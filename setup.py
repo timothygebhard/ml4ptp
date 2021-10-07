@@ -30,7 +30,7 @@ setup(
         'numpy~=1.21.2',
         'pandas~=1.3.3',
         'pyyaml~=5.4.1',
-        'scikit-learn~=0.24.2',
+        'scikit-learn~=0.p24.2',
         'scipy~=1.7.1',
         'torch~=1.9.1',
         'tqdm~=4.62.3',
@@ -40,6 +40,7 @@ setup(
             'coverage>=5.5',
             'flake8>=3.9.1',
             'mypy>=0.812',
+            'pylint>=2.11.1',
             'pytest>=6.2.3',
             'pytest-cov>=2.11.1',
         ]
