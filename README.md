@@ -1,2 +1,1 @@
-# vae4ptp
-(Disentangling) Variational Auto-Encoders for Pressure Temperature Profiles
+# ml4ptp: machine learning for PT profiles
