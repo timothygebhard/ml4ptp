@@ -30,7 +30,7 @@ setup(
         'numpy~=1.21.2',
         'pandas~=1.3.3',
         'pyyaml~=5.4.1',
-        'scikit-learn~=0.p24.2',
+        'scikit-learn~=0.24.2',
         'scipy~=1.7.1',
         'torch~=1.9.1',
         'tqdm~=4.62.3',
