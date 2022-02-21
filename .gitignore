@@ -1,3 +1,11 @@
+# Ignore plots
+*.pdf
+*.png
+
+# Ignore PyTorch checkpoints and TensorBoard files
+*.pth
+*.tfevents.*
+
 # PyCharm project folder
 .idea
 
