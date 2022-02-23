@@ -1,8 +1,12 @@
+# Ignore lightning logs
+lightning_logs/
+
 # Ignore plots
 *.pdf
 *.png
 
 # Ignore PyTorch checkpoints and TensorBoard files
+*.ckpt
 *.pth
 *.tfevents.*
 
