@@ -1,16 +1,14 @@
 """
 This script takes a folder with the full FDL PyATMOS data set as an
-input and collects the PT profiles from it to save them in a single
-HDF file. Specifically, this HDF file will contain one group for each
-PyATMOS simulation (whose name is the hash of that simulation), and
-each group will contain a data set with the altitudes ("ALT"), the
-pressures ("P") and the temperatures ("T").
+input and collects the PT profiles as well as other model parameters,
+such as the gas concentrations and fluxed, from it to save them in a
+single HDF file that is easy to load and work with.
 """
 
 # -----------------------------------------------------------------------------
 # IMPORTS
 # -----------------------------------------------------------------------------
-
+import sys
 from pathlib import Path
 
 import time
@@ -18,6 +16,7 @@ import time
 from tqdm.auto import tqdm
 
 import h5py
+import numpy as np
 import pandas as pd
 
 
@@ -32,10 +31,10 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     script_start = time.time()
-    print("\nPREPARE DATASET\n", flush=True)
+    print("\nCOLLECT PT PROFILES FOR PYATMOS DATASET\n", flush=True)
 
     # -------------------------------------------------------------------------
-    # Collect all PT profiles and associated information in an HDF file
+    # Read in summary CSV file
     # -------------------------------------------------------------------------
 
     # Define path to input directory and check if it exists.
@@ -44,8 +43,8 @@ if __name__ == "__main__":
     if not input_dir.exists():
         raise RuntimeError('input directory does not exist!')
 
-    # Read in the pyatmos_summary.csv file, which contains the basic input and
-    # output parameters of all models, as well as the simulation hashes
+    # Read in the pyatmos_summary.csv file, which contains the basic input
+    # and output parameters of all models, as well as the simulation hashes
     print('Reading in pyatmos_summary.csv ...', end=' ', flush=True)
     file_path = input_dir / 'pyatmos_summary.csv'
     summary_df = pd.read_csv(file_path)
@@ -58,36 +57,57 @@ if __name__ == "__main__":
     output_dir.mkdir(exist_ok=True)
     print('Done!', flush=True)
 
-    # Create an output HDF file
-    file_path = output_dir / 'pt_profiles.hdf'
+    # -------------------------------------------------------------------------
+    # Collect pressures, temperatures and altitudes
+    # -------------------------------------------------------------------------
+
+    # Initialize lists for the arrays / vectors that we will collect
+    pressures = []
+    temperatures = []
+    altitudes = []
+    convective = []
+
+    # Loop over all rows in the summary CSV file and collect P, T and ALT
+    print("\nCollecting PT profiles from HDF files:", flush=True)
+    for _, row in tqdm(summary_df.iterrows(), ncols=80, total=n_models):
+
+        # Find the directory that belongs to the current row
+        if row["hash"][0].isdigit():
+            model_dir = input_dir / f'dir_{row["hash"][0]}' / row['hash']
+        else:
+            model_dir = input_dir / f'Dir_alpha' / row['hash']
+
+        # Read in the CSV file that contains the PT profile
+        file_path = model_dir / 'parsed_clima_final.csv'
+        model_df = pd.read_csv(file_path, usecols=['P', 'T', 'ALT', 'CONVEC'])
+
+        # Get the pressure, temperatures, etc. for this model (= vectors)
+        pressures.append(model_df['P'].values)
+        temperatures.append(model_df['T'].values)
+        altitudes.append(model_df['ALT'].values)
+        convective.append(model_df['CONVEC'].values)
+
+    # -------------------------------------------------------------------------
+    # Store everything in an output HDF file
+    # -------------------------------------------------------------------------
+
+    print("\nWriting everything to output HDF file...", end=' ', flush=True)
+
+    # Create an output HDF file and store everything
+    file_path = output_dir / 'pyatmos.hdf'
     with h5py.File(file_path, "w") as hdf_file:
 
-        print("\nCollecting PT profiles in HDF file:", flush=True)
-        for _, row in tqdm(summary_df.iterrows(), ncols=80, total=n_models):
+        # First, store the array-valued columns that we collected
+        hdf_file.create_dataset(name='P', data=np.asarray(pressures))
+        hdf_file.create_dataset(name='T', data=np.asarray(temperatures))
+        hdf_file.create_dataset(name='ALT', data=np.asarray(altitudes))
+        hdf_file.create_dataset(name='CONVEC', data=np.asarray(convective))
 
-            # Find the directory that belongs to the current row
-            if row["hash"][0].isdigit():
-                model_dir = input_dir / f'dir_{row["hash"][0]}' / row['hash']
-            else:
-                model_dir = input_dir / f'Dir_alpha' / row['hash']
+        # Then, store all the columns from the pyatmos_summary.csv file
+        for key in summary_df.keys():
+            hdf_file.create_dataset(name=key, data=summary_df[key].values)
 
-            # Read in the CSV file that contains the PT profile
-            file_path = model_dir / 'parsed_clima_final.csv'
-            model_df = pd.read_csv(file_path)
-
-            # Create a new group in the HDF file for this model
-            group = hdf_file.create_group(name=row['hash'])
-
-            # In this group, store the PT profile (and the altitude)
-            group.create_dataset(name='P', data=model_df['P'].values)
-            group.create_dataset(name='T', data=model_df['T'].values)
-            group.create_dataset(name='ALT', data=model_df['ALT'].values)
-
-            # Additionally, store basic model parameters as attributes
-            for key, value in row.items():
-                if key == 'hash':
-                    continue
-                group.attrs[key] = value
+    print("Done!", flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
