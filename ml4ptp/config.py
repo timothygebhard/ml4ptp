@@ -23,27 +23,20 @@ def get_datasets_dir() -> Path:
     return get_ml4ptp_dir() / 'datasets'
 
 
-def get_dataset_path(dataset: str) -> Path:
+def get_dataset_path(name: str, stage: str) -> Path:
     """
     Get the path to the HDF file that contains the given `dataset`.
 
     Args:
-        dataset: Name of the dataset (e.g., "pyatmos").
+        name: Name of the dataset (e.g., "pyatmos").
+        stage: Either "train" or "test".
 
     Returns:
         The path to the HDF file for the given `dataset`.
     """
 
     # Define path to output directory
-    path = get_datasets_dir() / dataset / 'output'
-
-    # Depending on the dataset, append the name of the HDF file
-    if dataset == 'pyatmos':
-        path /= 't_for_fixed_p.hdf'
-    elif dataset == 'ms-100k':
-        path /= 'ms-100k.hdf'
-    else:
-        raise ValueError(f'Illegal value for dataset: {dataset}')
+    path = get_datasets_dir() / name / 'output' / f'{stage}.hdf'
 
     # Double-check that the target file exists
     if not path.exists():
