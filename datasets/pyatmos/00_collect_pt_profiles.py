@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Define path to input directory and check if it exists.
     # The input directory needs to contain the raw FDL PyATMOS data set.
-    input_dir = (Path('.') / 'input').resolve()
+    input_dir = (Path('..') / 'input').resolve()
     if not input_dir.exists():
         raise RuntimeError('input directory does not exist!')
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # Make sure that the output directory exists
     print('Creating output directory...', end=' ', flush=True)
-    output_dir = Path('.', 'output')
+    output_dir = Path('..', 'output')
     output_dir.mkdir(exist_ok=True)
     print('Done!', flush=True)
 
