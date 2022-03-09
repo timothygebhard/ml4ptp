@@ -8,7 +8,7 @@ single HDF file that is easy to load and work with.
 # -----------------------------------------------------------------------------
 # IMPORTS
 # -----------------------------------------------------------------------------
-import sys
+
 from pathlib import Path
 
 import time
