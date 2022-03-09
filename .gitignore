@@ -1,3 +1,9 @@
+# Ignore "jupyter" directory (at least for now)
+jupyter/
+
+# Ignore stuff we keep in the "ignored" directory
+ignored/
+
 # Ignore "input" and "output" folders of data sets
 # (We need to manually add things we want to keep)
 input/
