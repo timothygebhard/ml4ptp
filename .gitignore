@@ -1,3 +1,6 @@
+# Ignore HDF files
+*.hdf
+
 # Ignore "jupyter" directory (at least for now)
 jupyter/
 
