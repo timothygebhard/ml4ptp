@@ -25,6 +25,7 @@ setup(
     description='ml4ptp: machine learning for PT profiles',
     url='https://github.com/timothygebhard/ml4ptp',
     install_requires=[
+        'corner==2.2.1',
         'h5py==3.6.0',
         'matplotlib==3.5.1',
         'numpy==1.22.2',
