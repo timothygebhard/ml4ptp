@@ -27,6 +27,7 @@ setup(
     install_requires=[
         'corner==2.2.1',
         'h5py==3.6.0',
+        'joblib==1.1.0',
         'matplotlib==3.5.1',
         'numpy==1.22.2',
         'pandas==1.4.1',
