@@ -10,14 +10,111 @@ single HDF file that is easy to load and work with.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
+from typing import Dict
 
+import os
 import time
 
-from tqdm.auto import tqdm
+from joblib import Parallel, delayed
+from scipy.interpolate import InterpolatedUnivariateSpline
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 import h5py
 import numpy as np
 import pandas as pd
+
+
+# -----------------------------------------------------------------------------
+# FUNCTION DEFINITIONS
+# -----------------------------------------------------------------------------
+
+def get_n_jobs() -> int:
+    """
+    Get the number cores available to the current process (if possible,
+    otherwise return some hard-coded default value).
+    """
+
+    try:
+        n_jobs = len(os.sched_getaffinity(0))
+    except AttributeError:
+        n_jobs = 8
+    return n_jobs
+
+
+def collect_data_for_hash(
+    input_dir: Path,
+    model_hash: str,
+) -> Dict[str, np.array]:
+    """
+    Collect data of a simulation based on its hash.
+
+    Args:
+        input_dir: The main PyATMOS folder.
+        model_hash: The hash of the simulation for which
+            to collect the data.
+
+    Returns:
+        A dictionary of numpy arrays with all the data we collected.
+    """
+
+    # Initialize results that will be returned by this function
+    results = dict(hash=model_hash)
+
+    # Find the directory that corresponds to model for the given hash
+    folder = f'Dir_alpha' if not (x := model_hash[0]).isdigit() else f'dir_{x}'
+    model_dir = input_dir / folder / model_hash
+
+    # Read in the CSV file that contains the PT profile
+    file_path = model_dir / 'parsed_clima_final.csv'
+    parsed_clima_final = pd.read_csv(
+        filepath_or_buffer=file_path, usecols=['P', 'T', 'ALT', 'CONVEC']
+    )
+
+    # Add columns to results dictionary
+    results['P'] = parsed_clima_final['P'].values
+    results['T'] = parsed_clima_final['T'].values
+    results['ALT'] = parsed_clima_final['ALT'].values
+    results['CONVEC'] = parsed_clima_final['CONVEC'].values
+
+    # Read in the file with the photochemical mixing ratios
+    file_path = model_dir / 'parsed_photochem_mixing_ratios.csv'
+    parsed_photochem_mixing_ratios = pd.read_csv(filepath_or_buffer=file_path)
+
+    # Convert the altitude ('Z') in the mixing ratio file from cm to km
+    parsed_photochem_mixing_ratios['ALT'] = (
+        parsed_photochem_mixing_ratios['Z'] / 100_000
+    )
+
+    # Define keys of species which we want to interpolate
+    excluded = {'Z', 'ALT', 'Unnamed: 0'}
+    keys = sorted(
+        _ for _ in parsed_photochem_mixing_ratios.keys() if _ not in excluded
+    )
+
+    # Loop over keys and interpolate species to target altitude grid
+    for key in keys:
+
+        # Set up an interpolator:
+        # We will use a cubic spline for the interpolation (`k=3`) and permit
+        # extrapolation (`ext=0`), because the minimum of the target altitude
+        # grid is slightly smaller than available grid.
+        interpolator = InterpolatedUnivariateSpline(
+            x=parsed_photochem_mixing_ratios['ALT'],
+            y=parsed_photochem_mixing_ratios[key],
+            k=3,
+            ext=0,
+        )
+
+        # Interpolate to the target altitude grid and store
+        results[key] = interpolator(parsed_clima_final['ALT'])
+
+    return results
 
 
 # -----------------------------------------------------------------------------
@@ -39,7 +136,7 @@ if __name__ == "__main__":
 
     # Define path to input directory and check if it exists.
     # The input directory needs to contain the raw FDL PyATMOS data set.
-    input_dir = (Path('..') / 'input').resolve()
+    input_dir = (Path('.') / 'input').resolve()
     if not input_dir.exists():
         raise RuntimeError('input directory does not exist!')
 
@@ -53,59 +150,57 @@ if __name__ == "__main__":
 
     # Make sure that the output directory exists
     print('Creating output directory...', end=' ', flush=True)
-    output_dir = Path('..', 'output')
+    output_dir = Path('.', 'output')
     output_dir.mkdir(exist_ok=True)
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
-    # Collect pressures, temperatures and altitudes
+    # Collect simulation data (in parallel) and combine data frames
     # -------------------------------------------------------------------------
 
-    # Initialize lists for the arrays / vectors that we will collect
-    pressures = []
-    temperatures = []
-    altitudes = []
-    convective = []
+    # Define progress bar
+    progress_bar = Progress(
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TextColumn("•"),
+        TimeElapsedColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn(),
+    )
 
-    # Loop over all rows in the summary CSV file and collect P, T and ALT
-    print("\nCollecting PT profiles from HDF files:", flush=True)
-    for _, row in tqdm(summary_df.iterrows(), ncols=80, total=n_models):
+    # Collect simulation data in parallel; convert to DataFrame
+    print('\nCollecting simulation data in parallel:')
+    with progress_bar as p:
+        results = Parallel(n_jobs=get_n_jobs())(
+            delayed(collect_data_for_hash)(input_dir, model_hash)
+            for model_hash in p.track(summary_df.hash)
+        )
+    results_df = pd.DataFrame(results)
+    print('')
 
-        # Find the directory that belongs to the current row
-        if row["hash"][0].isdigit():
-            model_dir = input_dir / f'dir_{row["hash"][0]}' / row['hash']
-        else:
-            model_dir = input_dir / f'Dir_alpha' / row['hash']
-
-        # Read in the CSV file that contains the PT profile
-        file_path = model_dir / 'parsed_clima_final.csv'
-        model_df = pd.read_csv(file_path, usecols=['P', 'T', 'ALT', 'CONVEC'])
-
-        # Get the pressure, temperatures, etc. for this model (= vectors)
-        pressures.append(model_df['P'].values)
-        temperatures.append(model_df['T'].values)
-        altitudes.append(model_df['ALT'].values)
-        convective.append(model_df['CONVEC'].values)
+    # Merge the summary data frame with the results data frame based on the
+    # "hash" column which they both should have in common
+    print("Merging data frames...", end=' ', flush=True)
+    merged_df = pd.merge(summary_df, results_df, on="hash")
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Store everything in an output HDF file
     # -------------------------------------------------------------------------
 
-    print("\nWriting everything to output HDF file...", end=' ', flush=True)
+    print("Writing everything to output HDF file...", end=' ', flush=True)
 
-    # Create an output HDF file and store everything
+    # Create new output HDF file
     file_path = output_dir / 'pyatmos.hdf'
     with h5py.File(file_path, "w") as hdf_file:
 
-        # First, store the array-valued columns that we collected
-        hdf_file.create_dataset(name='P', data=np.asarray(pressures))
-        hdf_file.create_dataset(name='T', data=np.asarray(temperatures))
-        hdf_file.create_dataset(name='ALT', data=np.asarray(altitudes))
-        hdf_file.create_dataset(name='CONVEC', data=np.asarray(convective))
-
-        # Then, store all the columns from the pyatmos_summary.csv file
-        for key in summary_df.keys():
-            hdf_file.create_dataset(name=key, data=summary_df[key].values)
+        # Loop over all keys we have collected and create data sets for it
+        for key in merged_df.keys():
+            dtype = 'S25' if key == 'hash' else float
+            hdf_file.create_dataset(
+                name=key,
+                data=np.row_stack(merged_df[key].values).astype(dtype),
+            )
 
     print("Done!", flush=True)
 
