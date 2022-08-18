@@ -8,9 +8,7 @@ jupyter/
 ignored/
 local/
 
-# Ignore "input" and "output" folders of data sets
-# (We need to manually add things we want to keep)
-input/
+# Ignore "output" folders of data sets
 output/
 
 # Ignore lightning logs
