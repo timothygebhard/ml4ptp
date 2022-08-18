@@ -1,1 +1,0 @@
-Data set consisting of 100k samples generated with the model by [Madhusudhan and Seager (2009)](https://iopscience.iop.org/article/10.1088/0004-637X/707/1/24).
