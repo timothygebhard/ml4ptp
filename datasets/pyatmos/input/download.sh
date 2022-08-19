@@ -11,7 +11,7 @@
 
 # Start stopwatch
 printf "\nDOWNLOAD PYATMOS DATA FROM EXOPLANET ARCHIVE\n\n"
-start=$(date +%s.%N)
+start=$(date +%s)
 
 # Download data from exoplanet archive (ca. 40 GB)
 wget -O pyatmos_summary.csv 'https://exoplanetarchive.ipac.caltech.edu/data/FDL/ATMOS/pyatmos_summary.csv'
@@ -54,6 +54,6 @@ rm dir_9.tar.gz
 rm Dir_alpha.tar.gz
 
 # Print total runtime
-end=$(date +%s.%N)
-runtime=$(echo "$end - $start" | bc -l)
-printf "\nDone! This took %.2f seconds.\n\n" "$runtime"
+end=$(date +%s)
+runtime=$((end - start))
+printf "\nDone! This took %s seconds.\n\n" "$runtime"
