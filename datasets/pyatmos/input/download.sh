@@ -6,7 +6,8 @@
 #
 #     https://exoplanetarchive.ipac.caltech.edu/docs/fdl_landing.html
 #
-# Note that the full dataset is pretty large (more than 100 GB).
+# Note that the full dataset is pretty large (more than 100 GB). Even with a
+# fast internet connection, downloading and unpacking can take a few hours.
 
 # Start stopwatch
 printf "\nDOWNLOAD PYATMOS DATA FROM EXOPLANET ARCHIVE\n\n"
