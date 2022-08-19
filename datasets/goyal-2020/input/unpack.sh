@@ -52,7 +52,6 @@ unpack_zip_folder() {
     rm "$TAR_FILE"
     printf "Done!\n"
   done
-  rm "$1.zip"
 }
 
 
