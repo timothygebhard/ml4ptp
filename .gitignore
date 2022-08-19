@@ -7,9 +7,11 @@ jupyter/
 # Ignore stuff we keep in the "ignored" or "local" directory
 ignored/
 local/
+other/
 
 # Ignore "output" folders of data sets
-output/
+**/input/*/*
+**/output/
 
 # Ignore lightning logs
 lightning_logs/
