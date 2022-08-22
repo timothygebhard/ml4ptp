@@ -1,5 +1,5 @@
 """
-Functions and utilities related to the general configuration.
+Methods for configuration files.
 """
 
 # -----------------------------------------------------------------------------
@@ -8,42 +8,30 @@ Functions and utilities related to the general configuration.
 
 from pathlib import Path
 
-import ml4ptp
+import yaml
+
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader  # type: ignore
 
 
 # -----------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
-def get_ml4ptp_dir() -> Path:
-    return Path(ml4ptp.__file__).parent.parent.resolve()
-
-
-def get_datasets_dir() -> Path:
-    return get_ml4ptp_dir() / 'datasets'
-
-
-def get_dataset_path(name: str, stage: str) -> Path:
+def load_config(file_path: Path) -> dict:
     """
-    Get the path to the HDF file that contains the given `dataset`.
+    Load the (YAML) configuration file at the given ``file_path``.
 
     Args:
-        name: Name of the dataset (e.g., "pyatmos").
-        stage: Either "train" or "test".
+        file_path: Path to a YAML file to be loaded.
 
     Returns:
-        The path to the HDF file for the given `dataset`.
+        A ``dict`` with the contents of the target YAML file.
     """
 
-    # Define path to output directory
-    path = get_datasets_dir() / name / 'output' / f'{stage}.hdf'
-
-    # Double-check that the target file exists
-    if not path.exists():
-        raise RuntimeError(f'Target file ({path}) does not exist!')
-
-    return path
-
-
-def get_experiments_dir() -> Path:
-    return get_ml4ptp_dir() / 'experiments'
+    # Open the YAML file and parse its contents
+    with open(file_path, 'r') as yaml_file:
+        config = dict(yaml.load(yaml_file, Loader=Loader))
+    return config
