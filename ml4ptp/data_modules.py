@@ -1,22 +1,27 @@
 """
-Data modules that encapsulate the data handling for PyTorch Lightning.
-Note: Currently, there is only one module that handles the access for
-all data sets.
+Data module(s) that encapsulate the data handling for PyTorch Lightning.
 """
 
 # -----------------------------------------------------------------------------
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
+from pytorch_lightning.utilities.types import (
+    EVAL_DATALOADERS,
+    TRAIN_DATALOADERS,
+)
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
+import h5py
+import numpy as np
 import pytorch_lightning as pl
 import torch
 
-from ml4ptp.data_loading import load_temperatures, load_normalization
+from ml4ptp.paths import expandvars
 
 
 # -----------------------------------------------------------------------------
@@ -25,149 +30,147 @@ from ml4ptp.data_loading import load_temperatures, load_normalization
 
 class DataModule(pl.LightningDataModule):
     """
-    This class wraps the access to the training / validation dataset.
+    Wrap data loading in a PL-compatible way.
 
-    Args:
-        name: Name of the data set (e.g., "pyatmos").
-        train_size: Number of profiles to use for the training and
-            validation set. This is the total number, which is split
-            according to the given `val_fraction`.
-        test_size: Number of profiles to use for the test set.
-        val_fraction: Fraction of profiles used for validation.
-        batch_size: Batch size for training and validation.
-        num_workers: Number of workers for DataLoader instances.
-        random_state: Random seed for `train_test_split()` which is
-            used for splitting the training and validation data.
+    This class handles reading the data sets from HDF files, casting
+    them to tensors, splitting into training / validation, and creating
+    the required `Dataset` and `DataLoader` instances.
     """
 
     def __init__(
         self,
-        name: str,
+        key_P: str,
+        key_T: str,
+        train_file_path: Optional[Path],
+        test_file_path: Optional[Path],
         train_size: int = 10_000,
-        test_size: int = 1_000,
-        val_fraction: float = 0.1,
-        batch_size: int = 32,
+        val_size: Union[float, int] = 0.1,
+        batch_size: int = 1_024,
         num_workers: int = 4,
         random_state: int = 42,
     ) -> None:
 
-        super().__init__()
+        super().__init__()  # type: ignore
 
         # Store constructor arguments
-        self.name = name
+        self.train_file_path = train_file_path
+        self.test_file_path = test_file_path
+        self.key_P = key_P
+        self.key_T = key_T
         self.train_size = train_size
-        self.test_size = test_size
-        self.val_fraction = val_fraction
+        self.val_size = val_size
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.random_state = random_state
 
         # Initialize variables that will hold the normalization constants
-        self.mean = None
-        self.std = None
+        self.T_mean: float = np.nan
+        self.T_std: float = np.nan
 
         # Initialize variables that will hold the data sets
-        self.dataset_train = None
-        self.dataset_val = None
-        self.dataset_test = None
+        self.train_dataset: Optional[TensorDataset] = None
+        self.val_dataset: Optional[TensorDataset] = None
+        self.test_dataset: Optional[TensorDataset] = None
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def prepare_data(self) -> None:
         """
-        Prepare the data (e.g., splitting into training / validation /
-        test and applying the normalization transforms).
+        Prepare data. This function is called within a single process on
+        CPU, and is meant to be used, for example, for downloading data,
+        or tokenizing it.
 
-        (The main motivation for putting this into its own method seems
-        to be what happens when you train on multiple GPUs...)
-
-        Args:
-            stage: Either "fit", "validate", or "test".
+        Note: There exists also the possibility to define as `setup()`
+        method which is run on every GPU indepedently. However, since
+        we do not plan to train on multiple GPUs for now, everything is
+        placed in the `prepare_data()` method instead.
         """
 
-        # Set default value for stage
-        if stage is None or stage in ('fit', 'validate'):
-            stage = 'train'
+        # Load the training data
+        if self.train_file_path is not None:
 
-        # Load the normalization values
-        train_mean, train_std = load_normalization(name=self.name)
+            # Read data from HDF file
+            file_path = expandvars(self.train_file_path).resolve()
+            with h5py.File(file_path, "r") as hdf_file:
+                P = torch.as_tensor(hdf_file[self.key_P]).float()
+                P = P[:self.train_size]
+                log_P = torch.log10(P)
+                T = torch.as_tensor(hdf_file[self.key_T]).float()
+                T = T[:self.train_size]
 
-        # Either create train / validation data set...
-        if stage == 'train':
-    
-            # Load temperatures and normalize
-            temperatures = load_temperatures(
-                name=self.name, stage=stage, size=self.train_size,
-            )
-            temperatures -= train_mean
-            temperatures /= train_std
-
-            # Split into training and validation
-            t_train, t_val = train_test_split(
-                temperatures,
-                test_size=self.val_fraction,
+            # Split the data into training and validation
+            train_log_P, val_log_P, train_T, val_T = train_test_split(
+                log_P,
+                T,
+                test_size=self.val_size,
                 random_state=self.random_state,
             )
 
-            # Create datasets
-            self.dataset_train = TensorDataset(torch.Tensor(t_train))
-            self.dataset_val = TensorDataset(torch.Tensor(t_val))
+            # Compute the normalization for T from training data
+            self.T_mean = float(torch.mean(T))
+            self.T_std = float(torch.std(T))
 
-        # ...or test data set
-        elif stage == 'test':
+            # Create data sets for training and validation
+            self.train_dataset = TensorDataset(train_log_P, train_T)
+            self.val_dataset = TensorDataset(val_log_P, val_T)
 
-            # Load temperatures and normalize
-            temperatures = load_temperatures(
-                name=self.name, stage=stage, size=self.test_size,
-            )
-            temperatures -= train_mean
-            temperatures /= train_std
+        # Load the test data
+        if self.test_file_path is not None:
 
-            # Create dataset
-            self.dataset_test = TensorDataset(torch.Tensor(temperatures))
+            # Read data from HDF file
+            file_path = expandvars(self.test_file_path).resolve()
+            with h5py.File(file_path, "r") as hdf_file:
+                test_P = torch.as_tensor(hdf_file[self.key_P]).float()
+                test_P = test_P[:self.train_size]
+                test_log_P = torch.log10(test_P)
+                test_T = torch.as_tensor(hdf_file[self.key_T]).float()
+                test_T = test_T[:self.train_size]
 
-    def train_dataloader(self) -> DataLoader:
+            # Create data sets for testing
+            self.test_dataset = TensorDataset(test_log_P, test_T)
+
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
         """
         Returns: The train data loader.
         """
 
+        if self.train_dataset is None:
+            raise RuntimeError("No train_dataset defined!")
+
         return DataLoader(
-            dataset=self.dataset_train,
+            dataset=self.train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True,
         )
 
-    def val_dataloader(self) -> DataLoader:
+    def val_dataloader(self) -> EVAL_DATALOADERS:
         """
         Returns: The validation data loader.
         """
 
+        if self.val_dataset is None:
+            raise RuntimeError("No valid_dataset defined!")
+
         return DataLoader(
-            dataset=self.dataset_val,
+            dataset=self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True,
         )
 
-    def test_dataloader(self) -> DataLoader:
+    def test_dataloader(self) -> EVAL_DATALOADERS:
         """
         Returns: The test data loader.
         """
 
+        if self.test_dataset is None:
+            raise RuntimeError("No test_dataset defined!")
+
         return DataLoader(
-            dataset=self.dataset_test,
+            dataset=self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True,
         )
 
-    def predict_dataloader(self) -> DataLoader:
-        """
-        Returns: The predict data loader (= test data loader).
-        """
-
-        return DataLoader(
-            dataset=self.dataset_test,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            persistent_workers=True,
-        )
+    def predict_dataloader(self) -> EVAL_DATALOADERS:
+        raise NotImplementedError()
