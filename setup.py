@@ -26,6 +26,7 @@ setup(
     url='https://github.com/timothygebhard/ml4ptp',
     install_requires=[
         'corner==2.2.1',
+        'gitpython',
         'h5py==3.6.0',
         'joblib==1.1.0',
         'matplotlib==3.5.1',
