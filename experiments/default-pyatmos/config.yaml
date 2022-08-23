@@ -4,13 +4,13 @@ datamodule:
   test_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf
   key_P: "P"
   key_T: "T"
-  train_size: 90
-  val_size: 10
-  batch_size: 32
-  num_workers: 12
+  train_size: 90000
+  val_size: 8192
+  batch_size: 1024
+  num_workers: 4
   persistent_workers: True
   shuffle: True
-  pin_memory: True,
+  pin_memory: True
   drop_last: True
 
 # Parameters for the model itself
