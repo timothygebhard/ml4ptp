@@ -52,6 +52,7 @@ class DataModule(pl.LightningDataModule):
         val_size: Union[float, int] = 0.1,
         batch_size: int = 1_024,
         num_workers: int = 4,
+        persistent_workers: bool = True,
         random_state: int = 42,
     ) -> None:
 
@@ -66,6 +67,7 @@ class DataModule(pl.LightningDataModule):
         self.val_size = val_size
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.persistent_workers = persistent_workers
         self.random_state = random_state
 
         # Initialize variables that will hold the normalization constants
@@ -159,7 +161,7 @@ class DataModule(pl.LightningDataModule):
             dataset=self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
@@ -174,7 +176,7 @@ class DataModule(pl.LightningDataModule):
             dataset=self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
