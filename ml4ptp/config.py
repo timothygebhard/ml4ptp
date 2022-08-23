@@ -12,7 +12,7 @@ import yaml
 
 try:
     from yaml import CLoader as Loader
-except ImportError:
+except ImportError:  # pragma: no cover
     from yaml import Loader  # type: ignore
 
 

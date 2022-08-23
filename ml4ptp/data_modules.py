@@ -155,7 +155,7 @@ class DataModule(pl.LightningDataModule):
         """
 
         if self.val_dataset is None:
-            raise RuntimeError("No valid_dataset defined!")
+            raise RuntimeError("No val_dataset defined!")
 
         return DataLoader(
             dataset=self.val_dataset,

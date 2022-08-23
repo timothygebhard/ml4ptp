@@ -25,7 +25,7 @@ def get_repo() -> Optional[git.Repo]:
     """
     try:
         return git.Repo(Path(ml4ptp.__file__).parent.parent)
-    except git.InvalidGitRepositoryError:
+    except git.InvalidGitRepositoryError:  # pragma: no cover
         return None
 
 
@@ -34,7 +34,7 @@ def get_git_hash() -> str:
     Auxiliary function to get the current hash of the git HEAD.
     """
     repo = get_repo()
-    if repo is None:
+    if repo is None:  # pragma: no cover
         return "Not a git repository."
     return str(repo.head.object.hexsha)
 
@@ -46,7 +46,7 @@ def is_dirty() -> bool:
     repo = get_repo()
     if repo is not None:
         return bool(repo.is_dirty())
-    return False
+    return False  # pragma: no cover
 
 
 def get_diff() -> str:
@@ -54,7 +54,7 @@ def get_diff() -> str:
     Auxiliary function to get diff against the current HEAD.
     """
     repo = get_repo()
-    if repo is None:
+    if repo is None:  # pragma: no cover
         return "Not a git repository."
     tree = repo.head.commit.tree
     return str(repo.git.diff(tree))

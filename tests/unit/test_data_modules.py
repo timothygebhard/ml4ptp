@@ -43,6 +43,7 @@ def test__data_module(hdf_file: Path) -> None:
     Test DataModule.
     """
 
+    # Case 1
     dm = DataModule(
         key_P='P',
         key_T='T',
@@ -62,3 +63,26 @@ def test__data_module(hdf_file: Path) -> None:
     with pytest.raises(RuntimeError) as runtime_error:
         dm.test_dataloader()
     assert "No test_dataset defined!" in str(runtime_error)
+
+    # Case 2
+    dm = DataModule(
+        key_P='P',
+        key_T='T',
+        train_file_path=None,
+        test_file_path=hdf_file,
+        batch_size=2,
+    )
+    dm.prepare_data()
+
+    assert len(dm.test_dataloader()) == 9
+
+    with pytest.raises(RuntimeError) as runtime_error:
+        dm.train_dataloader()
+    assert "No train_dataset defined!" in str(runtime_error)
+
+    with pytest.raises(RuntimeError) as runtime_error:
+        dm.val_dataloader()
+    assert "No val_dataset defined!" in str(runtime_error)
+
+    with pytest.raises(NotImplementedError):
+        dm.predict_dataloader()
