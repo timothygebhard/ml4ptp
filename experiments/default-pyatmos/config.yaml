@@ -1,0 +1,51 @@
+# Define the data set to load
+datamodule:
+  train_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/train.hdf
+  test_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf
+  key_P: "P"
+  key_T: "T"
+  train_size: 90
+  val_size: 10
+  batch_size: 32
+  num_workers: 12
+  persistent_workers: True
+  shuffle: True
+  pin_memory: True,
+  drop_last: True
+
+# Parameters for the model itself
+model:
+  encoder:
+    latent_size: 2
+    layer_size: 256
+  decoder:
+    latent_size: 2
+    layer_size: 256
+
+# Parameters for the loss
+loss:
+  n_samples: 1000
+  beta: 10000.0
+
+# Parameters for the optimizer
+optimizer:
+  name: AdamW
+  parameters:
+    lr: 0.0003
+
+# Parameters for the learning rate scheduler (see optimizer)
+lr_scheduler: null
+
+# Parameters for plotting to TensorBoard
+plotting:
+  min_T: 0
+  max_T: 350
+  min_log_P: 0.5
+  max_log_P: -6.5
+
+# Parameters for the trainer
+trainer:
+  gpus: auto
+  detect_anomaly: true
+  log_every_n_steps: 10
+  max_epochs: 128
