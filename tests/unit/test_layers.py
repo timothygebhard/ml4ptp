@@ -23,12 +23,12 @@ def test__mean() -> None:
     # Case 1
     mean = Mean(dim=0)
     x_out = mean(x_in)
-    assert torch.equal(x_out, torch.range(65, 77))
+    assert torch.equal(x_out, torch.arange(65, 78).float())
 
     # Case 2
     mean = Mean(dim=1)
     x_out = mean(x_in)
-    assert torch.equal(x_out, torch.range(6, 136, 13))
+    assert torch.equal(x_out, torch.arange(6, 137, 13).float())
 
 
 def test_print_shape(capfd: pytest.CaptureFixture) -> None:
@@ -50,9 +50,9 @@ def test_squeeze() -> None:
     squeeze = Squeeze()
 
     # Case 1
-    x_in = torch.range(1, 42).reshape(1, 1, 42)
+    x_in = torch.arange(42).reshape(1, 1, 42).float()
     x_out = squeeze(x_in)
-    assert torch.equal(x_out, torch.range(1, 42))
+    assert torch.equal(x_out, torch.arange(42).float())
 
 
 def test_view() -> None:
@@ -60,6 +60,6 @@ def test_view() -> None:
     view = View(size=(4, 3))
 
     # Case 1
-    x_in = torch.range(1, 12).reshape(2, 6)
+    x_in = torch.arange(12).reshape(2, 6).float()
     x_out = view(x_in)
-    assert torch.equal(x_out, torch.range(1, 12).reshape(4, 3))
+    assert torch.equal(x_out, torch.arange(12).reshape(4, 3).float())
