@@ -6,6 +6,8 @@ General utility functions.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from typing import Union
+
 import os
 
 from rich.progress import (
@@ -40,6 +42,23 @@ def get_number_of_available_cores(default: int = 8) -> int:
         return len(os.sched_getaffinity(0))  # type: ignore
     except AttributeError:
         return default
+
+
+def resolve_gpus(gpus: Union[str, int]) -> int:
+    """
+    Auxiliary function to resolve the `gpus` argument for the trainer:
+    The argument "auto" should give the number of GPUs if CUDA is
+    available, and 0 otherwise.
+    """
+
+    # If we explicitly specify the number of GPUs, do not overwrite it
+    if gpus != 'auto':
+        return int(gpus)
+
+    # Otherwise, return either the number of available GPUs, or 0 (for CPU)
+    if torch.cuda.is_available():  # pragma: no cover
+        return torch.cuda.device_count()
+    return 0
 
 
 def setup_rich_progress_bar() -> Progress:
