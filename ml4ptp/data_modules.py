@@ -35,6 +35,11 @@ class DataModule(pl.LightningDataModule):
     This class handles reading the data sets from HDF files, casting
     them to tensors, splitting into training / validation, and creating
     the required `Dataset` and `DataLoader` instances.
+
+    The DataLoaders return a 2-tuple consisting of:
+
+        - log_P: A tensor with the log10 of the pressure values in bar.
+        - T: A tensor with the temperature values in Kelvin.
     """
 
     def __init__(
