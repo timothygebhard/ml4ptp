@@ -66,7 +66,7 @@ def get_identifier(file_name: str) -> str:
     """
 
     # Define regex and search for identifier
-    pattern = "^(.*eqpt_)(?P<identifier>.*)(_model.txt)$"
+    pattern = r"^(.*eqpt_)(?P<identifier>.*)(_model.txt)$"
     result = re.search(pattern=pattern, string=file_name)
 
     # If no identifier is found, raise an error
@@ -87,7 +87,7 @@ def get_planet_and_stellar_radius(file_path: Path) -> Tuple[float, float]:
         line = txt_file.readline().strip()
 
     # Parse the header to get the planetary and stellar radius
-    pattern = "^.*Rp_TOA = (?P<Rp_TOA>(\d|\.)*)\s*Rs = (?P<Rs>(\d|\.)*)$"
+    pattern = r"^.*Rp_TOA = (?P<Rp_TOA>(\d|\.)*)\s*Rs = (?P<Rs>(\d|\.)*)$"
     result = re.search(pattern=pattern, string=line)
 
     # If we found parameters, return them; otherwise, return defaults

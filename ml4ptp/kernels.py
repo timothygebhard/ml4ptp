@@ -14,7 +14,7 @@ import torch
 # -----------------------------------------------------------------------------
 
 def gaussian_kernel(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    
+
     x_size = x.size(0)
     y_size = y.size(0)
     dim = x.size(1)

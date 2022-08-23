@@ -57,7 +57,7 @@ def collect_data_for_hash(
     results: Dict[str, Union[str, np.ndarray]] = dict(hash=model_hash)
 
     # Find the directory that corresponds to model for the given hash
-    folder = f'Dir_alpha' if not (x := model_hash[0]).isdigit() else f'dir_{x}'
+    folder = 'Dir_alpha' if not (x := model_hash[0]).isdigit() else f'dir_{x}'
     model_dir = input_dir / folder / model_hash
 
     # Read in the CSV file that contains the PT profile
