@@ -14,6 +14,7 @@ other/
 **/output/
 
 # Ignore lightning logs
+runs/
 lightning_logs/
 
 # Ignore plots
