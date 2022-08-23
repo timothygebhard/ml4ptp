@@ -95,13 +95,13 @@ class DataModule(pl.LightningDataModule):
         if self.train_file_path is not None:
 
             # Read data from HDF file
-            file_path = expandvars(self.train_file_path).resolve()
+            file_path = expandvars(Path(self.train_file_path)).resolve()
             with h5py.File(file_path, "r") as hdf_file:
-                P = torch.as_tensor(hdf_file[self.key_P]).float()
-                P = P[:self.train_size]
+                P = torch.from_numpy(np.array(hdf_file[self.key_P]))
+                P = P[:self.train_size].float()
                 log_P = torch.log10(P)
-                T = torch.as_tensor(hdf_file[self.key_T]).float()
-                T = T[:self.train_size]
+                T = torch.from_numpy(np.array(hdf_file[self.key_T]))
+                T = T[:self.train_size].float()
 
             # Split the data into training and validation
             train_log_P, val_log_P, train_T, val_T = train_test_split(
@@ -123,13 +123,13 @@ class DataModule(pl.LightningDataModule):
         if self.test_file_path is not None:
 
             # Read data from HDF file
-            file_path = expandvars(self.test_file_path).resolve()
+            file_path = expandvars(Path(self.test_file_path)).resolve()
             with h5py.File(file_path, "r") as hdf_file:
-                test_P = torch.as_tensor(hdf_file[self.key_P]).float()
-                test_P = test_P[:self.train_size]
+                test_P = torch.from_numpy(np.array(hdf_file[self.key_P]))
+                test_P = test_P[:self.train_size].float()
                 test_log_P = torch.log10(test_P)
-                test_T = torch.as_tensor(hdf_file[self.key_T]).float()
-                test_T = test_T[:self.train_size]
+                test_T = torch.from_numpy(np.array(hdf_file[self.key_T]))
+                test_T = test_T[:self.train_size].float()
 
             # Create data sets for testing
             self.test_dataset = TensorDataset(test_log_P, test_T)
