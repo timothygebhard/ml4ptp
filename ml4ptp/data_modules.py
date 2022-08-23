@@ -53,6 +53,9 @@ class DataModule(pl.LightningDataModule):
         batch_size: int = 1_024,
         num_workers: int = 4,
         persistent_workers: bool = True,
+        shuffle: bool = True,
+        pin_memory: bool = True,
+        drop_last: bool = True,
         random_state: int = 42,
     ) -> None:
 
@@ -68,6 +71,9 @@ class DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.persistent_workers = persistent_workers
+        self.shuffle = shuffle
+        self.pin_memory = pin_memory
+        self.drop_last = drop_last
         self.random_state = random_state
 
         # Initialize variables that will hold the normalization constants
@@ -146,7 +152,10 @@ class DataModule(pl.LightningDataModule):
             dataset=self.train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
+            shuffle=self.shuffle,
+            pin_memory=self.pin_memory,
+            drop_last=self.drop_last,
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
@@ -162,6 +171,9 @@ class DataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            shuffle=False,
+            pin_memory=self.pin_memory,
+            drop_last=False,
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
@@ -177,6 +189,9 @@ class DataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            shuffle=False,
+            pin_memory=self.pin_memory,
+            drop_last=False,
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
