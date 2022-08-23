@@ -6,7 +6,8 @@ General utility functions.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from typing import Union
+from pathlib import Path
+from typing import Tuple, Union
 
 import os
 
@@ -42,6 +43,32 @@ def get_number_of_available_cores(default: int = 8) -> int:
         return len(os.sched_getaffinity(0))  # type: ignore
     except AttributeError:
         return default
+
+
+def get_run_dir(experiment_dir: Path) -> Tuple[Path, Path]:
+    """
+    For a given `experiment_dir`, return the `runs` subdirectory as
+    well as the next / current `run_<X>` directory inside `runs`.
+
+    Args:
+        experiment_dir: Path to an experiment directory.
+
+    Returns:
+        A tuple of ``Path`` objects, `runs_dir` and `run_dir`.
+    """
+
+    # Get the folder where we keep different runs
+    runs_dir = experiment_dir / 'runs'
+    runs_dir.mkdir(exist_ok=True)
+
+    # Get folder for the *current* run: Check runs_dir for directories that
+    # start with 'run_', get all the run numbers, find the maximum, and add 1
+    previous_runs = [int(_.name.split('_')[1]) for _ in runs_dir.glob('run_*')]
+    number = 0 if not previous_runs else max(previous_runs) + 1
+    run_dir = runs_dir / f'run_{number}'
+    run_dir.mkdir(exist_ok=True)
+
+    return runs_dir, run_dir
 
 
 def resolve_gpus(gpus: Union[str, int]) -> int:
