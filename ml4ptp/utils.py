@@ -7,7 +7,7 @@ General utility functions.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 import os
 
@@ -45,7 +45,7 @@ def get_number_of_available_cores(default: int = 8) -> int:
         return default
 
 
-def get_run_dir(experiment_dir: Path) -> Tuple[Path, Path]:
+def get_run_dir(experiment_dir: Path) -> Path:
     """
     For a given `experiment_dir`, return the `runs` subdirectory as
     well as the next / current `run_<X>` directory inside `runs`.
@@ -68,7 +68,7 @@ def get_run_dir(experiment_dir: Path) -> Tuple[Path, Path]:
     run_dir = runs_dir / f'run_{number}'
     run_dir.mkdir(exist_ok=True)
 
-    return runs_dir, run_dir
+    return run_dir
 
 
 def resolve_gpus(gpus: Union[str, int]) -> int:

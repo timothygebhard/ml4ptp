@@ -40,12 +40,12 @@ def test__get_number_of_available_cores() -> None:
 def test__get_run_dir(tmp_path: Path) -> None:
 
     # Case 1: runs_dir does not (yet) exist
-    runs_dir, run_dir = get_run_dir(experiment_dir=tmp_path)
-    assert runs_dir == tmp_path / 'runs'
+    run_dir = get_run_dir(experiment_dir=tmp_path)
+    assert run_dir.parent == tmp_path / 'runs'
     assert run_dir == tmp_path / 'runs' / 'run_0'
 
     # Case 2: runs_dir does already exist
-    runs_dir, run_dir = get_run_dir(experiment_dir=tmp_path)
+    run_dir = get_run_dir(experiment_dir=tmp_path)
     assert run_dir == tmp_path / 'runs' / 'run_1'
 
 
