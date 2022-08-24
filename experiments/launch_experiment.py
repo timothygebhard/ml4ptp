@@ -106,7 +106,7 @@ if __name__ == "__main__":
     print()
 
     # Get directory for this run
-    runs_dir, run_dir = get_run_dir(experiment_dir=experiment_dir)
+    run_dir = get_run_dir(experiment_dir=experiment_dir)
 
     # Create directory for HTCondor files
     print('Creating htcondor directory...', end=' ', flush=True)
@@ -123,6 +123,7 @@ if __name__ == "__main__":
     arguments = [
         (Path(__file__).parent / 'train.py').as_posix(),
         f'--experiment-dir {args.experiment_dir}',
+        f'--run-dir {run_dir.as_posix()}',
         f'--random-seed {args.random_seed}',
     ]
 

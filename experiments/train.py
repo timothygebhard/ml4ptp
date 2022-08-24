@@ -41,6 +41,11 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
+        '--run-dir',
+        default=None,
+        help='Do not generate a new run dir, but use the given one.',
+    )
+    parser.add_argument(
         '--random-seed',
         type=int,
         default=42,
@@ -81,8 +86,11 @@ if __name__ == "__main__":
     # Construct run directory; save config and git status
     # -------------------------------------------------------------------------
 
-    # Get paths
-    runs_dir, run_dir = get_run_dir(experiment_dir=experiment_dir)
+    # Get the directory where everything for this run is stored
+    if args.run_dir is not None:
+        run_dir = Path(args.run_dir).resolve()
+    else:
+        run_dir = get_run_dir(experiment_dir=experiment_dir)
 
     # Print run directory
     print('All data for this run will be stored in:')
@@ -115,7 +123,7 @@ if __name__ == "__main__":
 
     # Manually create a logger to get control over the run directory
     logger = TensorBoardLogger(
-        save_dir=runs_dir.as_posix(), name="", version=run_dir.name
+        save_dir=run_dir.parent.as_posix(), name="", version=run_dir.name
     )
 
     # Create a callback for creating (best) checkpoints
