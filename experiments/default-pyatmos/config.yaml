@@ -48,4 +48,9 @@ trainer:
   gpus: auto
   detect_anomaly: False
   log_every_n_steps: 10
-  max_epochs: 128
+  max_epochs: 512
+
+# Parameters for additional callbacks
+callbacks:
+  early_stopping:
+    patience: 50

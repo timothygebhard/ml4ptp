@@ -14,7 +14,11 @@ import time
 import yaml
 
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
+from pytorch_lightning.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    RichProgressBar,
+)
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.seed import seed_everything
 
@@ -134,11 +138,18 @@ if __name__ == "__main__":
         monitor="val/total_loss",
     )
 
+    # Create a callback for early stopping
+    early_stopping_callback = EarlyStopping(
+        monitor="val/total_loss",
+        **config['callbacks']['early_stopping']
+    )
+
     # Define default arguments for the Trainer, then add values from
     # experiment configuration file (possibly overwriting the defaults)
     trainer_params = dict(
         callbacks=[
             checkpoint_callback,
+            early_stopping_callback,
             RichProgressBar(),
         ],
         default_root_dir=expandvars(experiment_dir).as_posix(),
