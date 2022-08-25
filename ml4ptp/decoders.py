@@ -65,8 +65,6 @@ class Decoder(nn.Module):
         #    to (batch_size, grid_size) again: one T for each log_P
 
         # Get batch size and grid size
-        batch_size: int
-        grid_size: int
         batch_size, grid_size = log_P.shape
 
         # Repeat z so that we can concatenate it with every pressure value.
