@@ -73,7 +73,7 @@ class Model(pl.LightningModule):
             'ml4ptp.encoders', encoder_config['name']
         )(**encoder_config['parameters'], **normalization_config)
         self.decoder = get_member_by_name(
-            'ml4ptp.decoders', encoder_config['name']
+            'ml4ptp.decoders', decoder_config['name']
         )(**decoder_config['parameters'], **normalization_config)
 
     def configure_optimizers(self) -> dict:
