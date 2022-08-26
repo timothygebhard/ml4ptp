@@ -38,13 +38,3 @@ def test__encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
     assert np.isclose(output.mean().item(), 0.013009665533900261)
-
-    # Case 2
-    assert torch.equal(
-        encoder.normalize(T=torch.Tensor([3., 5., 7.]), undo=False),
-        torch.Tensor([1., 2., 3.]),
-    )
-    assert torch.equal(
-        encoder.normalize(T=torch.Tensor([1., 2., 3.]), undo=True),
-        torch.Tensor([3., 5., 7.]),
-    )

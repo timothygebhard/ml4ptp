@@ -28,13 +28,3 @@ def test__decoder() -> None:
     output = decoder.forward(z=z, log_P=log_P)
     assert output.shape == (17, 19)
     assert np.isclose(output.mean().item(), 1.7334630489349365)
-
-    # Case 2
-    assert torch.equal(
-        decoder.normalize(T=torch.Tensor([3., 5., 7.]), undo=False),
-        torch.Tensor([1., 2., 3.]),
-    )
-    assert torch.equal(
-        decoder.normalize(T=torch.Tensor([1., 2., 3.]), undo=True),
-        torch.Tensor([3., 5., 7.]),
-    )
