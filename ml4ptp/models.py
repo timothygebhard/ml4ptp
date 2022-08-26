@@ -17,8 +17,6 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch
 
-from ml4ptp.decoders import Decoder
-from ml4ptp.encoders import Encoder
 from ml4ptp.importing import get_member_by_name
 from ml4ptp.kernels import compute_mmd
 from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
@@ -71,8 +69,12 @@ class Model(pl.LightningModule):
         self.lr_scheduler_config = lr_scheduler_config
 
         # Set up the encoder and decoder networks
-        self.encoder = Encoder(**encoder_config, **normalization_config)
-        self.decoder = Decoder(**decoder_config, **normalization_config)
+        self.encoder = get_member_by_name(
+            'ml4ptp.encoders', encoder_config['name']
+        )(**encoder_config['parameters'], **normalization_config)
+        self.decoder = get_member_by_name(
+            'ml4ptp.decoders', encoder_config['name']
+        )(**decoder_config['parameters'], **normalization_config)
 
     def configure_optimizers(self) -> dict:
         """
