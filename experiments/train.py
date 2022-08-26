@@ -24,6 +24,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
+from ml4ptp.exporting import export_model_with_torchscript
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
@@ -206,6 +207,23 @@ if __name__ == "__main__":
 
     print('\n\nStarting training:\n', flush=True)
     trainer.fit(model=model, datamodule=datamodule)
+    print()
+
+    # -------------------------------------------------------------------------
+    # Export models using torchscript
+    # -------------------------------------------------------------------------
+
+    print('Exporting trained models...', end=' ', flush=True)
+
+    # Export encoder
+    file_path = run_dir / 'encoder.pt'
+    export_model_with_torchscript(model=model.encoder, file_path=file_path)
+
+    # Export decoder
+    file_path = run_dir / 'decoder.pt'
+    export_model_with_torchscript(model=model.decoder, file_path=file_path)
+
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
