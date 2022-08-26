@@ -13,14 +13,18 @@ datamodule:
   pin_memory: True
   drop_last: True
 
-# Parameters for the model itself
+# Parameters for the encoder and decoder
 model:
   encoder:
-    latent_size: 2
-    layer_size: 256
+    name: ConvolutionalEncoder
+    parameters:
+      latent_size: 2
+      layer_size: 256
   decoder:
-    latent_size: 2
-    layer_size: 256
+    name: Decoder
+    parameters:
+      latent_size: 2
+      layer_size: 256
 
 # Parameters for the loss
 loss:
