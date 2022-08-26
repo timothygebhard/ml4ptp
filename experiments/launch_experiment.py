@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
             # Launch a process that runs the command
             p = subprocess.run(args=cmd, capture_output=True)
-    
+
             # Wait for process to finish; get output
             output = p.stdout.decode()
             print(output)
