@@ -13,13 +13,14 @@ import torch
 import torch.nn as nn
 
 from ml4ptp.layers import Mean
+from ml4ptp.mixins import NormalizerMixin
 
 
 # -----------------------------------------------------------------------------
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-class Encoder(nn.Module):
+class Encoder(nn.Module, NormalizerMixin):
 
     def __init__(
         self,
@@ -34,8 +35,8 @@ class Encoder(nn.Module):
         # Store constructor arguments
         self.latent_size = latent_size
         self.layer_size = layer_size
-        self.T_mean = float(T_mean)
-        self.T_std = float(T_std)
+        self.T_mean = T_mean
+        self.T_std = T_std
 
         # Define encoder architecture
         self.layers: Callable[[torch.Tensor], torch.Tensor] = nn.Sequential(
@@ -58,11 +59,6 @@ class Encoder(nn.Module):
             ),
             Mean(dim=2),
         )
-
-    def normalize(self, T: torch.Tensor, undo: bool = False) -> torch.Tensor:
-        if not undo:
-            return (T - self.T_mean) / self.T_std
-        return T * self.T_std + self.T_mean
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
 

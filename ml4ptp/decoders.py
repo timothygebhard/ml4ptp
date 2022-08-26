@@ -11,12 +11,14 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
+from ml4ptp.mixins import NormalizerMixin
+
 
 # -----------------------------------------------------------------------------
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-class Decoder(nn.Module):
+class Decoder(nn.Module, NormalizerMixin):
 
     def __init__(
         self,
@@ -46,11 +48,6 @@ class Decoder(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(self.layer_size, 1),
         )
-
-    def normalize(self, T: torch.Tensor, undo: bool = False) -> torch.Tensor:
-        if not undo:
-            return (T - self.T_mean) / self.T_std
-        return T * self.T_std + self.T_mean
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
 
