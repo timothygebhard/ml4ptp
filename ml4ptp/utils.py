@@ -26,6 +26,13 @@ import torch
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
+def get_device_from_model(model: torch.nn.Module) -> torch.device:
+    """
+    Simple auxiliary function to get the device of a model.
+    """
+    return next(model.parameters()).device
+
+
 def get_number_of_available_cores(default: int = 8) -> int:
     """
     Get the number cores available to the current process (if possible,

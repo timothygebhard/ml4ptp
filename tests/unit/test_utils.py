@@ -12,6 +12,7 @@ from sys import platform
 import torch
 
 from ml4ptp.utils import (
+    get_device_from_model,
     get_number_of_available_cores,
     get_run_dir,
     resolve_gpus,
@@ -23,6 +24,13 @@ from ml4ptp.utils import (
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__get_device_from_model() -> None:
+
+    # Case 1: Create model on CPU
+    model = torch.nn.Sequential(torch.nn.Linear(1, 1))
+    assert get_device_from_model(model) == torch.device('cpu')
+
 
 def test__get_number_of_available_cores() -> None:
 
