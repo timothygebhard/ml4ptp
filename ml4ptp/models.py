@@ -70,10 +70,10 @@ class Model(pl.LightningModule):
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
-            'ml4ptp.encoders', encoder_config['name']
+            module_name='ml4ptp.encoders', member_name=encoder_config['name']
         )(**encoder_config['parameters'], **normalization_config)
         self.decoder = get_member_by_name(
-            'ml4ptp.decoders', decoder_config['name']
+            module_name='ml4ptp.decoders', member_name=decoder_config['name']
         )(**decoder_config['parameters'], **normalization_config)
 
     def configure_optimizers(self) -> dict:
