@@ -67,10 +67,20 @@ def evaluate_on_test_set(
         T_pred_optimal_all.append(T_pred_optimal_)
 
     # Merge batch results and cast to numpy
-    z_initial = np.asarray(torch.row_stack(z_initial_all).numpy())
-    z_optimal = np.asarray(torch.row_stack(z_optimal_all).numpy())
-    T_true = np.asarray(torch.row_stack(T_true_all).numpy())
-    T_pred_initial = np.asarray(torch.row_stack(T_pred_initial_all).numpy())
-    T_pred_optimal = np.asarray(torch.row_stack(T_pred_optimal_all).numpy())
+    z_initial = np.asarray(
+        torch.row_stack(z_initial_all).detach().cpu().numpy()
+    )
+    z_optimal = np.asarray(
+        torch.row_stack(z_optimal_all).detach().cpu().numpy()
+    )
+    T_true = np.asarray(
+        torch.row_stack(T_true_all).detach().cpu().numpy()
+    )
+    T_pred_initial = np.asarray(
+        torch.row_stack(T_pred_initial_all).detach().cpu().numpy()
+    )
+    T_pred_optimal = np.asarray(
+        torch.row_stack(T_pred_optimal_all).detach().cpu().numpy()
+    )
 
     return z_initial, z_optimal, T_true, T_pred_initial, T_pred_optimal
