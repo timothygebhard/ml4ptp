@@ -1,5 +1,5 @@
 """
-Train a model.
+Train a model and run basic evaluation.
 """
 
 # -----------------------------------------------------------------------------
@@ -11,6 +11,8 @@ from shutil import copy
 
 import argparse
 import time
+
+import h5py
 import yaml
 
 from pytorch_lightning import Trainer
@@ -25,10 +27,11 @@ from pytorch_lightning.utilities.seed import seed_everything
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
 from ml4ptp.exporting import export_model_with_torchscript
+from ml4ptp.evaluation import evaluate_on_test_set
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
-from ml4ptp.utils import get_run_dir, resolve_gpus
+from ml4ptp.utils import get_device_from_model, get_run_dir, resolve_gpus
 
 
 # -----------------------------------------------------------------------------
@@ -224,6 +227,32 @@ if __name__ == "__main__":
     export_model_with_torchscript(model=model.decoder, file_path=file_path)
 
     print('Done!', flush=True)
+
+    # -------------------------------------------------------------------------
+    # Evaluate the model on the test set
+    # -------------------------------------------------------------------------
+
+    # Run test set through model and apply LBFGS optimization to latent z
+    (
+        z_initial,
+        z_optimal,
+        T_true,
+        T_pred_initial,
+        T_pred_optimal,
+    ) = evaluate_on_test_set(
+        model=model,
+        test_dataloader=datamodule.test_dataloader(),
+        device=get_device_from_model(model),
+    )
+
+    # Save results to HDF file
+    file_path = run_dir / 'results_on_test_set.hdf'
+    with h5py.File(file_path, 'w') as hdf_file:
+        hdf_file.create_dataset(name='z_initial', data=z_initial)
+        hdf_file.create_dataset(name='z_optimal', data=z_optimal)
+        hdf_file.create_dataset(name='T_true', data=T_true)
+        hdf_file.create_dataset(name='T_pred_initial', data=T_pred_initial)
+        hdf_file.create_dataset(name='T_pred_optimal', data=T_pred_optimal)
 
     # -------------------------------------------------------------------------
     # Postliminaries
