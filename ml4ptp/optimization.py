@@ -50,8 +50,8 @@ def optimize_z_with_lbfgs(
 
     # Ensure the decoder model is in evaluation mode; move things to device
     decoder.eval().to(device)
-    log_P = log_P.to(device)
-    T_true = T_true.to(device)
+    log_P = log_P.to(device).detach()
+    T_true = T_true.to(device).detach()
 
     # Instantiate list to store results from batch-wise processing
     z_optimal_all = []
@@ -65,7 +65,8 @@ def optimize_z_with_lbfgs(
     for idx in np.array_split(all_idx, n_splits):
 
         # Create a new optimization target
-        z_optimal = z_initial[idx].clone().requires_grad_(True).to(device)
+        z_optimal = z_initial[idx].clone().to(device).detach()
+        z_optimal.requires_grad = True
 
         # Set up a new optimizer
         optim = torch.optim.LBFGS(params=[z_optimal], lr=1, max_iter=100)
