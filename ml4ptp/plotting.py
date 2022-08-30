@@ -56,14 +56,15 @@ def plot_profile_to_tensorboard(
             log_P[i].detach().cpu().numpy(),
             '.',
             color='C0',
-            label='True PT profile',
+            label='True',
         )
         ax.plot(
             T_pred[i].detach().cpu().numpy(),
             log_P[i].detach().cpu().numpy(),
-            '.',
+            '-',
+            lw=0.5,
             color='C1',
-            label='Reconstructed PT profile',
+            label='Pred.',
         )
 
         # Set plot options
