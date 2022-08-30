@@ -62,7 +62,7 @@ def plot_profile_to_tensorboard(
             T_pred[i].detach().cpu().numpy(),
             log_P[i].detach().cpu().numpy(),
             '-',
-            lw=0.5,
+            lw=1.5,
             color='C1',
             label='Pred.',
         )
