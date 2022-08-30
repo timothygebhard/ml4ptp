@@ -254,13 +254,13 @@ class Model(pl.LightningModule):
         plt.close(figure)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        pass
+        pass  # pragma: no cover
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        pass
+        pass  # pragma: no cover
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
-        pass
+        pass  # pragma: no cover
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        pass
+        pass  # pragma: no cover
