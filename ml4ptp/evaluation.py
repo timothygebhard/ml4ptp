@@ -35,23 +35,24 @@ def evaluate_on_test_set(
     z_initial_all = []
     z_optimal_all = []
     T_true_all = []
+    log_P_all = []
     T_pred_initial_all = []
     T_pred_optimal_all = []
 
     # Loop over data in batches
-    for log_P, T in track(
+    for log_P_, T in track(
         sequence=test_dataloader,
         description='Optimizing z:',
     ):
 
         # Compute "normal" pass through the model (encoder and decoder)
-        z_initial_, T_pred_initial_ = model(log_P=log_P, T=T)
+        z_initial_, T_pred_initial_ = model(log_P=log_P_, T=T)
 
         # Use the value of z from the encoder as a starting point for an
         # optimizer to find the best input value to the decoder
         z_optimal_, T_pred_optimal_ = optimize_z_with_lbfgs(
             z_initial=z_initial_.detach(),
-            log_P=log_P,
+            log_P=log_P_,
             T_true=T,
             decoder=model.decoder,
             n_epochs=100,
@@ -63,6 +64,7 @@ def evaluate_on_test_set(
         z_initial_all.append(z_initial_)
         z_optimal_all.append(z_optimal_)
         T_true_all.append(T)
+        log_P_all.append(log_P_)
         T_pred_initial_all.append(T_pred_initial_)
         T_pred_optimal_all.append(T_pred_optimal_)
 
@@ -76,6 +78,9 @@ def evaluate_on_test_set(
     T_true = np.asarray(
         torch.row_stack(T_true_all).detach().cpu().numpy()
     )
+    log_P = np.asarray(
+        torch.row_stack(log_P_all).detach().cpu().numpy()
+    )
     T_pred_initial = np.asarray(
         torch.row_stack(T_pred_initial_all).detach().cpu().numpy()
     )
@@ -83,4 +88,4 @@ def evaluate_on_test_set(
         torch.row_stack(T_pred_optimal_all).detach().cpu().numpy()
     )
 
-    return z_initial, z_optimal, T_true, T_pred_initial, T_pred_optimal
+    return z_initial, z_optimal, T_true, log_P, T_pred_initial, T_pred_optimal

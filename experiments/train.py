@@ -238,6 +238,7 @@ if __name__ == "__main__":
         z_initial,
         z_optimal,
         T_true,
+        log_P,
         T_pred_initial,
         T_pred_optimal,
     ) = evaluate_on_test_set(
@@ -253,6 +254,7 @@ if __name__ == "__main__":
         hdf_file.create_dataset(name='z_initial', data=z_initial)
         hdf_file.create_dataset(name='z_optimal', data=z_optimal)
         hdf_file.create_dataset(name='T_true', data=T_true)
+        hdf_file.create_dataset(name='log_P', data=log_P)
         hdf_file.create_dataset(name='T_pred_initial', data=T_pred_initial)
         hdf_file.create_dataset(name='T_pred_optimal', data=T_pred_optimal)
     print('Done!', flush=True)
