@@ -226,13 +226,14 @@ if __name__ == "__main__":
     file_path = run_dir / 'decoder.pt'
     export_model_with_torchscript(model=model.decoder, file_path=file_path)
 
-    print('Done!', flush=True)
+    print('Done!\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Evaluate the model on the test set
     # -------------------------------------------------------------------------
 
     # Run test set through model and apply LBFGS optimization to latent z
+    print('Evaluating trained model on test set:', flush=True)
     (
         z_initial,
         z_optimal,
@@ -246,6 +247,7 @@ if __name__ == "__main__":
     )
 
     # Save results to HDF file
+    print('Saving evaluation results to HDF file...', end=' ', flush=True)
     file_path = run_dir / 'results_on_test_set.hdf'
     with h5py.File(file_path, 'w') as hdf_file:
         hdf_file.create_dataset(name='z_initial', data=z_initial)
@@ -253,6 +255,7 @@ if __name__ == "__main__":
         hdf_file.create_dataset(name='T_true', data=T_true)
         hdf_file.create_dataset(name='T_pred_initial', data=T_pred_initial)
         hdf_file.create_dataset(name='T_pred_optimal', data=T_pred_optimal)
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
