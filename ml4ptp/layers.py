@@ -13,6 +13,25 @@ import torch.nn as nn
 
 
 # -----------------------------------------------------------------------------
+# FUNCTION DEFINITIONS
+# -----------------------------------------------------------------------------
+
+def get_mlp_layers(
+    input_size: int,
+    n_layers: int,
+    layer_size: int,
+    output_size: int = 1,
+) -> nn.Sequential:
+
+    layers = [nn.Linear(input_size, layer_size), nn.LeakyReLU()]
+    for i in range(n_layers):
+        layers += [nn.Linear(layer_size, layer_size), nn.LeakyReLU()]
+    layers += [nn.Linear(layer_size, output_size)]
+
+    return nn.Sequential(*layers)
+
+
+# -----------------------------------------------------------------------------
 # CLASS DEFINITIONS
 # -----------------------------------------------------------------------------
 

@@ -9,12 +9,35 @@ Unit tests for layers.py
 import pytest
 import torch
 
-from ml4ptp.layers import Mean, PrintShape, Squeeze, View
+from ml4ptp.layers import get_mlp_layers, Mean, PrintShape, Squeeze, View
 
 
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__get_mlp_layers() -> None:
+
+    # Case 1
+    layers = get_mlp_layers(
+        input_size=2,
+        n_layers=0,
+        layer_size=2,
+        output_size=1
+    )
+    assert len(layers) == 3
+    assert isinstance(layers[0], torch.nn.Linear)
+
+    # Case 2
+    layers = get_mlp_layers(
+        input_size=2,
+        n_layers=2,
+        layer_size=2,
+        output_size=1
+    )
+    assert len(layers) == 7
+    assert isinstance(layers[1], torch.nn.LeakyReLU)
+
 
 def test__mean() -> None:
 
