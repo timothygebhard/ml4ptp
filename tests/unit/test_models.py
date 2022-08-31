@@ -23,6 +23,7 @@ from ml4ptp.models import Model
 # TESTS
 # -----------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def hdf_file(tmp_path: Path) -> Path:
     """
@@ -50,10 +51,13 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     encoder_config = dict(
         name='MLPEncoder',
-        parameters=dict(input_size=13, layer_size=2, latent_size=1),
+        parameters=dict(
+            input_size=13, layer_size=2, latent_size=1, n_layers=2
+        ),
     )
     decoder_config = dict(
-        name='Decoder', parameters=dict(layer_size=2, latent_size=1)
+        name='Decoder',
+        parameters=dict(layer_size=2, latent_size=1, n_layers=2),
     )
     optimizer_config = dict(name='AdamW', parameters=dict(lr=3e-4))
     loss_config = dict(n_samples=100, beta=100)

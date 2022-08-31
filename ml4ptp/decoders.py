@@ -6,11 +6,10 @@ Define decoder architectures.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from typing import Callable
-
 import torch
 import torch.nn as nn
 
+from ml4ptp.layers import get_mlp_layers
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -24,6 +23,7 @@ class Decoder(nn.Module, NormalizerMixin):
         self,
         latent_size: int,
         layer_size: int,
+        n_layers: int,
         T_mean: float,
         T_std: float,
     ) -> None:
@@ -33,20 +33,18 @@ class Decoder(nn.Module, NormalizerMixin):
         # Store constructor arguments
         self.latent_size = latent_size
         self.layer_size = layer_size
+        self.n_layers = n_layers
         self.T_mean = float(T_mean)
         self.T_std = float(T_std)
 
         # Define encoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we
         # want to evaluate the profile represented by this decoder.
-        self.layers: Callable[[torch.Tensor], torch.Tensor] = nn.Sequential(
-            nn.Linear(self.latent_size + 1, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, 1),
+        self.layers = get_mlp_layers(
+            input_size=latent_size + 1,
+            n_layers=n_layers,
+            layer_size=layer_size,
+            output_size=1,
         )
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:

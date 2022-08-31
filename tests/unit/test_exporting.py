@@ -34,7 +34,9 @@ def model() -> torch.nn.Sequential:
 @pytest.fixture()
 def decoder() -> torch.nn.Module:
     torch.manual_seed(42)
-    model = Decoder(latent_size=2, layer_size=32, T_mean=300, T_std=50)
+    model = Decoder(
+        latent_size=2, layer_size=32, n_layers=2, T_mean=300, T_std=50
+    )
     return model
 
 

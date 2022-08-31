@@ -20,7 +20,9 @@ def test__decoder() -> None:
 
     torch.manual_seed(42)
 
-    decoder = Decoder(latent_size=5, layer_size=16, T_mean=1, T_std=2)
+    decoder = Decoder(
+        latent_size=5, layer_size=16, n_layers=2, T_mean=1, T_std=2
+    )
 
     # Case 1
     z = torch.randn(17, 5)

@@ -12,7 +12,7 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import Mean
+from ml4ptp.layers import get_mlp_layers, Mean
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -79,6 +79,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         input_size: int,
         latent_size: int,
         layer_size: int,
+        n_layers: int,
         T_mean: float,
         T_std: float,
     ) -> None:
@@ -89,18 +90,16 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         self.input_size = input_size
         self.latent_size = latent_size
         self.layer_size = layer_size
+        self.n_layers = n_layers
         self.T_mean = T_mean
         self.T_std = T_std
 
         # Define encoder architecture
-        self.layers: Callable[[torch.Tensor], torch.Tensor] = nn.Sequential(
-            nn.Linear(2 * self.input_size, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, self.layer_size),
-            nn.LeakyReLU(),
-            nn.Linear(self.layer_size, self.latent_size),
+        self.layers = get_mlp_layers(
+            input_size=2 * self.input_size,
+            layer_size=self.layer_size,
+            n_layers=self.n_layers,
+            output_size=self.latent_size,
         )
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
