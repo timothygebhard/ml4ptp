@@ -6,6 +6,8 @@ Define decoder architectures.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from typing import Callable
+
 import torch
 import torch.nn as nn
 
@@ -40,7 +42,7 @@ class Decoder(nn.Module, NormalizerMixin):
         # Define encoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we
         # want to evaluate the profile represented by this decoder.
-        self.layers = get_mlp_layers(
+        self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
             input_size=latent_size + 1,
             n_layers=n_layers,
             layer_size=layer_size,

@@ -95,7 +95,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         self.T_std = T_std
 
         # Define encoder architecture
-        self.layers = get_mlp_layers(
+        self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
             input_size=2 * self.input_size,
             layer_size=self.layer_size,
             n_layers=self.n_layers,
