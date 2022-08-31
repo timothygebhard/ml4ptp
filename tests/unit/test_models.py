@@ -23,7 +23,6 @@ from ml4ptp.models import Model
 # TESTS
 # -----------------------------------------------------------------------------
 
-
 @pytest.fixture()
 def hdf_file(tmp_path: Path) -> Path:
     """
@@ -65,7 +64,10 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     lr_scheduler_config = dict(
         name='StepLR', parameters=dict(step_size=30, gamma=0.1)
     )
-    plotting_config = dict(min_T=0, max_T=350, min_log_P=0.5, max_log_P=-6.5)
+    plotting_config = dict(
+        enable_plotting=True,
+        pt_profile=dict(min_T=0, max_T=350, min_log_P=0.5, max_log_P=-6.5),
+    )
 
     model = Model(
         encoder_config=encoder_config,

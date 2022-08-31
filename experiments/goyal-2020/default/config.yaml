@@ -43,10 +43,12 @@ lr_scheduler: null
 
 # Parameters for plotting to TensorBoard
 plotting:
-  min_T: 0
-  max_T: 4000
-  min_log_P: 4.5
-  max_log_P: -6.5
+  enable_plotting: True
+  pt_profile:
+    min_T: 0
+    max_T: 4000
+    min_log_P: 4.5
+    max_log_P: -6.5
 
 # Parameters for the trainer
 trainer:

@@ -201,7 +201,7 @@ class Model(pl.LightningModule):
         )
 
         # At the beginning of every epoch, save some plots to TensorBoard
-        if batch_idx == 0:
+        if batch_idx == 0 and self.plotting_config['enable_plotting']:
             self.plot_z_to_tensorboard(z=z, label=stage)
             self.plot_profile_to_tensorboard(
                 z=z, log_P=log_P, T_true=T_true, T_pred=T_pred, label=stage
@@ -240,7 +240,7 @@ class Model(pl.LightningModule):
             log_P,
             T_true,
             T_pred,
-            self.plotting_config,
+            self.plotting_config['pt_profile'],
         )
 
         # Add figure to TensorBoard
