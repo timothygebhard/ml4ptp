@@ -4,8 +4,8 @@ datamodule:
   test_file_path: $ML4PTP_DATASETS_DIR/goyal-2020/output/test.hdf
   key_P: "/pt_profiles/pressure"
   key_T: "/pt_profiles/temperature"
-  train_size: 9000
-  val_size: 512
+  train_size: 10000
+  val_size: 1000
   batch_size: 256
   num_workers: 4
   persistent_workers: True
@@ -24,8 +24,8 @@ model:
     name: Decoder
     parameters:
       latent_size: 2
-      layer_size: 256
-      n_layers: 2
+      layer_size: 512
+      n_layers: 3
 
 # Parameters for the loss
 loss:
@@ -39,7 +39,13 @@ optimizer:
     lr: 0.0003
 
 # Parameters for the learning rate scheduler (see optimizer)
-lr_scheduler: null
+lr_scheduler:
+  name: OneCycleLR
+  interval: step
+  parameters:
+    max_lr: 0.01
+    epochs: 512
+    steps_per_epoch: 35
 
 # Parameters for plotting to TensorBoard
 plotting:
@@ -60,4 +66,4 @@ trainer:
 # Parameters for additional callbacks
 callbacks:
   early_stopping:
-    patience: 50
+    patience: 100
