@@ -52,7 +52,7 @@ plotting:
 
 # Parameters for the trainer
 trainer:
-  gpus: auto
+  accelerator: auto
   detect_anomaly: False
   log_every_n_steps: 10
   max_epochs: 512
