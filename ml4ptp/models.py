@@ -8,6 +8,7 @@ Define models.
 
 from typing import List, Optional, Tuple
 
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
@@ -75,6 +76,13 @@ class Model(pl.LightningModule):
         self.decoder = get_member_by_name(
             module_name='ml4ptp.decoders', member_name=decoder_config['name']
         )(**decoder_config['parameters'], **normalization_config)
+
+    @property
+    def tensorboard_logger(self) -> TensorBoardLogger:
+        if not isinstance(self.logger, TensorBoardLogger):
+            raise RuntimeError('No TensorBoard logger found!')
+        # noinspection PyTypeChecker
+        return self.logger
 
     def configure_optimizers(self) -> dict:
         """
@@ -216,7 +224,7 @@ class Model(pl.LightningModule):
         figure = plot_z_to_tensorboard(z)
 
         # Log the figure to TensorBoard
-        self.logger.experiment.add_figure(
+        self.tensorboard_logger.experiment.add_figure(
             tag=f'Latent distribution ({label})',
             figure=figure,
             global_step=self.current_epoch,
@@ -244,7 +252,7 @@ class Model(pl.LightningModule):
         )
 
         # Add figure to TensorBoard
-        self.logger.experiment.add_figure(
+        self.tensorboard_logger.experiment.add_figure(
             tag=f'Example profiles ({label})',
             figure=figure,
             global_step=self.current_epoch,
