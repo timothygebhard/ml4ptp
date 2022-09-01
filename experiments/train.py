@@ -31,7 +31,7 @@ from ml4ptp.evaluation import evaluate_on_test_set
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
-from ml4ptp.utils import get_device_from_model, get_run_dir, resolve_gpus
+from ml4ptp.utils import get_device_from_model, get_run_dir
 
 
 # -----------------------------------------------------------------------------
@@ -148,9 +148,9 @@ if __name__ == "__main__":
         **config['callbacks']['early_stopping']
     )
 
-    # Define default arguments for the Trainer, then add values from
-    # experiment configuration file (possibly overwriting the defaults)
-    trainer_params = dict(
+    # Finally, create the trainer
+    print('\nPreparing Trainer:', flush=True)
+    trainer = Trainer(
         callbacks=[
             checkpoint_callback,
             early_stopping_callback,
@@ -158,15 +158,8 @@ if __name__ == "__main__":
         ],
         default_root_dir=expandvars(experiment_dir).as_posix(),
         logger=logger,
+        **config['trainer'],
     )
-    for key, value in config['trainer'].items():
-        if key == 'gpus':
-            value = resolve_gpus(gpus=value)
-        trainer_params[key] = value
-
-    # Finally, create the trainer
-    print('\nPreparing Trainer:', flush=True)
-    trainer = Trainer(**trainer_params)
     print()
 
     # -------------------------------------------------------------------------

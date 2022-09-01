@@ -7,7 +7,6 @@ General utility functions.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Union
 
 import os
 
@@ -76,23 +75,6 @@ def get_run_dir(experiment_dir: Path) -> Path:
     run_dir.mkdir(exist_ok=True)
 
     return run_dir
-
-
-def resolve_gpus(gpus: Union[str, int]) -> int:
-    """
-    Auxiliary function to resolve the `gpus` argument for the trainer:
-    The argument "auto" should give the number of GPUs if CUDA is
-    available, and 0 otherwise.
-    """
-
-    # If we explicitly specify the number of GPUs, do not overwrite it
-    if gpus != 'auto':
-        return int(gpus)
-
-    # Otherwise, return either the number of available GPUs, or 0 (for CPU)
-    if torch.cuda.is_available():  # pragma: no cover
-        return torch.cuda.device_count()
-    return 0
 
 
 def setup_rich_progress_bar() -> Progress:

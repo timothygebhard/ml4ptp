@@ -15,7 +15,6 @@ from ml4ptp.utils import (
     get_device_from_model,
     get_number_of_available_cores,
     get_run_dir,
-    resolve_gpus,
     setup_rich_progress_bar,
     tensor_to_str
 )
@@ -55,15 +54,6 @@ def test__get_run_dir(tmp_path: Path) -> None:
     # Case 2: runs_dir does already exist
     run_dir = get_run_dir(experiment_dir=tmp_path)
     assert run_dir == tmp_path / 'runs' / 'run_1'
-
-
-def test__resolve_gpus() -> None:
-
-    # Case 1:
-    assert resolve_gpus(42) == 42
-
-    # Case 2:
-    assert isinstance(resolve_gpus("auto"), int)
 
 
 def test__setup_rich_progress_bar() -> None:
