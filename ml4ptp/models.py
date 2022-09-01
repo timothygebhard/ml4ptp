@@ -112,9 +112,7 @@ class Model(pl.LightningModule):
             )
             result['lr_scheduler'] = {
                 'scheduler': lr_scheduler,
-                'interval': getattr(
-                    self.lr_scheduler_config, 'interval', 'epoch'
-                ),
+                'interval': self.lr_scheduler_config.get('interval', 'epoch'),
                 'monitor': 'val/total_loss',
                 'frequency': 1,
             }
