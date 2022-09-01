@@ -110,7 +110,12 @@ class Model(pl.LightningModule):
                 optimizer=optimizer,
                 **self.lr_scheduler_config['parameters'],
             )
-            result['lr_scheduler'] = lr_scheduler
+            result['lr_scheduler'] = {
+                "scheduler": lr_scheduler,
+                "interval": "epoch",
+                "monitor": "val/total_loss",
+                "frequency": 1,
+            }
 
         return result
 
