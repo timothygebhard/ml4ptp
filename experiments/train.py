@@ -18,6 +18,7 @@ import yaml
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     EarlyStopping,
+    LearningRateMonitor,
     ModelCheckpoint,
     RichProgressBar,
 )
@@ -154,6 +155,7 @@ if __name__ == "__main__":
         callbacks=[
             checkpoint_callback,
             early_stopping_callback,
+            LearningRateMonitor(logging_interval='step'),
             RichProgressBar(),
         ],
         default_root_dir=expandvars(experiment_dir).as_posix(),
