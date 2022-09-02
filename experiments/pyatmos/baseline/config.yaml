@@ -1,0 +1,4 @@
+# For the baseline, we only need to specify the test file
+test_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf
+key_P: "P"
+key_T: "T"
