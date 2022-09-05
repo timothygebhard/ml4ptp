@@ -26,6 +26,8 @@ def evaluate_on_test_set(
     model: Model,
     test_dataloader: EVAL_DATALOADERS,
     device: torch.device = torch.device('cpu'),
+    n_epochs: int = 100,
+    batch_size: int = 128,
 ) -> Tuple[np.ndarray, ...]:
 
     # Make sure model is in evaluation mode
@@ -55,8 +57,8 @@ def evaluate_on_test_set(
             log_P=log_P_,
             T_true=T,
             decoder=model.decoder,
-            n_epochs=100,
-            batch_size=512,
+            n_epochs=n_epochs,
+            batch_size=batch_size,
             device=device,
         )
 
