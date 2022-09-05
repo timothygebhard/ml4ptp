@@ -19,7 +19,6 @@ from ml4ptp.encoders import ConvolutionalEncoder, MLPEncoder, CNPEncoder
 # TESTS
 # -----------------------------------------------------------------------------
 
-
 @pytest.fixture()
 def data() -> Tuple[torch.Tensor, torch.Tensor]:
 
@@ -67,7 +66,9 @@ def test__mlp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
 def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
 
     torch.manual_seed(42)
-    encoder = CNPEncoder(latent_size=5, layer_size=16, T_mean=1, T_std=2)
+    encoder = CNPEncoder(
+        latent_size=5, layer_size=16, n_layers=2, T_mean=1, T_std=2
+    )
 
     # Case 1
     log_P, T = data
