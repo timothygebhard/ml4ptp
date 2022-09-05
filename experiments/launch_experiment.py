@@ -65,7 +65,7 @@ def get_cli_args() -> argparse.Namespace:
     parser.add_argument(
         '--memory',
         type=int,
-        default=8192,
+        default=16384,
         help='Memory (in MB) to request for cluster job.',
     )
     parser.add_argument(
