@@ -1,0 +1,70 @@
+# Define the data set to load
+datamodule:
+  train_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/train.hdf
+  test_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf
+  key_P: "P"
+  key_T: "T"
+  train_size: 100000
+  val_size: 10000
+  batch_size: 1024
+  num_workers: 4
+  persistent_workers: True
+  shuffle: True
+  pin_memory: True
+  drop_last: True
+
+# Parameters for the encoder and decoder
+model:
+  encoder:
+    name: MLPEncoder
+    parameters:
+      input_size: 101
+      latent_size: 4
+      layer_size: 512
+      n_layers: 3
+  decoder:
+    name: Decoder
+    parameters:
+      latent_size: 4
+      layer_size: 512
+      n_layers: 3
+
+# Parameters for the loss
+loss:
+  n_samples: 1000
+  beta: 10000.0
+
+# Parameters for the optimizer
+optimizer:
+  name: AdamW
+  parameters:
+    lr: 0.0003
+
+# Parameters for the learning rate scheduler (see optimizer)
+lr_scheduler:
+  name: CosineAnnealingWarmRestarts
+  interval: epoch
+  parameters:
+    T_0: 8
+    T_mult: 2
+
+# Parameters for plotting to TensorBoard
+plotting:
+  enable_plotting: True
+  pt_profile:
+    min_T: 0
+    max_T: 350
+    min_log_P: 0.5
+    max_log_P: -6.5
+
+# Parameters for the trainer
+trainer:
+  accelerator: auto
+  detect_anomaly: False
+  log_every_n_steps: 10
+  max_epochs: 1024
+
+# Parameters for additional callbacks
+callbacks:
+  early_stopping:
+    patience: 100
