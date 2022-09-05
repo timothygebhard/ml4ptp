@@ -32,7 +32,7 @@ model:
 # Parameters for the loss
 loss:
   n_samples: 1000
-  beta: 10000.0
+  beta: 100000.0
 
 # Parameters for the optimizer
 optimizer:
@@ -42,11 +42,12 @@ optimizer:
 
 # Parameters for the learning rate scheduler (see optimizer)
 lr_scheduler:
-  name: CosineAnnealingWarmRestarts
+  name: ReduceLROnPlateau
   interval: epoch
   parameters:
-    T_0: 8
-    T_mult: 2
+    mode: min
+    factor: 0.1
+    patience: 10
 
 # Parameters for plotting to TensorBoard
 plotting:
