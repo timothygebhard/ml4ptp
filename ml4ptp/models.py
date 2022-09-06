@@ -148,8 +148,8 @@ class Model(pl.LightningModule):
 
         # Compute the MMD between z and a sample from a standard Gaussian
         true_samples = torch.randn(
-            self.loss_config['n_samples'], self.encoder.latent_size
-        ).type_as(z)
+            z.shape[0], self.encoder.latent_size, device=self.device,
+        )
         mmd_loss = self.loss_config['beta'] * compute_mmd(true_samples, z)
 
         # Compute the total loss
