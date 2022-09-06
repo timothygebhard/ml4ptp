@@ -123,6 +123,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         n_layers: int,
         T_mean: float,
         T_std: float,
+        deterministic: bool = True,
     ) -> None:
 
         super().__init__()
@@ -133,13 +134,14 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         self.n_layers = n_layers
         self.T_mean = T_mean
         self.T_std = T_std
+        self.deterministic = deterministic
 
         # Define encoder architecture
         self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
             input_size=2,
             layer_size=self.layer_size,
             n_layers=self.n_layers,
-            output_size=self.latent_size,
+            output_size=(2 - int(deterministic)) * self.latent_size,
         )
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
@@ -157,9 +159,25 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         z_values = self.layers(encoder_input)
 
         # Reshape to get grid dimension back
-        z_values = z_values.reshape(batch_size, grid_size, self.latent_size)
+        z_values = z_values.reshape(batch_size, grid_size, -1)
 
         # Aggregate along grid dimension to get final z
         z = torch.mean(z_values, dim=1)
+
+        # In case the encoder is not deterministic, we have just predicted
+        # the mean and standard deviation of a Gaussian, from which we still
+        # need to sample using the reparameterization trick
+        if not self.deterministic:
+
+            # Split z into mu and sigma
+            mu = z[:, :self.latent_size]
+            sigma = torch.exp(z[:, self.latent_size:])
+
+            # Evaluation mode is always deterministic
+            if self.training:
+                dist = torch.distributions.Normal(0, 1)
+                z = mu + sigma * dist.sample(mu.shape).type_as(mu)
+            else:
+                z = mu
 
         return z
