@@ -9,9 +9,10 @@ ignored/
 local/
 other/
 
-# Ignore "output" folders of data sets
+# Ignore data set files
 **/input/*/*
 **/output/
+*.zip
 
 # Ignore lightning logs
 runs/
