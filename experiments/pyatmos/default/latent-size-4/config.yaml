@@ -30,7 +30,7 @@ model:
 
 # Parameters for the loss
 loss:
-  beta: 200000.0
+  beta: 20000.0
 
 # Parameters for the optimizer
 optimizer:
