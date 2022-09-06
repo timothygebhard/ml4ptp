@@ -74,40 +74,8 @@ def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
         n_layers=2,
         T_mean=1,
         T_std=2,
-        deterministic=True,
     )
     log_P, T = data
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
     assert np.isclose(output.mean().item(), 0.00554615119472146)
-
-    # Case 2
-    encoder = CNPEncoder(
-        latent_size=5,
-        layer_size=16,
-        n_layers=2,
-        T_mean=1,
-        T_std=2,
-        deterministic=False,
-    )
-    encoder.train()
-    log_P, T = data
-    output = encoder.forward(log_P=log_P, T=T)
-    assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.12951301038265228)
-
-
-    # Case 3
-    encoder = CNPEncoder(
-        latent_size=5,
-        layer_size=16,
-        n_layers=2,
-        T_mean=1,
-        T_std=2,
-        deterministic=False,
-    )
-    encoder.eval()
-    log_P, T = data
-    output = encoder.forward(log_P=log_P, T=T)
-    assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.03222157806158066)
