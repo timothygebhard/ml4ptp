@@ -227,6 +227,15 @@ if __name__ == "__main__":
     # Evaluate the model on the test set
     # -------------------------------------------------------------------------
 
+    # Load "best" checkpoint
+    print('Loading best checkpoint...', end=' ', flush=True)
+    file_path = run_dir / 'checkpoints' / 'best.ckpt'
+    model.load_from_checkpoint(
+        checkpoint_path=file_path.as_posix(),
+        map_location=get_device_from_model(model)
+    )
+    print('Done!', flush=True)
+
     # Run test set through model and apply LBFGS optimization to latent z
     print('Evaluating trained model on test set:', flush=True)
     (
