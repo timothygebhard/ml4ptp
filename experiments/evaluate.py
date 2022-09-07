@@ -35,6 +35,12 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
+        '--batch-size',
+        type=int,
+        default=128,
+        help='Batch size for optimization with LBFGS.',
+    )
+    parser.add_argument(
         '--run',
         type=int,
         required=True,
@@ -134,6 +140,7 @@ if __name__ == "__main__":
         model=model,
         test_dataloader=datamodule.test_dataloader(),
         device=get_device_from_model(model),
+        batch_size=args.batch_size,
     )
 
     # Save results to HDF file
