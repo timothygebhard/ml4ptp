@@ -75,12 +75,12 @@ def evaluate_on_test_set(
         T_pred_optimal_all.append(T_pred_optimal_.detach().cpu().numpy())
 
         # Add some sanity checks to ensure we are not just producing NaNs
-        assert not any(np.isnan(z_initial_all[-1]))
-        assert not any(np.isnan(z_optimal_all[-1]))
-        assert not any(np.isnan(T_true_all[-1]))
-        assert not any(np.isnan(log_P_all[-1]))
-        assert not any(np.isnan(T_pred_initial_all[-1]))
-        assert not any(np.isnan(T_pred_optimal_all[-1]))
+        assert not np.any(np.isnan(z_initial_all[-1]))
+        assert not np.any(np.isnan(z_optimal_all[-1]))
+        assert not np.any(np.isnan(T_true_all[-1]))
+        assert not np.any(np.isnan(log_P_all[-1]))
+        assert not np.any(np.isnan(T_pred_initial_all[-1]))
+        assert not np.any(np.isnan(T_pred_optimal_all[-1]))
 
     # Merge batch results
     z_initial = np.row_stack(z_initial_all)
