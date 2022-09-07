@@ -24,6 +24,9 @@ def optimize_z_with_lbfgs(
     batch_size: int,
     device: torch.device,
     n_epochs: int = 10,
+    lr: float = 1,
+    max_iter: int = 10,
+    history_size: int = 10,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Given a `decoder` and an initial guess for `z`, use the L-BFGS
@@ -41,7 +44,13 @@ def optimize_z_with_lbfgs(
         decoder: A model that takes `z` and `log_P` and predicts `T`.
         batch_size: Number of profiles to optimize simultaneously.
         device: Device (CUDA or CPU) on which to run optimization.
-        n_epochs: Numer of optimization epochs.
+        n_epochs: Number of optimization epochs.
+        lr: The learning rate for the LBFGS optimizer.
+        max_iter: The maximum number of iterations.
+        history_size: The amount of history to keep. Note that LBFGS is
+            a very memory-intensive optimizer: As per the PyTorch docs,
+            it requires `param_bytes * (history_size + 1)` bytes of
+            memory.
 
     Returns:
         A tuple `(z_optimal, T_pred)` with the optimized values for `z`
@@ -68,8 +77,13 @@ def optimize_z_with_lbfgs(
         z_optimal = z_initial[idx].clone().to(device).detach()
         z_optimal.requires_grad = True
 
-        # Set up a new optimizer
-        optim = torch.optim.LBFGS(params=[z_optimal], lr=1, max_iter=100)
+        # Set up a new LBFGS optimizer
+        optim = torch.optim.LBFGS(
+            params=[z_optimal],
+            lr=lr,
+            max_iter=max_iter,
+            history_size=history_size,
+        )
 
         # Run several multiple optimization rounds
         for i in range(n_epochs):
