@@ -100,7 +100,8 @@ def optimize_z_with_lbfgs(
             optim.step(closure=lambda: float(loss))
 
         # Compute the optimized PT profiles from z_optimal for this batch
-        T_pred = decoder.forward(z=z_optimal, log_P=log_P[idx])
+        with torch.no_grad():
+            T_pred = decoder.forward(z=z_optimal, log_P=log_P[idx])
 
         # Store z_optimal and PT profiles for this batch
         z_optimal_all.append(z_optimal.detach().cpu())
