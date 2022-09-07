@@ -30,9 +30,15 @@ def get_cli_args() -> argparse.Namespace:
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--run-dir',
-        default=None,
-        help='Do not generate a new run dir, but use the given one.',
+        '--experiment-dir',
+        required=True,
+        help='Path to the experiment directory with the config.yaml',
+    )
+    parser.add_argument(
+        '--run',
+        type=int,
+        required=True,
+        help='Which run to evaluate.',
     )
     parser.add_argument(
         '--random-seed',
@@ -64,14 +70,16 @@ if __name__ == "__main__":
 
     # Get CLI arguments
     args = get_cli_args()
-    random_seed = args.random_seed
-    run_dir = Path(args.run_dir)
 
     # Load experiment configuration from YAML
     print('Loading experiment configuration...', end=' ', flush=True)
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
     config = load_config(experiment_dir / 'config.yaml')
     print('Done!\n', flush=True)
+
+    # Define shortcuts
+    random_seed = args.random_seed
+    run_dir = experiment_dir / 'runs' / f'run_{args.run}'
 
     # -------------------------------------------------------------------------
     # Prepare the dataset
@@ -87,14 +95,6 @@ if __name__ == "__main__":
     # Set up the model
     # -------------------------------------------------------------------------
 
-    # Collect the parameters for the normalization from the data module,
-    # unless we explicitly specify values in the configuration file
-    if 'normalization' not in config['model'].keys():
-        config['normalization'] = dict(
-            T_mean=datamodule.T_mean,
-            T_std=datamodule.T_std,
-        )
-
     # Instantiate the model as prescribed by the configuration file
     print('Setting up model...', end=' ', flush=True)
     model = Model(
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         decoder_config=config['model']['decoder'],
         optimizer_config=config['optimizer'],
         loss_config=config['loss'],
-        normalization_config=config['normalization'],
+        normalization_config=dict(T_mean=float('nan'), T_std=float('nan')),
         lr_scheduler_config=config['lr_scheduler'],
         plotting_config=config['plotting'],
     )
