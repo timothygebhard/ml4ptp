@@ -227,13 +227,17 @@ if __name__ == "__main__":
     # Evaluate the model on the test set
     # -------------------------------------------------------------------------
 
+    # Store the device (CPU or CUDA)
+    device = get_device_from_model(model)
+
     # Load "best" checkpoint
     print('Loading best checkpoint...', end=' ', flush=True)
     file_path = run_dir / 'checkpoints' / 'best.ckpt'
-    model.load_from_checkpoint(
+    model = model.load_from_checkpoint(
         checkpoint_path=file_path.as_posix(),
-        map_location=get_device_from_model(model)
+        map_location=device,
     )
+    model.to(device)
     print('Done!', flush=True)
 
     # Run test set through model and apply LBFGS optimization to latent z

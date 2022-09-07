@@ -123,10 +123,6 @@ if __name__ == "__main__":
     )
     print('Done!', flush=True)
 
-    # Move model to GPU, if possible
-    if torch.cuda.is_available():
-        model.to(torch.device('cuda'))
-
     # -------------------------------------------------------------------------
     # Evaluate the model on the test set
     # -------------------------------------------------------------------------
@@ -134,11 +130,15 @@ if __name__ == "__main__":
     # Load "best" checkpoint
     print('Loading best checkpoint...', end=' ', flush=True)
     file_path = run_dir / 'checkpoints' / 'best.ckpt'
-    model.load_from_checkpoint(
+    model = model.load_from_checkpoint(
         checkpoint_path=file_path.as_posix(),
         map_location=get_device_from_model(model)
     )
     print('Done!', flush=True)
+
+    # Move model to GPU, if possible
+    if torch.cuda.is_available():
+        model.to(torch.device('cuda'))
 
     # Run test set through model and apply LBFGS optimization to latent z
     print('Evaluating trained model on test set:', flush=True)
