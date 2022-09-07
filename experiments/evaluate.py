@@ -12,6 +12,7 @@ import argparse
 import time
 
 import h5py
+import torch
 
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
@@ -113,6 +114,10 @@ if __name__ == "__main__":
         plotting_config=config['plotting'],
     )
     print('Done!', flush=True)
+
+    # Move model to GPU, if possible
+    if torch.cuda.is_available():
+        model.to(torch.device('cuda'))
 
     # -------------------------------------------------------------------------
     # Evaluate the model on the test set
