@@ -66,13 +66,21 @@ def evaluate_on_test_set(
             history_size=history_size,
         )
 
-        # Store batch results (as numpy arraz on CPU!)
+        # Store batch results (as numpy array on CPU!)
         z_initial_all.append(z_initial_.detach().cpu().numpy())
         z_optimal_all.append(z_optimal_.detach().cpu().numpy())
         T_true_all.append(T.detach().cpu().numpy())
         log_P_all.append(log_P_.detach().cpu().numpy())
         T_pred_initial_all.append(T_pred_initial_.detach().cpu().numpy())
         T_pred_optimal_all.append(T_pred_optimal_.detach().cpu().numpy())
+
+        # Add some sanity checks to ensure we are not just producing NaNs
+        assert not any(np.isnan(z_initial_all[-1]))
+        assert not any(np.isnan(z_optimal_all[-1]))
+        assert not any(np.isnan(T_true_all[-1]))
+        assert not any(np.isnan(log_P_all[-1]))
+        assert not any(np.isnan(T_pred_initial_all[-1]))
+        assert not any(np.isnan(T_pred_optimal_all[-1]))
 
     # Merge batch results
     z_initial = np.row_stack(z_initial_all)
