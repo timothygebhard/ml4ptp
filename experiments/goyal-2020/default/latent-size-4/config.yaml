@@ -1,0 +1,69 @@
+# Define the data set to load
+datamodule:
+  train_file_path: $ML4PTP_DATASETS_DIR/goyal-2020/output/train.hdf
+  test_file_path: $ML4PTP_DATASETS_DIR/goyal-2020/output/test.hdf
+  key_P: "/pt_profiles/pressure"
+  key_T: "/pt_profiles/temperature"
+  train_size: 10000
+  val_size: 1000
+  batch_size: 256
+  num_workers: 4
+  persistent_workers: True
+  shuffle: True
+  pin_memory: True
+  drop_last: True
+
+# Parameters for the encoder and decoder
+model:
+  encoder:
+    name: CNPEncoder
+    parameters:
+      latent_size: 4
+      layer_size: 1024
+      n_layers: 5
+  decoder:
+    name: Decoder
+    parameters:
+      latent_size: 4
+      layer_size: 512
+      n_layers: 3
+
+# Parameters for the loss
+loss:
+  beta: 20000.0
+
+# Parameters for the optimizer
+optimizer:
+  name: AdamW
+  parameters:
+    lr: 0.0003
+
+# Parameters for the learning rate scheduler (see optimizer)
+lr_scheduler:
+  name: ReduceLROnPlateau
+  interval: epoch
+  parameters:
+    mode: min
+    factor: 0.1
+    patience: 10
+
+# Parameters for plotting to TensorBoard
+plotting:
+  enable_plotting: True
+  pt_profile:
+    min_T: 0
+    max_T: 4000
+    min_log_P: 4.5
+    max_log_P: -6.5
+
+# Parameters for the trainer
+trainer:
+  accelerator: auto
+  detect_anomaly: False
+  log_every_n_steps: 10
+  max_epochs: 1000
+
+# Parameters for additional callbacks
+callbacks:
+  early_stopping:
+    patience: 100

@@ -16,21 +16,21 @@ datamodule:
 # Parameters for the encoder and decoder
 model:
   encoder:
-    name: ConvolutionalEncoder
+    name: CNPEncoder
     parameters:
-      latent_size: 2
-      layer_size: 256
+      latent_size: 5
+      layer_size: 1024
+      n_layers: 5
   decoder:
     name: Decoder
     parameters:
-      latent_size: 2
+      latent_size: 5
       layer_size: 512
       n_layers: 3
 
 # Parameters for the loss
 loss:
-  n_samples: 1000
-  beta: 10000.0
+  beta: 20000.0
 
 # Parameters for the optimizer
 optimizer:
@@ -40,12 +40,12 @@ optimizer:
 
 # Parameters for the learning rate scheduler (see optimizer)
 lr_scheduler:
-  name: OneCycleLR
-  interval: step
+  name: ReduceLROnPlateau
+  interval: epoch
   parameters:
-    max_lr: 0.01
-    epochs: 512
-    steps_per_epoch: 35
+    mode: min
+    factor: 0.1
+    patience: 10
 
 # Parameters for plotting to TensorBoard
 plotting:
@@ -61,7 +61,7 @@ trainer:
   accelerator: auto
   detect_anomaly: False
   log_every_n_steps: 10
-  max_epochs: 512
+  max_epochs: 1000
 
 # Parameters for additional callbacks
 callbacks:
