@@ -28,6 +28,7 @@ def evaluate_on_test_set(
     device: torch.device = torch.device('cpu'),
     n_epochs: int = 100,
     batch_size: int = 128,
+    history_size: int = 10,
 ) -> Tuple[np.ndarray, ...]:
 
     # Make sure model is in evaluation mode
@@ -60,6 +61,7 @@ def evaluate_on_test_set(
             n_epochs=n_epochs,
             batch_size=batch_size,
             device=device,
+            history_size=history_size,
         )
 
         # Store batch results
