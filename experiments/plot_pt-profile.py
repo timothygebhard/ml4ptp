@@ -7,7 +7,6 @@ Create plot of a PT profile from test set.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import List
 
 import argparse
 import time
@@ -18,22 +17,13 @@ import numpy as np
 
 from ml4ptp.config import load_config
 from ml4ptp.paths import expandvars
-from ml4ptp.plotting import plot_pt_profile
+from ml4ptp.plotting import set_fontsize
+from ml4ptp.utils import find_run_dirs_with_results
 
 
 # -----------------------------------------------------------------------------
 # DEFINITIONS
 # -----------------------------------------------------------------------------
-
-def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
-
-    runs_dir = experiment_dir / 'runs'
-    run_dirs = filter(
-        lambda _: (_ / 'results_on_test_set.hdf').exists(),
-        runs_dir.glob('run_*')
-    )
-    return sorted(run_dirs)
-
 
 def get_cli_args() -> argparse.Namespace:
 
@@ -144,12 +134,44 @@ if __name__ == "__main__":
 
     # Create the plot of the PT profile
     print('Plotting the PT profile...', end=' ', flush=True)
-    fig, ax = plot_pt_profile(
-        pt_profiles=pt_profiles,
-        latent_size=latent_size,
-        xlim=xlim,
-        ylim=ylim,
+
+    # Create a new figure
+    fig, ax = plt.subplots(figsize=(3.2 / 2.54, 3.0 / 2.54))
+
+    # Loop over different file paths (usually those are different runs)
+    for i, (log_P, T_true, T_pred) in enumerate(pt_profiles):
+
+        # Plot the true PT profile and the best polynomial fit (only once)
+        if i == 0:
+
+            # Draw the true PT profile
+            ax.plot(T_true, log_P, 'o', ms=1, mec='none', mfc='k', zorder=99)
+
+            # Fit the true PT profile with a polynomial and plot the result
+            p = np.polyfit(log_P, T_true, deg=latent_size - 1)
+            T_pred_poly = np.polyval(p=p, x=log_P)
+            ax.plot(T_pred_poly, log_P, lw=1, color='C1')
+
+        # Plot the best fit obtained with the decoder model
+        ax.plot(T_pred, log_P, lw=1, color='C0')
+
+    # Set up ax labels, limits, etc.
+    ax.set_xticks(np.linspace(int(xlim[0]), int(xlim[1]), 3, endpoint=True))
+    ax.set_yticks(range(int(ylim[1]), int(ylim[0]) + 1, 1))
+    ax.set_xlabel('Temperature (K)')
+    ax.set_ylabel('log(Pressure / bar)')
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    set_fontsize(ax, 6)
+
+    # Adjust spacing around the plot
+    plt.subplots_adjust(
+        left=0.30,
+        bottom=0.275,
+        right=0.90,
+        top=0.975,
     )
+
     print('Done!', flush=True)
     print('Saving plot to PDF...', end=' ', flush=True)
 
