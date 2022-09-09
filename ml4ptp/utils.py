@@ -7,6 +7,7 @@ General utility functions.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
+from typing import List
 
 import os
 
@@ -24,6 +25,16 @@ import torch
 # -----------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
+
+def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
+
+    runs_dir = experiment_dir / 'runs'
+    run_dirs = filter(
+        lambda _: (_ / 'results_on_test_set.hdf').exists(),
+        runs_dir.glob('run_*'),
+    )
+    return sorted(run_dirs)
+
 
 def get_device_from_model(model: torch.nn.Module) -> torch.device:
     """
