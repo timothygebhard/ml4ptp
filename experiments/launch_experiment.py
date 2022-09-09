@@ -34,6 +34,13 @@ def get_cli_args() -> argparse.Namespace:
         help='How much to bid for the cluster job.',
     )
     parser.add_argument(
+        '--blacklist',
+        type=str,
+        nargs='+',
+        default='',
+        help='Names of nodes (e.g., "g019") to exclude from running jobs.',
+    )
+    parser.add_argument(
         '--cpus',
         type=int,
         default=4,
@@ -53,19 +60,18 @@ def get_cli_args() -> argparse.Namespace:
     parser.add_argument(
         '--gpu-memory',
         type=int,
-        default=0,
+        default=8_192,
         help='GPU memory (in MB) to request for cluster job.',
     )
     parser.add_argument(
         '--experiment-dir',
-        # required=True,
-        default='$ML4PTP_EXPERIMENTS_DIR/default-pyatmos',
+        required=True,
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
         '--memory',
         type=int,
-        default=16384,
+        default=16_384,
         help='Memory (in MB) to request for cluster job.',
     )
     parser.add_argument(
@@ -127,6 +133,26 @@ if __name__ == "__main__":
         f'--random-seed {args.random_seed}',
     ]
 
+    # Collect requirements
+    requirements = []
+    if args.gpus > 0 and args.gpu_memory > 0:
+        requirements += [f'TARGET.CUDAGlobalMemoryMb > {args.gpu_memory}']
+    for node_name in list(args.blacklist):
+        print(node_name)
+        requirements += [
+            f'TARGET.Machine != "{node_name}.internal.cluster.is.localnet"'
+        ]
+
+    # Construct string from requirements
+    requirements_string = ''
+    for i, requirement in enumerate(requirements):
+        if i == 0:
+            requirements_string += f'requirements   = {requirement} && \\\n'
+        elif i < len(requirements) - 1:
+            requirements_string += f'%                {requirement} && \\\n'
+        else:
+            requirements_string += f'%                {requirement}'
+
     # Collect the lines for the *.sub file
     lines = f"""
         getenv = true
@@ -142,12 +168,12 @@ if __name__ == "__main__":
         request_cpus   = {args.cpus}
         request_gpus   = {args.gpus}
 
-        requirements   = TARGET.CUDAGlobalMemoryMb > {args.gpu_memory}
-
+        {requirements_string}
+ 
         queue
         """
-    lines = '\n'.join(_.strip() for _ in lines.split('\n'))
-
+    lines = '\n'.join(_.strip().replace('%', ' ') for _ in lines.split('\n'))
+ 
     # Create the *.sub file in the HTCondor directory
     print('Creating run.sub file...', end=' ', flush=True)
     file_path = htcondor_dir / 'run.sub'
