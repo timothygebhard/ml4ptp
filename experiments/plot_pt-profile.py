@@ -41,6 +41,11 @@ def get_cli_args() -> argparse.Namespace:
         help='Index of the PT profile in the test set.',
     )
     parser.add_argument(
+        '--no-baseline',
+        action='store_true',
+        help='Use this flag to not plot the polynomial baseline.',
+    )
+    parser.add_argument(
         '--xlim',
         nargs='+',
         type=float,
@@ -148,9 +153,10 @@ if __name__ == "__main__":
             ax.plot(T_true, log_P, 'o', ms=1, mec='none', mfc='k', zorder=99)
 
             # Fit the true PT profile with a polynomial and plot the result
-            p = np.polyfit(log_P, T_true, deg=latent_size - 1)
-            T_pred_poly = np.polyval(p=p, x=log_P)
-            ax.plot(T_pred_poly, log_P, lw=1, color='C1')
+            if not args.no_baseline:
+                p = np.polyfit(log_P, T_true, deg=latent_size - 1)
+                T_pred_poly = np.polyval(p=p, x=log_P)
+                ax.plot(T_pred_poly, log_P, lw=1, color='C1')
 
         # Plot the best fit obtained with the decoder model
         ax.plot(T_pred, log_P, lw=1, color='C0')
