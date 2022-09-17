@@ -142,13 +142,15 @@ if __name__ == "__main__":
         requirements += [
             f'TARGET.Machine != "{node_name}.internal.cluster.is.localnet"'
         ]
+    n_requirements = len(requirements)
 
     # Construct string from requirements
     requirements_string = ''
     for i, requirement in enumerate(requirements):
         if i == 0:
-            requirements_string += f'requirements   = {requirement} && \\\n'
-        elif i < len(requirements) - 1:
+            requirements_string += f'requirements   = {requirement}'
+            requirements_string += ' && \\\n' if n_requirements > 1 else ' \n'
+        elif i < n_requirements - 1:
             requirements_string += f'%                {requirement} && \\\n'
         else:
             requirements_string += f'%                {requirement}'
