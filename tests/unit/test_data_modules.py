@@ -52,11 +52,12 @@ def test__data_module(hdf_file: Path) -> None:
         train_size=11,
         val_size=3,
         batch_size=1,
+        normalization='whiten'
     )
     dm.prepare_data()
 
-    assert np.isclose(dm.T_mean, 72)
-    assert np.isclose(dm.T_std, 41.42462921142578)
+    assert np.isclose(dm.T_offset, 72)
+    assert np.isclose(dm.T_factor, 41.42462921142578)
     assert len(dm.train_dataloader()) == 8
     assert len(dm.val_dataloader()) == 3
 
@@ -71,6 +72,7 @@ def test__data_module(hdf_file: Path) -> None:
         train_file_path=None,
         test_file_path=hdf_file,
         batch_size=2,
+        normalization='whiten'
     )
     dm.prepare_data()
 
@@ -86,3 +88,19 @@ def test__data_module(hdf_file: Path) -> None:
 
     with pytest.raises(NotImplementedError):
         dm.predict_dataloader()
+
+    # Case 3
+    dm = DataModule(
+        key_P='P',
+        key_T='T',
+        train_file_path=hdf_file,
+        test_file_path=None,
+        train_size=11,
+        val_size=3,
+        batch_size=1,
+        normalization='minmax'
+    )
+    dm.prepare_data()
+
+    assert np.isclose(dm.T_offset, 1)
+    assert np.isclose(dm.T_factor, 11 * 13 - 1)
