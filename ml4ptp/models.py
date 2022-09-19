@@ -69,6 +69,9 @@ class Model(pl.LightningModule):
         self.plotting_config = plotting_config
         self.lr_scheduler_config = lr_scheduler_config
 
+        # Define some shortcuts
+        self.beta = self.loss_config['beta']
+
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
             module_name='ml4ptp.encoders', member_name=encoder_config['name']
@@ -150,10 +153,10 @@ class Model(pl.LightningModule):
         true_samples = torch.randn(
             z.shape[0], self.encoder.latent_size, device=self.device,
         )
-        mmd_loss = self.loss_config['beta'] * compute_mmd(true_samples, z)
+        mmd_loss = compute_mmd(true_samples, z)
 
         # Compute the total loss
-        total_loss = reconstruction_loss + mmd_loss
+        total_loss = reconstruction_loss + self.beta * mmd_loss
 
         return total_loss, reconstruction_loss, mmd_loss
 
