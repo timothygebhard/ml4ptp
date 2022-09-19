@@ -54,7 +54,7 @@ class PTProfile:
         z_in = torch.from_numpy(np.tile(A=z, reps=(log_P.shape[0], 1))).float()
 
         # Send through the model
-        with torch.no_grad():  # type: ignore
+        with torch.no_grad():
             T = self.model.forward(z=z_in, log_P=log_P_in).numpy()
 
         return np.asarray(np.atleast_1d(T.squeeze()))
