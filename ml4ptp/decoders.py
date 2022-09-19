@@ -28,6 +28,8 @@ class Decoder(nn.Module, NormalizerMixin):
         n_layers: int,
         T_mean: float,
         T_std: float,
+        activation: str = 'leaky_relu',
+        final_sigmoid: bool = False,
     ) -> None:
 
         super().__init__()
@@ -47,6 +49,8 @@ class Decoder(nn.Module, NormalizerMixin):
             n_layers=n_layers,
             layer_size=layer_size,
             output_size=1,
+            activation=activation,
+            final_sigmoid=final_sigmoid,
         )
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
@@ -90,8 +94,5 @@ class Decoder(nn.Module, NormalizerMixin):
 
         # Undo normalization (i.e., transform back to Kelvin)
         T_pred = self.normalize(T_pred, undo=True)
-
-        # Enforce physical constraints: temperature must not be negative
-        T_pred = torch.relu(T_pred)
 
         return T_pred
