@@ -26,8 +26,8 @@ class Decoder(nn.Module, NormalizerMixin):
         latent_size: int,
         layer_size: int,
         n_layers: int,
-        T_mean: float,
-        T_std: float,
+        T_offset: float,
+        T_factor: float,
         activation: str = 'leaky_relu',
         final_sigmoid: bool = False,
     ) -> None:
@@ -38,8 +38,8 @@ class Decoder(nn.Module, NormalizerMixin):
         self.latent_size = latent_size
         self.layer_size = layer_size
         self.n_layers = n_layers
-        self.T_mean = float(T_mean)
-        self.T_std = float(T_std)
+        self.T_offset = float(T_offset)
+        self.T_factor = float(T_factor)
 
         # Define encoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we

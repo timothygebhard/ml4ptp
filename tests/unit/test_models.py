@@ -51,16 +51,25 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     encoder_config = dict(
         name='MLPEncoder',
         parameters=dict(
-            input_size=13, layer_size=2, latent_size=1, n_layers=2
+            input_size=13,
+            layer_size=2,
+            latent_size=1,
+            n_layers=2,
         ),
     )
     decoder_config = dict(
         name='Decoder',
-        parameters=dict(layer_size=2, latent_size=1, n_layers=2),
+        parameters=dict(
+            layer_size=2,
+            latent_size=1,
+            n_layers=2,
+            activation='leaky_relu',
+            final_sigmoid=False,
+        ),
     )
     optimizer_config = dict(name='AdamW', parameters=dict(lr=3e-4))
     loss_config = dict(n_samples=100, beta=100)
-    normalization_config = dict(T_mean=0, T_std=1)
+    normalization_config = dict(T_offset=0, T_factor=1)
     lr_scheduler_config = dict(
         name='StepLR', parameters=dict(step_size=30, gamma=0.1)
     )

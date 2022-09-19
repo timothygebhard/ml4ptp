@@ -28,8 +28,8 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         latent_size: int,
         layer_size: int,
         n_layers: int,
-        T_mean: float,
-        T_std: float,
+        T_offset: float,
+        T_factor: float,
     ) -> None:
 
         super().__init__()
@@ -39,8 +39,8 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         self.latent_size = latent_size
         self.layer_size = layer_size
         self.n_layers = n_layers
-        self.T_mean = T_mean
-        self.T_std = T_std
+        self.T_offset = T_offset
+        self.T_factor = T_factor
 
         # Define encoder architecture
         self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
@@ -71,8 +71,8 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         latent_size: int,
         layer_size: int,
         n_layers: int,
-        T_mean: float,
-        T_std: float,
+        T_offset: float,
+        T_factor: float,
     ) -> None:
 
         super().__init__()
@@ -81,8 +81,8 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         self.latent_size = latent_size
         self.layer_size = layer_size
         self.n_layers = n_layers
-        self.T_mean = T_mean
-        self.T_std = T_std
+        self.T_offset = T_offset
+        self.T_factor = T_factor
 
         # Define encoder architecture
         self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(

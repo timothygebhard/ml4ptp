@@ -182,8 +182,8 @@ if __name__ == "__main__":
     # unless we explicitly specify values in the configuration file
     if 'normalization' not in config['model'].keys():
         config['normalization'] = dict(
-            T_mean=datamodule.T_mean,
-            T_std=datamodule.T_std,
+            T_offset=datamodule.T_offset,
+            T_factor=datamodule.T_factor,
         )
 
     # Instantiate the model as prescribed by the configuration file

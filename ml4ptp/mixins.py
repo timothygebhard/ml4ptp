@@ -15,10 +15,10 @@ import torch
 
 class NormalizerMixin:
 
-    T_mean: float
-    T_std: float
+    T_offset: float
+    T_factor: float
 
     def normalize(self, T: torch.Tensor, undo: bool = False) -> torch.Tensor:
         if not undo:
-            return (T - self.T_mean) / self.T_std
-        return T * self.T_std + self.T_mean
+            return (T - self.T_offset) / self.T_factor
+        return T * self.T_factor + self.T_offset
