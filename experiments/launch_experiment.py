@@ -171,11 +171,11 @@ if __name__ == "__main__":
         request_gpus   = {args.gpus}
 
         {requirements_string}
- 
+
         queue
         """
     lines = '\n'.join(_.strip().replace('%', ' ') for _ in lines.split('\n'))
- 
+
     # Create the *.sub file in the HTCondor directory
     print('Creating run.sub file...', end=' ', flush=True)
     file_path = htcondor_dir / 'run.sub'
