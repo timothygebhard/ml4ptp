@@ -138,8 +138,10 @@ class Identity(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    @staticmethod
-    def forward(tensor: torch.Tensor) -> torch.Tensor:
+    # Note: This cannot be a @staticmethod because otherwise the export
+    # using torchscript seems to break.
+    # noinspection PyMethodMayBeStatic
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor
 
 
