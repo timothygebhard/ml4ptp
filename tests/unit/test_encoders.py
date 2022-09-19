@@ -36,15 +36,15 @@ def test__mlp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
         latent_size=5,
         layer_size=16,
         n_layers=2,
-        T_mean=1,
-        T_std=2,
+        T_offset=1,
+        T_factor=2,
     )
 
     # Case 1
     log_P, T = data
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.0008047096198424697)
+    assert np.isclose(output.mean().item(), 0.0004023064102511853)
 
 
 def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
@@ -56,10 +56,10 @@ def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
         latent_size=5,
         layer_size=16,
         n_layers=2,
-        T_mean=1,
-        T_std=2,
+        T_offset=1,
+        T_factor=2,
     )
     log_P, T = data
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.00554615119472146)
+    assert np.isclose(output.mean().item(), 0.0027798849623650312)

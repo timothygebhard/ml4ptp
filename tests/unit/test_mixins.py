@@ -32,8 +32,8 @@ def test__normalizer_mixin() -> None:
     # Case 2: Create Dummy class that uses NormalizerMixin
     class Dummy(NormalizerMixin):
         def __init__(self) -> None:
-            self.T_mean = 1.0
-            self.T_std = 2.0
+            self.T_offset = 1.0
+            self.T_factor = 2.0
 
     dummy = Dummy()
     assert torch.equal(

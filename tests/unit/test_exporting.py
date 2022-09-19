@@ -35,7 +35,7 @@ def model() -> torch.nn.Sequential:
 def decoder() -> torch.nn.Module:
     torch.manual_seed(42)
     model = Decoder(
-        latent_size=2, layer_size=32, n_layers=2, T_mean=300, T_std=50
+        latent_size=2, layer_size=32, n_layers=2, T_offset=300, T_factor=50
     )
     return model
 
@@ -59,8 +59,8 @@ def test__pt_profile(decoder: torch.nn.Module, tmp_path: Path) -> None:
 
     # Case 1
     pt_profile = PTProfile(file_path=file_path)
-    assert pt_profile.T_mean == 300
-    assert pt_profile.T_std == 50
+    assert pt_profile.T_offset == 300
+    assert pt_profile.T_factor == 50
     assert pt_profile.latent_size == 2
 
     z = np.zeros(pt_profile.latent_size)

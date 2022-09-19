@@ -64,7 +64,6 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
             latent_size=1,
             n_layers=2,
             activation='leaky_relu',
-            final_sigmoid=False,
         ),
     )
     optimizer_config = dict(name='AdamW', parameters=dict(lr=3e-4))

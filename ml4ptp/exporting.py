@@ -30,8 +30,8 @@ class PTProfile:
 
         # Make some other properties available
         self.latent_size = self.model.latent_size
-        self.T_mean = self.model.T_mean
-        self.T_std = self.model.T_std
+        self.T_offset = self.model.T_offset
+        self.T_factor = self.model.T_factor
 
     def __call__(
         self,
