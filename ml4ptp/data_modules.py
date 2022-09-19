@@ -56,10 +56,11 @@ class DataModule(pl.LightningDataModule):
         shuffle: bool = True,
         pin_memory: bool = True,
         drop_last: bool = True,
+        normalization: str = 'whiten',
         random_state: int = 42,
     ) -> None:
 
-        super().__init__()  # type: ignore
+        super().__init__()
 
         # Store constructor arguments
         self.train_file_path = train_file_path
@@ -74,11 +75,15 @@ class DataModule(pl.LightningDataModule):
         self.shuffle = shuffle
         self.pin_memory = pin_memory
         self.drop_last = drop_last
+        self.normalization = normalization
         self.random_state = random_state
 
         # Initialize variables that will hold the normalization constants
-        self.T_mean: float = np.nan
-        self.T_std: float = np.nan
+        # for the temperature. The `offset` is either the mean (for whitening)
+        # or the minimum (for minmax); the `factor` is either the standard
+        # deviation or the maximum minus the minimum.
+        self.T_offset: float = np.nan
+        self.T_factor: float = np.nan
 
         # Initialize variables that will hold the data sets
         self.train_dataset: Optional[TensorDataset] = None
@@ -118,8 +123,14 @@ class DataModule(pl.LightningDataModule):
             )
 
             # Compute the normalization for T from training data
-            self.T_mean = float(torch.mean(T))
-            self.T_std = float(torch.std(T))
+            if self.normalization == 'whiten':
+                self.T_offset = float(torch.mean(T))
+                self.T_factor = float(torch.std(T))
+            elif self.normalization == 'minmax':
+                self.T_offset = float(torch.min(T))
+                self.T_factor = float(torch.max(T) - torch.min(T))
+            else:
+                raise ValueError('Invalid normalization!')
 
             # Create data sets for training and validation
             self.train_dataset = TensorDataset(train_log_P, train_T)
