@@ -49,7 +49,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             n_layers=self.n_layers,
             output_size=self.latent_size,
             activation='leaky_relu',
-            final_sigmoid=False,
+            final_tanh=True,
         )
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
@@ -91,7 +91,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
             n_layers=self.n_layers,
             output_size=self.latent_size,
             activation='leaky_relu',
-            final_sigmoid=False,
+            final_tanh=True,
         )
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:

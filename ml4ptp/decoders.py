@@ -29,7 +29,6 @@ class Decoder(nn.Module, NormalizerMixin):
         T_offset: float,
         T_factor: float,
         activation: str = 'leaky_relu',
-        final_sigmoid: bool = False,
     ) -> None:
 
         super().__init__()
@@ -50,7 +49,7 @@ class Decoder(nn.Module, NormalizerMixin):
             layer_size=layer_size,
             output_size=1,
             activation=activation,
-            final_sigmoid=final_sigmoid,
+            final_tanh=False,
         )
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:

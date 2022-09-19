@@ -40,7 +40,7 @@ def get_mlp_layers(
     layer_size: int,
     output_size: int = 1,
     activation: str = 'leaky_relu',
-    final_sigmoid: bool = True,
+    final_tanh: bool = False,
 ) -> nn.Sequential:
     """
     Create a multi-layer perceptron with the layer sizes.
@@ -55,8 +55,8 @@ def get_mlp_layers(
             If "siren" is used, the MLP will use sine as the activation
             function and apply the special initialization scheme from
             Sitzmann et al. (2020).
-        final_sigmoid: If True, add a sigmoid activation function after
-            the last layer to ensure all outputs are in [0, 1].
+        final_tanh: If True, add a scaled Tanh activation function after
+            the last layer to force outputs into [-5, 5].
 
     Returns:
         A `nn.Sequential` container with the desired MLP.
@@ -66,7 +66,7 @@ def get_mlp_layers(
     nonlinearity = get_activation(name=activation)
 
     # Set up the final activation function
-    final_nonlinearity = nn.Sigmoid() if final_sigmoid else Identity()
+    final_nonlinearity = ScaledTanh() if final_tanh else Identity()
 
     # Define layers
     layers = [nn.Linear(input_size, layer_size), nonlinearity]
@@ -143,6 +143,20 @@ class Identity(torch.nn.Module):
     # noinspection PyMethodMayBeStatic
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor
+
+
+class ScaledTanh(nn.Module):
+    """
+    Scaled version of a Tanh activation function: `a * tanh(x / b)`.
+    """
+
+    def __init__(self, a: float = 5.0, b: float = 10.0):
+        super().__init__()
+        self.a = a
+        self.b = b
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        return self.a * torch.tanh(tensor / self.b)
 
 
 class Squeeze(nn.Module):
