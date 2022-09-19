@@ -63,6 +63,33 @@ class PrintShape(torch.nn.Module):
         return tensor
 
 
+class Sine(torch.nn.Module):
+    """
+    A wrapper around 'torch.sin()` to use it as an activation function.
+    Optionally with a frequency parameter `w0`.
+    """
+
+    def __init__(self, w0: float = 1) -> None:
+        super().__init__()
+        self.w0 = w0
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        return torch.sin(self.w0 * tensor)
+
+
+class Identity(torch.nn.Module):
+    """
+    A dummy layer that simply returns its input without doing anything.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    @staticmethod
+    def forward(tensor: torch.Tensor) -> torch.Tensor:
+        return tensor
+
+
 class Squeeze(nn.Module):
     """
     Wrap the `.squeeze()` method into a `nn.Module`.
