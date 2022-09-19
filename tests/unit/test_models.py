@@ -97,13 +97,13 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
-        trainer.logged_metrics['val/total_loss_epoch'], 93753.2344
+        trainer.logged_metrics['val/total_loss_epoch'], 93747.0859
     )
     assert np.isclose(
-        trainer.logged_metrics['train/total_loss_epoch'], 1048.0829
+        trainer.logged_metrics['train/total_loss_epoch'], 1064.7472
     )
 
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
-        trainer.logged_metrics['test/total_loss_epoch'], 47403.5547
+        trainer.logged_metrics['test/total_loss_epoch'], 47404.3047
     )

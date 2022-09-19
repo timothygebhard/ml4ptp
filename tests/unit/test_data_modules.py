@@ -104,3 +104,18 @@ def test__data_module(hdf_file: Path) -> None:
 
     assert np.isclose(dm.T_offset, 1)
     assert np.isclose(dm.T_factor, 11 * 13 - 1)
+
+    # Case 4
+    with pytest.raises(ValueError) as value_error:
+        dm = DataModule(
+            key_P='P',
+            key_T='T',
+            train_file_path=hdf_file,
+            test_file_path=None,
+            train_size=11,
+            val_size=3,
+            batch_size=1,
+            normalization='illegal'
+        )
+        dm.prepare_data()
+    assert 'Invalid normalization!' in str(value_error)

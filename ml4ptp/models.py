@@ -82,7 +82,7 @@ class Model(pl.LightningModule):
 
     @property
     def tensorboard_logger(self) -> TensorBoardLogger:
-        if not isinstance(self.logger, TensorBoardLogger):
+        if not isinstance(self.logger, TensorBoardLogger):  # pragma: no cover
             raise RuntimeError('No TensorBoard logger found!')
         # noinspection PyTypeChecker
         return self.logger
@@ -179,7 +179,7 @@ class Model(pl.LightningModule):
         batch: List[torch.Tensor],
         batch_idx: int,
     ) -> torch.Tensor:
-        return self._common_step(batch, batch_idx, "test")
+        return self._common_step(batch, batch_idx, "test")  # pragma: no cover
 
     def _common_step(
         self,

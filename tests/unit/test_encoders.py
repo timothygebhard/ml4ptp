@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import torch
 
-from ml4ptp.encoders import ConvolutionalEncoder, MLPEncoder, CNPEncoder
+from ml4ptp.encoders import MLPEncoder, CNPEncoder
 
 
 # -----------------------------------------------------------------------------
@@ -26,22 +26,6 @@ def data() -> Tuple[torch.Tensor, torch.Tensor]:
     log_P = torch.randn(17, 29)
     T = torch.randn(17, 29)
     return log_P, T
-
-
-def test__convolutional_encoder(
-    data: Tuple[torch.Tensor, torch.Tensor]
-) -> None:
-
-    torch.manual_seed(42)
-    encoder = ConvolutionalEncoder(
-        latent_size=5, layer_size=16, T_mean=1, T_std=2
-    )
-
-    # Case 1
-    log_P, T = data
-    output = encoder.forward(log_P=log_P, T=T)
-    assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.013009665533900261)
 
 
 def test__mlp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:

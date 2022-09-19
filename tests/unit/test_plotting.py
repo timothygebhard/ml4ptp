@@ -9,12 +9,23 @@ Unit tests for plotting.py
 import matplotlib.pyplot as plt
 import torch
 
-from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
+from ml4ptp.plotting import (
+    set_fontsize,
+    plot_profile_to_tensorboard,
+    plot_z_to_tensorboard,
+)
 
 
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__set_fontsize() -> None:
+
+    fig, ax = plt.subplots()
+    set_fontsize(ax, 6)
+    plt.close(fig)
+
 
 def test__plot_profile_to_tensorboard() -> None:
 

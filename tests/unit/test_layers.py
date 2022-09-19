@@ -9,12 +9,34 @@ Unit tests for layers.py
 import pytest
 import torch
 
-from ml4ptp.layers import get_mlp_layers, Mean, PrintShape, Squeeze, View
+from ml4ptp.layers import (
+    get_activation,
+    get_mlp_layers,
+    Identity,
+    Mean,
+    PrintShape,
+    Sine,
+    Squeeze,
+    View,
+)
 
 
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__get_activation() -> None:
+
+    assert isinstance(get_activation('leaky_relu'), torch.nn.LeakyReLU)
+    assert isinstance(get_activation('relu'), torch.nn.ReLU)
+    assert isinstance(get_activation('sine'), Sine)
+    assert isinstance(get_activation('siren'), Sine)
+    assert isinstance(get_activation('tanh'), torch.nn.Tanh)
+
+    with pytest.raises(ValueError) as value_error:
+        get_activation('illegal')
+    assert 'Could not resolve name' in str(value_error)
+
 
 def test__get_mlp_layers() -> None:
 
@@ -23,9 +45,11 @@ def test__get_mlp_layers() -> None:
         input_size=2,
         n_layers=0,
         layer_size=2,
-        output_size=1
+        output_size=1,
+        activation='leaky_relu',
+        final_sigmoid=False,
     )
-    assert len(layers) == 3
+    assert len(layers) == 4
     assert isinstance(layers[0], torch.nn.Linear)
 
     # Case 2
@@ -33,10 +57,23 @@ def test__get_mlp_layers() -> None:
         input_size=2,
         n_layers=2,
         layer_size=2,
-        output_size=1
+        output_size=1,
+        activation='relu',
+        final_sigmoid=True,
     )
-    assert len(layers) == 7
-    assert isinstance(layers[1], torch.nn.LeakyReLU)
+    assert len(layers) == 8
+    assert isinstance(layers[1], torch.nn.ReLU)
+    assert isinstance(layers[-1], torch.nn.Sigmoid)
+
+
+def test__identity() -> None:
+
+    identity = Identity()
+
+    # Case 1
+    x_in = torch.rand(17, 39)
+    x_out = identity(x_in)
+    assert torch.equal(x_out, x_in)
 
 
 def test__mean() -> None:
@@ -66,6 +103,16 @@ def test_print_shape(capfd: pytest.CaptureFixture) -> None:
     # Case 2
     out, err = capfd.readouterr()
     assert 'Some layer:  torch.Size([5, 7])' in str(out)
+
+
+def test_sine() -> None:
+
+    sine = Sine()
+
+    # Case 1
+    x_in = torch.linspace(0, 2 * 3.1415926, 100)
+    x_out = sine(x_in)
+    assert torch.equal(x_out, torch.sin(x_in))
 
 
 def test_squeeze() -> None:

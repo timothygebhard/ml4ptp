@@ -12,6 +12,7 @@ from sys import platform
 import torch
 
 from ml4ptp.utils import (
+    find_run_dirs_with_results,
     get_device_from_model,
     get_number_of_available_cores,
     get_run_dir,
@@ -23,6 +24,25 @@ from ml4ptp.utils import (
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__find_run_dirs_with_results(tmp_path: Path) -> None:
+
+    runs_dir = tmp_path / 'runs'
+    runs_dir.mkdir(exist_ok=True)
+
+    for i in range(10):
+        run_dir = runs_dir / f'run_{i}'
+        run_dir.mkdir(exist_ok=True)
+        if i in (1, 3, 7):
+            file_path = run_dir / 'results_on_test_set.hdf'
+            file_path.touch()
+
+    run_dirs = find_run_dirs_with_results(tmp_path)
+    assert len(run_dirs) == 3
+    assert run_dirs[0].as_posix().endswith('1')
+    assert run_dirs[1].as_posix().endswith('3')
+    assert run_dirs[2].as_posix().endswith('7')
+
 
 def test__get_device_from_model() -> None:
 
