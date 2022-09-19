@@ -48,23 +48,10 @@ def test__get_mlp_layers() -> None:
         layer_size=2,
         output_size=1,
         activation='leaky_relu',
-        final_tanh=False,
     )
-    assert len(layers) == 4
+    assert len(layers) == 3
     assert isinstance(layers[0], torch.nn.Linear)
-
-    # Case 2
-    layers = get_mlp_layers(
-        input_size=2,
-        n_layers=2,
-        layer_size=2,
-        output_size=1,
-        activation='relu',
-        final_tanh=True,
-    )
-    assert len(layers) == 8
-    assert isinstance(layers[1], torch.nn.ReLU)
-    assert isinstance(layers[-1], ScaledTanh)
+    assert isinstance(layers[1], torch.nn.LeakyReLU)
 
 
 def test__identity() -> None:
