@@ -7,7 +7,7 @@ General utility functions.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import List
+from typing import List, Sized
 
 import os
 
@@ -19,6 +19,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
+import numpy as np
 import torch
 
 
@@ -27,6 +28,10 @@ import torch
 # -----------------------------------------------------------------------------
 
 def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
+    """
+    Auxiliary function to find the runs in an experiment directory for
+    which a result file "results_on_test_set.hdf" is available.
+    """
 
     runs_dir = experiment_dir / 'runs'
     run_dirs = filter(
@@ -34,6 +39,17 @@ def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
         runs_dir.glob('run_*'),
     )
     return sorted(run_dirs)
+
+
+def get_batch_idx(a: Sized, batch_size: int) -> List[np.ndarray]:
+    """
+    Auxiliary functions to get the indices need to loop over `a` in
+    batches of size `batch_size`.
+    """
+ 
+    return np.split(
+        np.arange(len(a)), np.arange(batch_size, len(a), batch_size)
+    )
 
 
 def get_device_from_model(model: torch.nn.Module) -> torch.device:

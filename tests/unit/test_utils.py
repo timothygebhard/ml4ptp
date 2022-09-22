@@ -9,10 +9,12 @@ Unit tests for utils.py
 from pathlib import Path
 from sys import platform
 
+import numpy as np
 import torch
 
 from ml4ptp.utils import (
     find_run_dirs_with_results,
+    get_batch_idx,
     get_device_from_model,
     get_number_of_available_cores,
     get_run_dir,
@@ -42,6 +44,25 @@ def test__find_run_dirs_with_results(tmp_path: Path) -> None:
     assert run_dirs[0].as_posix().endswith('1')
     assert run_dirs[1].as_posix().endswith('3')
     assert run_dirs[2].as_posix().endswith('7')
+
+
+def test__get_batch_idx() -> None:
+
+    # Case 1
+    array = np.array([0, 1, 2, 3, 4, 5])
+    idx = get_batch_idx(array, 2)
+    assert isinstance(idx, list)
+    assert len(idx) == 3
+    assert np.array_equal(idx[0], array[0:2])
+    assert np.array_equal(idx[1], array[2:4])
+    assert np.array_equal(idx[2], array[4:6])
+
+    # Case 2
+    array = np.array([0, 1, 2, 3, 4])
+    idx = get_batch_idx(array, 3)
+    assert len(idx) == 2
+    assert np.array_equal(idx[0], array[0:3])
+    assert np.array_equal(idx[1], array[3:])
 
 
 def test__get_device_from_model() -> None:
