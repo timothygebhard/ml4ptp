@@ -100,9 +100,9 @@ if __name__ == "__main__":
 
     # Define grid (depending on data set)
     if dataset == 'goyal-2020':
-        grid = np.linspace(0, 100, 1000)
+        grid = np.linspace(0, 100, 2_000)
     elif dataset == 'pyatmos':
-        grid = np.linspace(0, 12.5, 1000)
+        grid = np.linspace(0, 12.5, 2_000)
     else:
         raise ValueError('Invalid data set!')
 
@@ -181,7 +181,7 @@ if __name__ == "__main__":
             file_path = run_dir / 'results_on_test_set.hdf'
             with h5py.File(file_path, 'r') as hdf_file:
                 T_true = np.array(hdf_file['T_true'])
-                T_pred = np.array(hdf_file['T_pred_optimal'])
+                T_pred = np.array(hdf_file['T_pred_refined'])
 
             # Compute the mean absolute error for each profile; compute KDE
             error = np.mean(np.abs(T_true - T_pred), axis=1)
