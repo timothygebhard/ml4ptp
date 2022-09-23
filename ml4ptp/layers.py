@@ -40,6 +40,7 @@ def get_mlp_layers(
     layer_size: int,
     output_size: int = 1,
     activation: str = 'leaky_relu',
+    final_tanh: bool = True,
 ) -> nn.Sequential:
     """
     Create a multi-layer perceptron with the layer sizes.
@@ -54,6 +55,8 @@ def get_mlp_layers(
             If "siren" is used, the MLP will use sine as the activation
             function and apply the special initialization scheme from
             Sitzmann et al. (2020).
+        final_tanh: If True, add a scaled Tanh() activation after the
+            last layer to limit outputs to [-5, 5]. (For encoders.)
 
     Returns:
         A `nn.Sequential` container with the desired MLP.
@@ -67,6 +70,12 @@ def get_mlp_layers(
     for i in range(n_layers):
         layers += [nn.Linear(layer_size, layer_size), nonlinearity]
     layers += [nn.Linear(layer_size, output_size)]
+
+    # Add final tanh activation, if desired
+    # This function is approximately linear from -3 to 3, but makes sure that
+    # all values are inside [-5, 5], which is want we want for sampling z.
+    if final_tanh:
+        layers += [ScaledTanh(5.0, 5.0)]
 
     # Apply special initialization scheme for SIREN networks
     if activation == 'siren':
@@ -144,7 +153,7 @@ class ScaledTanh(nn.Module):
     Scaled version of a Tanh activation function: `a * tanh(x / b)`.
     """
 
-    def __init__(self, a: float = 5.0, b: float = 10.0):
+    def __init__(self, a: float = 5.0, b: float = 5.0):
         super().__init__()
         self.a = a
         self.b = b
