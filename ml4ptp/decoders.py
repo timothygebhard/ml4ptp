@@ -40,7 +40,7 @@ class Decoder(nn.Module, NormalizerMixin):
         self.T_offset = float(T_offset)
         self.T_factor = float(T_factor)
 
-        # Define encoder architecture
+        # Define decoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we
         # want to evaluate the profile represented by this decoder.
         self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
@@ -49,6 +49,7 @@ class Decoder(nn.Module, NormalizerMixin):
             layer_size=layer_size,
             output_size=1,
             activation=activation,
+            final_tanh=False,
         )
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
@@ -89,6 +90,92 @@ class Decoder(nn.Module, NormalizerMixin):
         # Reshape the decoder output to (batch_size, grid_size), that is,
         # the original shape of `log_p`
         T_pred = decoded.reshape(batch_size, grid_size)
+
+        # Undo normalization (i.e., transform back to Kelvin)
+        T_pred = self.normalize(T_pred, undo=True)
+
+        return T_pred
+
+
+class HyperSIREN(nn.Module, NormalizerMixin):
+
+    def __init__(
+        self,
+        latent_size: int,
+        layer_size: int,
+        n_layers: int,
+        T_offset: float,
+        T_factor: float,
+        activation: str = 'leaky_relu',
+    ) -> None:
+
+        super().__init__()
+
+        # Store constructor arguments
+        self.latent_size = latent_size
+        self.layer_size = layer_size
+        self.n_layers = n_layers
+        self.T_offset = float(T_offset)
+        self.T_factor = float(T_factor)
+
+        # Define hypernet architecture
+        self.hypernet: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
+            input_size=latent_size,
+            n_layers=n_layers,
+            layer_size=layer_size,
+            output_size=4353,  # total number of parameters in SIREN network
+            activation=activation,
+            final_tanh=False,
+        )
+
+    def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
+
+        # Reminder:
+        #  * z has shape (batch_size, latent_size)
+        #  * log_p has shape (batch_size, grid_size)
+        #  * The decoder takes inputs of size latent_size + 1
+        #  * We now need to combine z and log_p into a single tensor of
+        #    shape (batch_size * grid_size, latent_size + 1) that we can
+        #    give to the decoder
+        #  * After passing through the decoder, we want to reshape the output
+        #    to (batch_size, grid_size) again: one T for each log_P
+
+        # Get batch size and grid size
+        batch_size, grid_size = log_P.shape
+
+        # Repeat z so that we can concatenate it with every pressure value.
+        # This changes the shape of z:
+        #   (batch_size, latent_size) -> (batch_size, grid_size, latent_size)
+        z = z.unsqueeze(1).repeat(1, grid_size, 1)
+
+        # Reshape the pressure grid and z into the batch dimension. They now
+        # show have shapes:
+        #   p_flat: (batch_size * grid_size, 1)
+        #   z_flat: (batch_size * grid_size, latent_size)
+        p_flat = log_P.reshape(batch_size * grid_size, 1)
+        z_flat = z.reshape(batch_size * grid_size, self.latent_size)
+
+        # Get weights and biases from hypernet
+        weights_and_biases = self.hypernet(z_flat)
+        weight_1, weight_2, weight_3, bias_1, bias_2, bias_3 = torch.split(
+            weights_and_biases, [64, 64 * 64, 64, 64, 64, 1], dim=1,
+        )
+        weight_1 = weight_1.reshape(-1, 64)
+        weight_2 = weight_2.reshape(-1, 64, 64)
+        weight_3 = weight_3.reshape(-1, 64)
+
+        # Pass pressure through a tiny SIREN whose weights and biases we
+        # predicted using the hypernet
+        x = p_flat
+        x = torch.einsum('ij,ij->ij', x, weight_1) + bias_1
+        x = torch.sin(30 * x)
+        x = torch.einsum('ik,ijk->ij', x, weight_2) + bias_2
+        x = torch.sin(x)
+        x = torch.einsum('ij,ij->i', x, weight_3) + bias_3.T
+
+        # Reshape the SIREN output to (batch_size, grid_size), that is,
+        # the original shape of `log_p`
+        T_pred = x.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
         T_pred = self.normalize(T_pred, undo=True)
