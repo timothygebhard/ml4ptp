@@ -13,10 +13,11 @@ import time
 
 import h5py
 import torch
+import numpy as np
 
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
-from ml4ptp.evaluation import evaluate_on_test_set
+from ml4ptp.evaluation import get_initial_predictions, get_refined_predictions
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
 from ml4ptp.utils import get_device_from_model
@@ -38,8 +39,14 @@ def get_cli_args() -> argparse.Namespace:
     parser.add_argument(
         '--batch-size',
         type=int,
-        default=128,
-        help='Batch size for optimization with LBFGS.',
+        default=512,
+        help='Batch size for refinement / optimization.',
+    )
+    parser.add_argument(
+        '--n-epochs',
+        type=int,
+        default=50,
+        help='Number of epochs for the refinement / optimization.',
     )
     parser.add_argument(
         '--run',
@@ -106,8 +113,8 @@ if __name__ == "__main__":
     # unless we explicitly specify values in the configuration file
     if 'normalization' not in config['model'].keys():
         config['normalization'] = dict(
-            T_mean=datamodule.T_mean,
-            T_std=datamodule.T_std,
+            T_offset=datamodule.T_offset,
+            T_factor=datamodule.T_factor,
         )
 
     # Instantiate the model as prescribed by the configuration file
@@ -124,7 +131,7 @@ if __name__ == "__main__":
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
-    # Evaluate the model on the test set
+    # Load the model and move it to the GPU
     # -------------------------------------------------------------------------
 
     # Load "best" checkpoint
@@ -134,38 +141,76 @@ if __name__ == "__main__":
         checkpoint_path=file_path.as_posix(),
         map_location=get_device_from_model(model)
     )
-    print('Done!', flush=True)
+    print('Done!\n', flush=True)
 
     # Move model to GPU, if possible
     if torch.cuda.is_available():
-        model.to(torch.device('cuda'))
+        print('Running on device: CUDA\n')
+        device = torch.device('cuda')
+        model.to(device)
+    else:
+        print('Running on device: CPU\n')
+        device = torch.device('cpu')
 
-    # Run test set through model and apply LBFGS optimization to latent z
-    print('Evaluating trained model on test set:', flush=True)
-    (
-        z_initial,
-        z_optimal,
-        T_true,
-        log_P,
-        T_pred_initial,
-        T_pred_optimal,
-    ) = evaluate_on_test_set(
+    # -------------------------------------------------------------------------
+    # Get initial predictions (without refinement)
+    # -------------------------------------------------------------------------
+
+    # Run test set through model and get initial predictions for everything
+    print('Getting initial predictions on test set:', flush=True)
+    z_initial, T_true, log_P, T_pred_initial = get_initial_predictions(
         model=model,
         test_dataloader=datamodule.test_dataloader(),
-        device=get_device_from_model(model),
-        batch_size=args.batch_size,
+        device=device,
     )
+    print()
+
+    # Compute initial error
+    mae_initial = np.mean(np.abs(T_true - T_pred_initial), axis=1)
+    q_5 = np.quantile(mae_initial, 0.05)
+    q_50 = np.quantile(mae_initial, 0.50)
+    q_95 = np.quantile(mae_initial, 0.95)
+    print(f'Initial MAE: {q_50:.2f} [{q_5:.2f}-{q_95:.2f}]', flush=True)
 
     # Save results to HDF file
-    print('Saving evaluation results to HDF file...', end=' ', flush=True)
+    print('Saving initial results to HDF file...', end=' ', flush=True)
     file_path = run_dir / 'results_on_test_set.hdf'
     with h5py.File(file_path, 'w') as hdf_file:
         hdf_file.create_dataset(name='z_initial', data=z_initial)
-        hdf_file.create_dataset(name='z_optimal', data=z_optimal)
         hdf_file.create_dataset(name='T_true', data=T_true)
         hdf_file.create_dataset(name='log_P', data=log_P)
         hdf_file.create_dataset(name='T_pred_initial', data=T_pred_initial)
-        hdf_file.create_dataset(name='T_pred_optimal', data=T_pred_optimal)
+    print('Done!\n', flush=True)
+
+    # -------------------------------------------------------------------------
+    # Get refined predictions
+    # -------------------------------------------------------------------------
+
+    print('Getting refined predictions on test set:', flush=True)
+    z_refined, T_pred_refined = get_refined_predictions(
+        model=model,
+        z_initial=z_initial,
+        T_true=T_true,
+        log_P=log_P,
+        device=device,
+        n_epochs=args.n_epochs,
+        batch_size=args.batch_size,
+    )
+    print()
+
+    # Compute refined error
+    mae_refined = np.mean(np.abs(T_true - T_pred_refined), axis=1)
+    q_5 = np.quantile(mae_refined, 0.05)
+    q_50 = np.quantile(mae_refined, 0.50)
+    q_95 = np.quantile(mae_refined, 0.95)
+    print(f'Refined MAE: {q_50:.2f} [{q_5:.2f}-{q_95:.2f}]', flush=True)
+
+    # Save results to HDF file
+    print('Saving refined results to HDF file...', end=' ', flush=True)
+    file_path = run_dir / 'results_on_test_set.hdf'
+    with h5py.File(file_path, 'a') as hdf_file:
+        hdf_file.create_dataset(name='z_refined', data=z_refined)
+        hdf_file.create_dataset(name='T_pred_refined', data=T_pred_refined)
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
