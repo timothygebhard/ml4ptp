@@ -11,26 +11,28 @@ datamodule:
   persistent_workers: True
   shuffle: True
   pin_memory: True
-  drop_last: True
+  normalization: minmax
 
 # Parameters for the encoder and decoder
 model:
   encoder:
-    name: CNPEncoder
+    name: MLPEncoder
     parameters:
+      input_size: 51
       latent_size: 3
-      layer_size: 1024
+      layer_size: 512
       n_layers: 5
   decoder:
     name: Decoder
     parameters:
       latent_size: 3
-      layer_size: 512
-      n_layers: 3
+      layer_size: 256
+      n_layers: 6
+      activation: leaky_relu
 
 # Parameters for the loss
 loss:
-  beta: 20000.0
+  beta: 1000.0
 
 # Parameters for the optimizer
 optimizer:
@@ -44,8 +46,8 @@ lr_scheduler:
   interval: epoch
   parameters:
     mode: min
-    factor: 0.1
-    patience: 10
+    factor: 0.5
+    patience: 20
 
 # Parameters for plotting to TensorBoard
 plotting:
