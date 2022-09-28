@@ -128,7 +128,7 @@ if __name__ == "__main__":
         with h5py.File(file_path, 'r') as hdf_file:
             log_P = np.array(hdf_file['log_P'][idx]).squeeze()
             T_true = np.array(hdf_file['T_true'][idx]).squeeze()
-            T_pred = np.array(hdf_file['T_pred_optimal'][idx]).squeeze()
+            T_pred = np.array(hdf_file['T_pred_refined'][idx]).squeeze()
             pt_profiles.append((log_P, T_true, T_pred))
 
     print('Done!', flush=True)
@@ -156,10 +156,10 @@ if __name__ == "__main__":
             if not args.no_baseline:
                 p = np.polyfit(log_P, T_true, deg=latent_size - 1)
                 T_pred_poly = np.polyval(p=p, x=log_P)
-                ax.plot(T_pred_poly, log_P, lw=1, color='C1')
+                ax.plot(T_pred_poly, log_P, lw=2, color='C2')
 
         # Plot the best fit obtained with the decoder model
-        ax.plot(T_pred, log_P, lw=1, color='C0')
+        ax.plot(T_pred, log_P, lw=2, color='C1')
 
     # Set up ax labels, limits, etc.
     ax.set_xticks(np.linspace(int(xlim[0]), int(xlim[1]), 3, endpoint=True))

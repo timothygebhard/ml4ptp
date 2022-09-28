@@ -100,9 +100,9 @@ if __name__ == "__main__":
 
     # Define grid (depending on data set)
     if dataset == 'goyal-2020':
-        grid = np.linspace(0, 100, 2_000)
+        grid = np.linspace(0, 100, 500)
     elif dataset == 'pyatmos':
-        grid = np.linspace(0, 12.5, 2_000)
+        grid = np.linspace(0, 12.5, 500)
     else:
         raise ValueError('Invalid data set!')
 
