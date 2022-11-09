@@ -44,7 +44,7 @@ def test__mlp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
     log_P, T = data
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.0008047096198424697)
+    assert np.isclose(output.mean().item(), 0.0008043177658692002)
 
 
 def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
@@ -62,4 +62,4 @@ def test__cnp_encoder(data: Tuple[torch.Tensor, torch.Tensor]) -> None:
     log_P, T = data
     output = encoder.forward(log_P=log_P, T=T)
     assert output.shape == (17, 5)
-    assert np.isclose(output.mean().item(), 0.00554615119472146)
+    assert np.isclose(output.mean().item(), 0.005600515753030777)

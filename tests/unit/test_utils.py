@@ -50,7 +50,7 @@ def test__get_batch_idx() -> None:
 
     # Case 1
     array = np.array([0, 1, 2, 3, 4, 5])
-    idx = get_batch_idx(array, 2)
+    idx = get_batch_idx(array, 2, shuffle=False)
     assert isinstance(idx, list)
     assert len(idx) == 3
     assert np.array_equal(idx[0], array[0:2])
@@ -59,10 +59,17 @@ def test__get_batch_idx() -> None:
 
     # Case 2
     array = np.array([0, 1, 2, 3, 4])
-    idx = get_batch_idx(array, 3)
+    idx = get_batch_idx(array, 3, shuffle=False)
     assert len(idx) == 2
     assert np.array_equal(idx[0], array[0:3])
     assert np.array_equal(idx[1], array[3:])
+
+    # Case 3
+    array = np.array([0, 1, 2, 3, 4])
+    idx = get_batch_idx(array, 3, shuffle=True)
+    assert len(idx) == 2
+    assert np.array_equal(idx[0], np.array([4, 2, 3]))
+    assert np.array_equal(idx[1], np.array([1, 0]))
 
 
 def test__get_device_from_model() -> None:

@@ -58,7 +58,7 @@ def test__pt_profile(decoder: torch.nn.Module, tmp_path: Path) -> None:
     export_model_with_torchscript(model=decoder, file_path=file_path)
 
     # Case 1
-    pt_profile = PTProfile(file_path=file_path)
+    pt_profile = PTProfile(decoder_file_path=file_path)
     assert pt_profile.T_offset == 300
     assert pt_profile.T_factor == 50
     assert pt_profile.latent_size == 2
