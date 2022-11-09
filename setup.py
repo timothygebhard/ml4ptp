@@ -30,6 +30,7 @@ setup(
         'h5py',
         'joblib',
         'matplotlib',
+        'normflows',
         'numpy',
         'pandas',
         'pytorch-lightning>=1.7',
