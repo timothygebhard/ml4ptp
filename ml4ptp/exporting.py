@@ -7,7 +7,7 @@ Utilities for exporting models.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import torch
@@ -23,10 +23,19 @@ class PTProfile:
     a (parameterized) pressure-temperature profile.
     """
 
-    def __init__(self, file_path: Path):
+    def __init__(
+        self,
+        decoder_file_path: Path,
+        flow_file_path: Optional[Path] = None,
+    ) -> None:
 
         # Load the (decoder) model from the given file path
-        self.model = torch.jit.load(file_path)  # type: ignore
+        self.model = torch.jit.load(decoder_file_path)  # type: ignore
+
+        # If a flow file path is given, load the flow
+        self.flow = None
+        if flow_file_path is not None:
+            self.flow = torch.load(flow_file_path)  # type: ignore
 
         # Make some other properties available
         self.latent_size = self.model.latent_size
@@ -49,9 +58,16 @@ class PTProfile:
         if log_P.ndim != 1:
             raise ValueError('log_P must be 1D!')
 
+        # Apply flow, if needed
+        z_in = torch.from_numpy(z).float().unsqueeze(0)
+        if self.flow is not None:
+            with torch.no_grad():
+                for layer in self.flow.flows:
+                    z_in, _ = layer(z_in)
+
         # Construct inputs to model
         log_P_in = torch.from_numpy(log_P.reshape(-1, 1)).float()
-        z_in = torch.from_numpy(np.tile(A=z, reps=(log_P.shape[0], 1))).float()
+        z_in = torch.tile(z_in, (log_P.shape[0], 1))
 
         # Send through the model
         with torch.no_grad():
