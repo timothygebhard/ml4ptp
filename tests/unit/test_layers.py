@@ -48,10 +48,24 @@ def test__get_mlp_layers() -> None:
         layer_size=2,
         output_size=1,
         activation='leaky_relu',
+        final_tanh=False,
     )
     assert len(layers) == 3
     assert isinstance(layers[0], torch.nn.Linear)
     assert isinstance(layers[1], torch.nn.LeakyReLU)
+
+    # Case 2
+    layers = get_mlp_layers(
+        input_size=2,
+        n_layers=1,
+        layer_size=2,
+        output_size=1,
+        activation='relu',
+        final_tanh=False,
+    )
+    assert len(layers) == 5
+    assert isinstance(layers[0], torch.nn.Linear)
+    assert isinstance(layers[1], torch.nn.ReLU)
 
 
 def test__identity() -> None:
@@ -91,6 +105,33 @@ def test_print_shape(capfd: pytest.CaptureFixture) -> None:
     # Case 2
     out, err = capfd.readouterr()
     assert 'Some layer:  torch.Size([5, 7])' in str(out)
+
+
+def test_scaled_tanh() -> None:
+
+    # Case 1
+    scaled_tanh = ScaledTanh(a=5.0, b=5.0)
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([0.0])), torch.Tensor([0.0])
+    )
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([1.0])), torch.Tensor([0.9868766069412231])
+    )
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([100.0])), torch.Tensor([5.0])
+    )
+
+    # Case 2
+    scaled_tanh = ScaledTanh(a=3.0, b=1.0)
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([0.0])), torch.Tensor([0.0])
+    )
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([1.0])), torch.Tensor([2.28478247])
+    )
+    assert torch.isclose(
+        scaled_tanh(torch.Tensor([100.0])), torch.Tensor([3.0])
+    )
 
 
 def test_sine() -> None:
