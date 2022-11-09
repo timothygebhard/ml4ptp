@@ -41,15 +41,27 @@ def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
     return sorted(run_dirs)
 
 
-def get_batch_idx(a: Sized, batch_size: int) -> List[np.ndarray]:
+def get_batch_idx(
+    a: Sized,
+    batch_size: int,
+    shuffle: bool = True,
+    random_seed: int = 42,
+) -> List[np.ndarray]:
     """
     Auxiliary functions to get the indices need to loop over `a` in
-    batches of size `batch_size`.
+    batches of size `batch_size`. (Including optional shuffling.)
     """
  
-    return np.split(
-        np.arange(len(a)), np.arange(batch_size, len(a), batch_size)
-    )
+    # Create a new random number generator
+    rng = np.random.default_rng(random_seed)
+
+    # Create indices and shuffle, if desired
+    idx = np.arange(len(a))
+    if shuffle:
+        rng.shuffle(idx)
+ 
+    # Split indices into batches and return
+    return np.split(idx, np.arange(batch_size, len(a), batch_size))
 
 
 def get_device_from_model(model: torch.nn.Module) -> torch.device:
