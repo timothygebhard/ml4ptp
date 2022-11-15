@@ -6,7 +6,12 @@ Methods for plotting.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from typing import Any
+
 from corner import corner
+from matplotlib.colorbar import Colorbar
+from matplotlib.image import AxesImage
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import matplotlib.pyplot as plt
 import torch
@@ -17,6 +22,49 @@ from ml4ptp.utils import tensor_to_str
 # -----------------------------------------------------------------------------
 # UTILITY FUNCTIONS
 # -----------------------------------------------------------------------------
+
+def add_colorbar_to_ax(
+    img: AxesImage,
+    fig: plt.Figure,
+    ax: plt.Axes,
+    where: str = 'right',
+    **kwargs: Any,
+) -> Colorbar:
+    """
+    Add a "nice" colorbar to a plot.
+
+    Args:
+        img: The return of a plotting command.
+        fig: The figure that the plot is part of.
+        ax: The ax which contains the plot.
+        where: Where to place the colorbar (`"left"`, `"right"`,
+            `"top"` or `"bottom"`).
+        **kwargs: Additional keyword arguments which will be passed
+            to `fig.colorbar()`.
+
+    Returns:
+        The colorbar that was added to the axis.
+    """
+
+    if where in ('left', 'right'):
+        orientation = 'vertical'
+    elif where in ('top', 'bottom'):
+        orientation = 'horizontal'
+    else:
+        raise ValueError(
+            f'Illegal value for `where`: "{where}". Must be one '
+            'of ["left", "right", "top", "bottom"].'
+        )
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes(where, size='5%', pad=0.05)
+    cbar = fig.colorbar(
+        img, cax=cax, orientation=orientation, ticklocation=where, **kwargs,
+    )
+    cbar.ax.tick_params(labelsize=8)
+
+    return cbar
+
 
 def set_fontsize(ax: plt.Axes, fontsize: int) -> None:
     """
