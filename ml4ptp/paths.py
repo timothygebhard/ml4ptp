@@ -30,3 +30,21 @@ def expandvars(path: Path) -> Path:
     """
 
     return Path(expandvars_(path.as_posix()))
+
+
+def get_datasets_dir() -> Path:
+    """
+    Return the path to the directory containing the datasets.
+
+    Returns:
+        The path to the directory containing the datasets.
+    """
+
+    datasets_dir = expandvars(Path('$ML4PTP_DATASETS_DIR'))
+
+    if not datasets_dir.exists():
+        raise FileNotFoundError(
+            f'The datasets directory does not exist: {datasets_dir}'
+        )
+
+    return datasets_dir
