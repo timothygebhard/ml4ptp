@@ -19,7 +19,7 @@ import pytorch_lightning as pl
 import torch
 
 from ml4ptp.importing import get_member_by_name
-from ml4ptp.kernels import compute_mmd
+from ml4ptp.mmd import compute_mmd
 from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
 
 
