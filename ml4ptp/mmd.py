@@ -51,7 +51,7 @@ def compute_mmd(
     # of the median of the distances between the points in the combined sample.
     if sigma is None:
         distances = torch.pdist(torch.cat([x, y], dim=0))
-        sigma = float(distances.median() / 2)
+        sigma = float(distances.median())
 
     # Compute term 1: K(X, X)
     # - `dists` contains a matrix of shape (n, n) with the pairwise Euclidean
