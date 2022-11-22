@@ -1,5 +1,5 @@
 """
-Train a model and run basic evaluation.
+Train a model for a PT profile parameterization.
 """
 
 # -----------------------------------------------------------------------------
@@ -12,7 +12,6 @@ from shutil import copy
 import argparse
 import time
 
-import h5py
 import yaml
 
 from pytorch_lightning import Trainer
@@ -28,11 +27,10 @@ from pytorch_lightning.utilities.seed import seed_everything
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
 from ml4ptp.exporting import export_model_with_torchscript
-from ml4ptp.evaluation import get_initial_predictions, get_refined_predictions
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
-from ml4ptp.utils import get_device_from_model, get_run_dir
+from ml4ptp.utils import get_run_dir
 
 
 # -----------------------------------------------------------------------------
@@ -45,14 +43,17 @@ def get_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--experiment-dir',
-        # required=True,
-        default='$ML4PTP_EXPERIMENTS_DIR/default-pyatmos',
+        required=True,
+        default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2',
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
         '--run-dir',
         default=None,
-        help='Do not generate a new run dir, but use the given one.',
+        help=(
+            'Path to the run directory (should be inside the experiment_dir). '
+            'If given, do not generate a new run dir, but use the given one.'
+        ),
     )
     parser.add_argument(
         '--random-seed',
@@ -221,61 +222,6 @@ if __name__ == "__main__":
     export_model_with_torchscript(model=model.decoder, file_path=file_path)
 
     print('Done!\n', flush=True)
-
-    # -------------------------------------------------------------------------
-    # Evaluate the model on the test set
-    # -------------------------------------------------------------------------
-
-    # Get device (should be GPU whenever possible)
-    device = get_device_from_model(model)
-
-    # Load "best" checkpoint
-    print('Loading best checkpoint...', end=' ', flush=True)
-    file_path = run_dir / 'checkpoints' / 'best.ckpt'
-    model = model.load_from_checkpoint(
-        checkpoint_path=file_path.as_posix(),
-        map_location=device,
-    )
-    model.to(device)
-    print(f'Done! (Moved model to device: {device})\n', flush=True)
-
-    # Run test set through model and get initial predictions for everything
-    print('Getting initial predictions on test set:', flush=True)
-    z_initial, T_true, log_P, T_pred_initial = get_initial_predictions(
-        model=model,
-        test_dataloader=datamodule.test_dataloader(),
-        device=device,
-    )
-    print()
-
-    # Save results to HDF file
-    print('Saving initial results to HDF file...', end=' ', flush=True)
-    file_path = run_dir / 'results_on_test_set.hdf'
-    with h5py.File(file_path, 'w') as hdf_file:
-        hdf_file.create_dataset(name='z_initial', data=z_initial)
-        hdf_file.create_dataset(name='T_true', data=T_true)
-        hdf_file.create_dataset(name='log_P', data=log_P)
-        hdf_file.create_dataset(name='T_pred_initial', data=T_pred_initial)
-    print('Done!\n', flush=True)
-
-    # Get refined predictions
-    print('Getting refined predictions on test set:', flush=True)
-    z_refined, T_pred_refined = get_refined_predictions(
-        model=model,
-        z_initial=z_initial,
-        T_true=T_true,
-        log_P=log_P,
-        device=device,
-    )
-    print()
-
-    # Save results to HDF file
-    print('Saving refined results to HDF file...', end=' ', flush=True)
-    file_path = run_dir / 'results_on_test_set.hdf'
-    with h5py.File(file_path, 'a') as hdf_file:
-        hdf_file.create_dataset(name='z_refined', data=z_refined)
-        hdf_file.create_dataset(name='T_pred_refined', data=T_pred_refined)
-    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
