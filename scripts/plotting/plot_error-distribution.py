@@ -123,11 +123,11 @@ if __name__ == "__main__":
     handles = [
         Line2D([0], [0], color=f'C{i}', lw=2) for i in range(len(latent_sizes))
     ]
-    labels = [f'dim(z) = {z}' for z in latent_sizes]
+    labels = [f'd = {z}' for z in latent_sizes]
     leg = axes[0].legend(
         handles=handles,
         labels=labels,
-        columnspacing=1.0,
+        columnspacing=2.5,
         fontsize=6,
         frameon=False,
         handlelength=0.75,
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # Plot error distribution for polynomial baseline
     # -------------------------------------------------------------------------
 
-    print('Plotting results from baseline...', end=' ', flush=True)
+    print('Plotting results from baseline:', flush=True)
 
     for i, latent_size in enumerate(latent_sizes):
 
@@ -154,18 +154,20 @@ if __name__ == "__main__":
         # Compute the mean absolute error for each profile; compute KDE
         error = np.mean(np.abs(T_true - T_pred), axis=1)
         kde = gaussian_kde(error)
+        median = np.median(error)
 
         # Plot the error distribution, add vertical line for median
         axes[1].plot(grid, kde(grid), lw=1, color=f'C{i}')
-        axes[1].axvline(x=np.median(error), lw=0.5, ls='--', color=f'C{i}')
+        axes[1].axvline(x=median, lw=0.5, ls='--', color=f'C{i}')
 
-    print('Done!', flush=True)
+        # Print the median error
+        print(f'  latent_size = {latent_size}, median error = {median:.2f}')
 
     # -------------------------------------------------------------------------
     # Plot error distribution for our method
     # -------------------------------------------------------------------------
 
-    print('Plotting result from our method...', end=' ', flush=True)
+    print('\nPlotting result from our method:', flush=True)
 
     for i, latent_size in enumerate(latent_sizes):
 
@@ -210,7 +212,8 @@ if __name__ == "__main__":
         median = grid[np.abs(cdf - 0.5).argmin()]
         axes[2].axvline(x=median, lw=0.5, ls='--', color=f'C{i}')
 
-    print('Done!', flush=True)
+        # Print the median error
+        print(f'  latent_size = {latent_size}, median error = {median:.2f}')
 
     # -------------------------------------------------------------------------
     # Set up ax labels, limits, ...
@@ -273,8 +276,8 @@ if __name__ == "__main__":
     # Save the plot
     # -------------------------------------------------------------------------
 
-    print('Saving plot to PDF...', end=' ', flush=True)
-    file_path = parent_dir / 'error-distribution.pdf'
+    print('\nSaving plot to PDF...', end=' ', flush=True)
+    file_path = Path(f'error-distribution-{dataset}.pdf')
     plt.savefig(
         file_path,
         facecolor='white',
