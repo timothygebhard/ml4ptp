@@ -40,6 +40,7 @@ setup(
         'scipy',
         'torch',
         'tqdm',
+        'ultranest',
     ],
     extras_require={
         'develop': [
