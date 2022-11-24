@@ -46,11 +46,14 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
-        '--run',
+        '--run-dir',
         default=0,
-        type=int,
+        type=str,
         # required=True,
-        help='Which run to evaluate.',
+        help=(
+            'Path to the directory of the run to evaluate. Should contain the '
+            'saved encoder and decoder models: encoder.pt and decoder.pt.'
+        ),
     )
     parser.add_argument(
         '--random-seed',
@@ -204,7 +207,7 @@ if __name__ == "__main__":
 
     # Define shortcuts
     random_seed = args.random_seed
-    run_dir = experiment_dir / 'runs' / f'run_{args.run}'
+    run_dir = expandvars(Path(args.run_dir)).resolve()
     latent_size = config['model']['decoder']['parameters']['latent_size']
 
     # -------------------------------------------------------------------------
