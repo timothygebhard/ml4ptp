@@ -91,6 +91,7 @@ def find_optimal_z_with_nested_sampling(
         results['z_initial'] = z_initial.numpy()
         results['T_pred_initial'] = T_pred_initial.numpy()
         results['error_initial'] = error_initial
+        results['T_true'] = T_true.numpy()
 
     # -------------------------------------------------------------------------
     # Define (Gaussian) prior and likelihood
