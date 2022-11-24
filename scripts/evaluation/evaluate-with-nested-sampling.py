@@ -90,11 +90,11 @@ def find_optimal_z_with_nested_sampling(
 
         z_initial = encoder(log_P=log_P, T=T_true)
         T_pred_initial = decoder(log_P=log_P, z=z_initial)
-        error_initial = float(torch.mean((T_pred_initial - T_true) ** 2))
+        mse_initial = float(torch.mean((T_pred_initial - T_true) ** 2))
 
         results['z_initial'] = z_initial.numpy()
         results['T_pred_initial'] = T_pred_initial.numpy()
-        results['error_initial'] = error_initial
+        results['mse_initial'] = mse_initial
         results['T_true'] = T_true.numpy()
 
     # -------------------------------------------------------------------------
@@ -117,7 +117,7 @@ def find_optimal_z_with_nested_sampling(
 
     def likelihood(params: np.ndarray) -> np.ndarray:
         """
-        Likelihood for comparing PT profiles (= mean squared error).
+        Likelihood for comparing PT profiles (= negative MSE).
         """
 
         z = torch.from_numpy(params).float()
@@ -172,9 +172,9 @@ def find_optimal_z_with_nested_sampling(
 
     with torch.no_grad():
         T_pred_refined = decoder(log_P=log_P, z=z_refined)
-        error_refined = float(torch.mean((T_pred_refined - T_true) ** 2))
+        mse_refined = float(torch.mean((T_pred_refined - T_true) ** 2))
         results['T_pred_refined'] = T_pred_refined.numpy()
-        results['error_refined'] = error_refined
+        results['mse_refined'] = mse_refined
 
     return results
 
@@ -274,8 +274,8 @@ if __name__ == "__main__":
             'z_refined',
             'T_pred_initial',
             'T_pred_refined',
-            'error_initial',
-            'error_refined',
+            'mse_initial',
+            'mse_refined',
             'niter',
         ):
 
