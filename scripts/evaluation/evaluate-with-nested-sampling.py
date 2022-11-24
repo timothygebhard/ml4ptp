@@ -72,8 +72,9 @@ def find_optimal_z_with_nested_sampling(
 ) -> dict:
 
     # Load decoder from buffer
-    encoder = torch.jit.load(encoder_buffer)  # type: ignore
-    decoder = torch.jit.load(decoder_buffer)  # type: ignore
+    loc = torch.device('cpu')
+    encoder = torch.jit.load(encoder_buffer, map_location=loc)  # type: ignore
+    decoder = torch.jit.load(decoder_buffer, map_location=loc)  # type: ignore
 
     # Prepare dict with results
     results = dict()
