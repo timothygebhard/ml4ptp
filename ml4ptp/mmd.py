@@ -30,7 +30,8 @@ def compute_mmd(
         https://www.jmlr.org/papers/volume13/gretton12a/gretton12a.pdf
 
     Note: Technically, this functions returns the *squared* MMD, which
-    may still be negative (because it is an unbiased estimator).
+    may still be negative (because it is an unbiased estimator). We,
+    therefore, return the absolute value of the squared MMD.
 
     Args:
         x: A tensor of shape (n, d) containing the first sample.
@@ -77,5 +78,10 @@ def compute_mmd(
         + 1 / (n * (n - 1)) * k_yy
         - 2 / (m * n) * k_xy
     )
+
+    # Since we are computing an unbiased estimator of the MMD, it may be
+    # negative. To avoid that this interferes with the optimization, we
+    # return the absolute value.
+    mmd = torch.abs(mmd)
 
     return mmd
