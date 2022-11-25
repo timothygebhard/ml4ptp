@@ -9,6 +9,8 @@ Methods related to paths.
 from os.path import expandvars as expandvars_
 from pathlib import Path
 
+import ml4ptp
+
 
 # -----------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
@@ -48,3 +50,14 @@ def get_datasets_dir() -> Path:
         )
 
     return datasets_dir
+
+
+def get_scripts_dir() -> Path:
+    """
+    Return the path to the directory containing the scripts.
+
+    Returns:
+        The path to the directory containing the scripts.
+    """
+
+    return Path(ml4ptp.__file__).parent.parent / 'scripts'
