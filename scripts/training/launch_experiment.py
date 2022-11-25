@@ -1,5 +1,5 @@
 """
-Create a HTCondor *.sub file for a given experiment and launch it  as a
+Create a HTCondor *.sub file for a given experiment and launch it as a
 job on the cluster.
 """
 
@@ -10,35 +10,35 @@ job on the cluster.
 from pathlib import Path
 
 import argparse
-import subprocess
-import sys
 import time
-import traceback
 
-from ml4ptp.paths import expandvars
-from ml4ptp.utils import get_run_dir
+from ml4ptp.htcondor import SubmitFile, DAGFile, submit_dag
+from ml4ptp.paths import expandvars, get_scripts_dir
 
 
 # -----------------------------------------------------------------------------
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
+
 def get_cli_args() -> argparse.Namespace:
 
     # Set up argument parser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=(
+            'Create HTCondor submit files for training and evaluation, and '
+            'a DAG file to control the workflow.\n\n'
+            'Useful strings for the --requirements argument:\n'
+            '  - "TARGET.Machine != \'g025.internal.cluster.is.localnet\'"\n'
+            '  - "TARGET.CUDAGlobalMemoryMb > 15000"\n'
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument(
         '--bid',
         type=int,
         default=5,
         help='How much to bid for the cluster job.',
-    )
-    parser.add_argument(
-        '--blacklist',
-        type=str,
-        nargs='+',
-        default='',
-        help='Names of nodes (e.g., "g019") to exclude from running jobs.',
     )
     parser.add_argument(
         '--cpus',
@@ -58,14 +58,8 @@ def get_cli_args() -> argparse.Namespace:
         help='Number of GPUs to request for cluster job.',
     )
     parser.add_argument(
-        '--gpu-memory',
-        type=int,
-        default=8_192,
-        help='GPU memory (in MB) to request for cluster job.',
-    )
-    parser.add_argument(
         '--experiment-dir',
-        required=True,
+        # required=True,
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
@@ -75,10 +69,18 @@ def get_cli_args() -> argparse.Namespace:
         help='Memory (in MB) to request for cluster job.',
     )
     parser.add_argument(
-        '--random-seed',
+        '--random-seeds',
+        nargs='+',
         type=int,
-        default=42,
-        help='Random seed for PyTorch, numpy, ....',
+        default=[0],
+        help='(List of) random seeds; each will be used for a separate run.',
+    )
+    parser.add_argument(
+        '--requirements',
+        type=str,
+        nargs='+',
+        default=['TARGET.CUDAGlobalMemoryMb > 15000'],
+        help='One more multuple strings with requirements (e.g., GPU memory).',
     )
     args = parser.parse_args()
 
@@ -99,7 +101,7 @@ if __name__ == "__main__":
     print('\nLAUNCH EXPERIMENT ON THE CLUSTER\n', flush=True)
 
     # -------------------------------------------------------------------------
-    # Create a *.sub file for the run
+    # Get command line arguments, prepare runs directory for experiment
     # -------------------------------------------------------------------------
 
     # Get command line arguments; resolve experiment_dir
@@ -111,111 +113,108 @@ if __name__ == "__main__":
         print(f'    {key} = {value}')
     print()
 
-    # Get directory for this run
-    run_dir = get_run_dir(experiment_dir=experiment_dir)
-
-    # Create directory for HTCondor files
-    print('Creating htcondor directory...', end=' ', flush=True)
-    htcondor_dir = run_dir / 'htcondor'
-    htcondor_dir.mkdir(exist_ok=True)
-    print('Done!', flush=True)
-
-    print('Creating logs directory...', end=' ', flush=True)
-    logs_dir = htcondor_dir / 'logs'
-    logs_dir.mkdir(exist_ok=True)
-    print('Done!', flush=True)
-
-    # Collect arguments for train.py
-    arguments = [
-        (Path(__file__).parent / 'train.py').as_posix(),
-        f'--experiment-dir {args.experiment_dir}',
-        f'--run-dir {run_dir.as_posix()}',
-        f'--random-seed {args.random_seed}',
-    ]
-
-    # Collect requirements
-    requirements = []
-    if args.gpus > 0 and args.gpu_memory > 0:
-        requirements += [f'TARGET.CUDAGlobalMemoryMb > {args.gpu_memory}']
-    for node_name in list(args.blacklist):
-        print(node_name)
-        requirements += [
-            f'TARGET.Machine != "{node_name}.internal.cluster.is.localnet"'
-        ]
-    n_requirements = len(requirements)
-
-    # Construct string from requirements
-    requirements_string = ''
-    for i, requirement in enumerate(requirements):
-        if i == 0:
-            requirements_string += f'requirements   = {requirement}'
-            requirements_string += ' && \\\n' if n_requirements > 1 else ' \n'
-        elif i < n_requirements - 1:
-            requirements_string += f'%                {requirement} && \\\n'
-        else:
-            requirements_string += f'%                {requirement}'
-
-    # Collect the lines for the *.sub file
-    lines = f"""
-        getenv = true
-
-        executable = {sys.executable}
-        arguments  = {' '.join(arguments)}
-
-        output = {(logs_dir / 'htcondor.out.txt').as_posix()}
-        error  = {(logs_dir / 'htcondor.err.txt').as_posix()}
-        log    = {(logs_dir / 'htcondor.log.txt').as_posix()}
-
-        request_memory = {args.memory}
-        request_cpus   = {args.cpus}
-        request_gpus   = {args.gpus}
-
-        {requirements_string}
-
-        queue
-        """
-    lines = '\n'.join(_.strip().replace('%', ' ') for _ in lines.split('\n'))
-
-    # Create the *.sub file in the HTCondor directory
-    print('Creating run.sub file...', end=' ', flush=True)
-    file_path = htcondor_dir / 'run.sub'
-    with open(file_path, 'w') as sub_file:
-        sub_file.write(lines)
-    print('Done!\n', flush=True)
+    # Get the runs directory
+    print('Creating runs directory...', end=' ', flush=True)
+    runs_dir = experiment_dir / 'runs'
+    runs_dir.mkdir(exist_ok=True)
+    print('Done!\n\n', flush=True)
 
     # -------------------------------------------------------------------------
-    # Launch the job on the cluster
+    # For each random seed, create a run
     # -------------------------------------------------------------------------
 
-    # Define the command to launch the job
-    cmd = ['condor_submit_bid', str(args.bid), file_path.as_posix()]
-    print('Command for launching job:\n')
-    print('    ', ' '.join(cmd), '\n')
+    for random_seed in args.random_seeds:
 
-    # In case of a dry run, we abort here
-    if args.dry_run:
-        print('Dry run, aborting here!')
+        print(f'Creating run for random seed {random_seed}:', flush=True)
 
-    # Otherwise, we actually launch the job
-    else:
+        # Construct the directory for this run
+        print(f'  Creating run directory...', end=' ', flush=True)
+        run_dir = runs_dir / f'run_{random_seed}'
+        run_dir.mkdir(exist_ok=True)
+        print('Done!', flush=True)
 
-        print('Launching job on cluster:\n')
+        # Create directory for HTCondor files
+        print('  Creating htcondor directory...', end=' ', flush=True)
+        htcondor_dir = run_dir / 'htcondor'
+        htcondor_dir.mkdir(exist_ok=True)
+        print('Done!', flush=True)
 
-        try:
+        # Instantiate a new DAG file
+        dag_file = DAGFile()
 
-            # Launch a process that runs the command
-            p = subprocess.run(args=cmd, capture_output=True)
+        # Create submit file for training job and add it to DAG file
+        print('  Creating submit file for training...', end=' ', flush=True)
+        training_submit_file = SubmitFile(
+            log_dir=htcondor_dir,
+            memory=args.memory,
+            cpus=args.cpus,
+            gpus=args.gpus,
+            requirements=args.requirements,
+        )
+        training_submit_file.add_job(
+            name='training',
+            job_script=get_scripts_dir() / 'training' / 'train_pt-profile.py',
+            arguments={
+                'experiment-dir': experiment_dir.as_posix(),
+                'run-dir': run_dir.as_posix(),
+                'random-seed': random_seed,
+            },
+            bid=args.bid,
+        )
+        file_path = htcondor_dir / 'training.sub'
+        training_submit_file.save(file_path=file_path)
+        dag_file.add_submit_file(
+            name='training',
+            attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
+        )
+        print('Done!', flush=True)
 
-            # Wait for process to finish; get output
-            output = p.stdout.decode()
-            print(output)
+        # Create submit file for evaluation job and add it to DAG file
+        print('  Creating submit file for evaluation...', end=' ', flush=True)
+        evaluation_submit_file = SubmitFile(
+            log_dir=htcondor_dir,
+            memory=65_536,
+            cpus=64,
+        )
+        evaluation_submit_file.add_job(
+            name='training',
+            job_script=(
+                get_scripts_dir()
+                / 'evaluation'
+                / 'evaluate-with-nested-sampling.py'
+            ),
+            arguments={
+                'experiment-dir': experiment_dir.as_posix(),
+                'run-dir': run_dir.as_posix(),
+                'random-seed': random_seed,
+            },
+            bid=args.bid,
+        )
+        file_path = htcondor_dir / 'evaluation.sub'
+        evaluation_submit_file.save(file_path=file_path)
+        dag_file.add_submit_file(
+            name='evaluation',
+            attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
+        )
+        print('Done!', flush=True)
 
-        except Exception as e:
-            print(f'There was a problem: {e}\n')
-            print(traceback.format_exc())
+        # Add dependencies to DAG file and save file
+        print('  Saving DAG file...', end=' ', flush=True)
+        dag_file.add_dependency('training', 'evaluation')
+        file_path = htcondor_dir / 'run.dag'
+        dag_file.save(file_path=file_path)
+        print('Done!', flush=True)
+
+        # Submit DAG file to cluster
+        print('  Submitting DAG file...', end=' ', flush=True)
+        output = submit_dag(file_path=file_path, dry_run=args.dry_run)
+        print('Done!', flush=True)
+        print(f'  Output: "{output}"', flush=True)
+
+        print('\n')
 
     # -------------------------------------------------------------------------
     # Postliminaries
     # -------------------------------------------------------------------------
 
-    print(f'\nDone! This took {time.time() - script_start:.1f} seconds.\n')
+    print(f'Done! This took {time.time() - script_start:.1f} seconds.\n')
