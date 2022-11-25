@@ -9,7 +9,7 @@ Unit tests for decoders.py
 import numpy as np
 import torch
 
-from ml4ptp.decoders import Decoder, HypernetDecoder
+from ml4ptp.decoders import Decoder, SkipConnectionsDecoder, HypernetDecoder
 
 
 # -----------------------------------------------------------------------------
@@ -50,6 +50,23 @@ def test__decoder() -> None:
     output = decoder.forward(z=z, log_P=log_P)
     assert output.shape == (17, 19)
     assert np.isclose(output.mean().item(), 0.29760393500328064)
+
+
+def test__skip_connections_decoder() -> None:
+
+    # Case 1
+    decoder = SkipConnectionsDecoder(
+        latent_size=5,
+        layer_size=16,
+        n_layers=2,
+        T_offset=1,
+        T_factor=2,
+        activation='leaky_relu',
+    )
+    z = torch.randn(17, 5)
+    log_P = torch.randn(17, 19)
+    T_pred = decoder(z=z, log_P=log_P)
+    assert T_pred.shape == log_P.shape
 
 
 def test__hypernet_decoder() -> None:

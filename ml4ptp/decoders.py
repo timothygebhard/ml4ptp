@@ -24,7 +24,7 @@ class Decoder(nn.Module, NormalizerMixin):
     """
     A standard decoder architecture where the conditioning is achieved
     by concatenating each input (i.e., a pressure values) with `z`.
-    
+
     Arguments:
         latent_size: The size of the latent space.
         layer_size: The size of the hidden layers of the decoder.
@@ -103,6 +103,99 @@ class Decoder(nn.Module, NormalizerMixin):
         # Reshape the decoder output to (batch_size, grid_size), that is,
         # the original shape of `log_p`
         T_pred = decoded.reshape(batch_size, grid_size)
+
+        # Undo normalization (i.e., transform back to Kelvin)
+        T_pred = self.normalize(T_pred, undo=True)
+
+        return T_pred
+
+
+class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
+    """
+    Similar to the standard decoder, but with skip connections: The
+    latent variable is concatenated to the output of each layer.
+
+    Arguments:
+        latent_size: The size of the latent space.
+        layer_size: The size of the hidden layers of the decoder.
+        n_layers: The number of hidden layers of the decoder.
+        T_offset: The offset to use for the temperature normalization.
+        T_factor: The factor to use for the temperature normalization.
+        activation: The activation function to use in the decoder.
+    """
+
+    def __init__(
+        self,
+        latent_size: int,
+        layer_size: int,
+        n_layers: int,
+        T_offset: float,
+        T_factor: float,
+        activation: str = 'leaky_relu',
+    ) -> None:
+
+        super().__init__()
+
+        # Store constructor arguments
+        self.latent_size = latent_size
+        self.layer_size = layer_size
+        self.n_layers = n_layers
+        self.T_offset = float(T_offset)
+        self.T_factor = float(T_factor)
+
+        # Instantiate list of layers (both Linear and activation functions)
+        self.layers = nn.ModuleList()
+
+        # Add first layer plus activation function
+        self.layers.append(
+            nn.Linear(latent_size + 1, layer_size - latent_size)
+        )
+        self.layers.append(get_activation(activation))
+
+        # Add hidden layers plus activation functions
+        for i in range(n_layers):
+            self.layers.append(nn.Linear(layer_size, layer_size - latent_size))
+            self.layers.append(get_activation(activation))
+
+        # Add final layer (no activation function)
+        self.layers.append(nn.Linear(layer_size, 1))
+
+    def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
+
+        # Get batch size and grid size
+        batch_size, grid_size = log_P.shape
+
+        # Repeat z so that we can concatenate it with every pressure value.
+        # This changes the shape of z:
+        #   (batch_size, latent_size) -> (batch_size, grid_size, latent_size)
+        z = z.unsqueeze(1).repeat(1, grid_size, 1)
+
+        # Reshape the pressure grid and z into the batch dimension.
+        # They now show have shapes:
+        #   p_flat: (batch_size * grid_size, 1)
+        #   z_flat: (batch_size * grid_size, latent_size)
+        p_flat = log_P.reshape(batch_size * grid_size, 1)
+        z_flat = z.reshape(batch_size * grid_size, self.latent_size)
+
+        # The input to the decoder is simply p_flat; we only use different
+        # names to make the code more readable.
+        x = p_flat
+
+        # Send through decoder (manually, so that we can take care of the skip
+        # connections and concatenate z to the output of each layer)
+        for layer in self.layers:
+
+            # Before sending through the layer, concatenate the latent
+            # variable to the output of the previous layer
+            if isinstance(layer, nn.Linear):
+                x = torch.cat((x, z_flat), dim=1)
+
+            # Send through layer (or apply activation function)
+            x = layer(x)
+
+        # Reshape the decoder output to (batch_size, grid_size), that is,
+        # the original shape of `log_p`
+        T_pred = x.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
         T_pred = self.normalize(T_pred, undo=True)
