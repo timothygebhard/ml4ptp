@@ -177,7 +177,7 @@ if __name__ == "__main__":
             cpus=64,
         )
         evaluation_submit_file.add_job(
-            name='training',
+            name='evaluation',
             job_script=(
                 get_scripts_dir()
                 / 'evaluation'
