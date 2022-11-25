@@ -14,6 +14,7 @@ import time
 
 import yaml
 
+from lightning_lite.utilities.seed import seed_everything
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -22,7 +23,6 @@ from pytorch_lightning.callbacks import (
     RichProgressBar,
 )
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.utilities.seed import seed_everything
 
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
