@@ -311,6 +311,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
 
         # Loop over weights and biases and construct linear layers from them
         # which correspond to the decoder
+        first_layer_flag = True
         for weight_size, bias_size in zip(self.weight_sizes, self.bias_sizes):
 
             # Compute the number of weights in this layer
@@ -327,6 +328,11 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
 
             # Compute the pass through the linear layer
             x = torch.einsum('bi,bij->bj', x, weight) + bias
+
+            # On the first layer, increase the frequency of the sine activation
+            if first_layer_flag and self.decoder_activation == 'siren':
+                x *= 30
+                first_layer_flag = False
 
             # Apply activation function (except for the last layer)
             if weights_and_biases.shape[1] > 0:
