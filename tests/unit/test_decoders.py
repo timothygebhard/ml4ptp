@@ -9,7 +9,7 @@ Unit tests for decoders.py
 import numpy as np
 import torch
 
-from ml4ptp.decoders import Decoder, HyperSIREN
+from ml4ptp.decoders import Decoder, HypernetDecoder
 
 
 # -----------------------------------------------------------------------------
@@ -52,16 +52,19 @@ def test__decoder() -> None:
     assert np.isclose(output.mean().item(), 0.29760393500328064)
 
 
-def test__hypersiren() -> None:
-   
+def test__hypernet_decoder() -> None:
+
     # Case 1
-    model = HyperSIREN(
-        latent_size=2,
-        layer_size=16,
-        n_layers=2,
+    model = HypernetDecoder(
         T_offset=0,
         T_factor=1,
-        activation='siren',
+        latent_size=2,
+        hypernet_layer_size=16,
+        decoder_layer_size=16,
+        hypernet_n_layers=3,
+        decoder_n_layers=3,
+        hypernet_activation='leaky_relu',
+        decoder_activation='siren',
     )
 
     z = torch.randn(17, 2)

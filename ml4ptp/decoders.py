@@ -6,12 +6,13 @@ Define decoder architectures.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from math import prod
 from typing import Callable
 
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import get_mlp_layers
+from ml4ptp.layers import get_mlp_layers, get_activation
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -20,6 +21,18 @@ from ml4ptp.mixins import NormalizerMixin
 # -----------------------------------------------------------------------------
 
 class Decoder(nn.Module, NormalizerMixin):
+    """
+    A standard decoder architecture where the conditioning is achieved
+    by concatenating each input (i.e., a pressure values) with `z`.
+    
+    Arguments:
+        latent_size: The size of the latent space.
+        layer_size: The size of the hidden layers of the decoder.
+        n_layers: The number of hidden layers of the decoder.
+        T_offset: The offset to use for the temperature normalization.
+        T_factor: The factor to use for the temperature normalization.
+        activation: The activation function to use in the decoder.
+    """
 
     def __init__(
         self,
@@ -97,48 +110,89 @@ class Decoder(nn.Module, NormalizerMixin):
         return T_pred
 
 
-class HyperSIREN(nn.Module, NormalizerMixin):
+class HypernetDecoder(nn.Module, NormalizerMixin):
+    """
+    A more sophisticated decoder model that uses a hypernetwork to turn
+    the latent variable `z` into the weights and biases of a decoder.
+
+    Arguments:
+        latent_size: The size of the latent variable `z`.
+        T_offset: The offset used to normalize the temperature.
+        T_factor: The factor used to normalize the temperature.
+        hypernet_layer_size: The size of the (hidden) layers in the
+            hypernetwork.
+        decoder_layer_size: The size of the (hidden) layers in the
+            decoder.
+        hypernet_n_layers: The number of layers in the hypernetwork.
+        decoder_n_layers: The number of layers in the decoder.
+        hypernet_activation: The activation function to use in the
+            hypernetwork.
+        decoder_activation: The activation function to use in the
+            decoder.
+    """
 
     def __init__(
         self,
         latent_size: int,
-        layer_size: int,
-        n_layers: int,
         T_offset: float,
         T_factor: float,
-        activation: str = 'leaky_relu',
+        hypernet_layer_size: int,
+        decoder_layer_size: int,
+        hypernet_n_layers: int,
+        decoder_n_layers: int,
+        hypernet_activation: str = 'leaky_relu',
+        decoder_activation: str = 'siren',
     ) -> None:
 
         super().__init__()
 
         # Store constructor arguments
         self.latent_size = latent_size
-        self.layer_size = layer_size
-        self.n_layers = n_layers
+        self.hypernet_layer_size = hypernet_layer_size
+        self.decoder_layer_size = decoder_layer_size
+        self.hypernet_n_layers = hypernet_n_layers
+        self.decoder_n_layers = decoder_n_layers
+        self.hypernet_activation = hypernet_activation
+        self.decoder_activation = decoder_activation
         self.T_offset = float(T_offset)
         self.T_factor = float(T_factor)
+
+        # Compute sizes of the weight and bias tensors for the decoder
+        self.weight_sizes, self.bias_sizes = self._get_weight_and_bias_sizes()
+
+        # Compute the total number of weights that the hypernet needs to output
+        output_size = sum(prod(_) for _ in self.weight_sizes)
+        output_size += sum(self.bias_sizes)
 
         # Define hypernet architecture
         self.hypernet: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
             input_size=latent_size,
-            n_layers=n_layers,
-            layer_size=layer_size,
-            output_size=4353,  # total number of parameters in SIREN network
-            activation=activation,
+            n_layers=hypernet_n_layers,
+            layer_size=hypernet_layer_size,
+            output_size=output_size,
+            activation=hypernet_activation,
             final_tanh=False,
         )
 
-    def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
+    def _get_weight_and_bias_sizes(self) -> tuple:
 
-        # Reminder:
-        #  * z has shape (batch_size, latent_size)
-        #  * log_p has shape (batch_size, grid_size)
-        #  * The decoder takes inputs of size latent_size + 1
-        #  * We now need to combine z and log_p into a single tensor of
-        #    shape (batch_size * grid_size, latent_size + 1) that we can
-        #    give to the decoder
-        #  * After passing through the decoder, we want to reshape the output
-        #    to (batch_size, grid_size) again: one T for each log_P
+        weight_sizes = (
+            [(1, self.decoder_layer_size)]
+            + [
+                (self.decoder_layer_size, self.decoder_layer_size)
+                for _ in range(self.decoder_n_layers)
+            ]
+            + [(self.decoder_layer_size, 1)]
+        )
+        bias_sizes = (
+            [1]
+            + [self.decoder_layer_size for _ in range(self.decoder_n_layers)]
+            + [1]
+        )
+
+        return weight_sizes, bias_sizes
+
+    def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
 
         # Get batch size and grid size
         batch_size, grid_size = log_P.shape
@@ -148,32 +202,44 @@ class HyperSIREN(nn.Module, NormalizerMixin):
         #   (batch_size, latent_size) -> (batch_size, grid_size, latent_size)
         z = z.unsqueeze(1).repeat(1, grid_size, 1)
 
-        # Reshape the pressure grid and z into the batch dimension. They now
-        # show have shapes:
+        # Reshape the pressure grid and z into the batch dimension.
+        # They now show have shapes:
         #   p_flat: (batch_size * grid_size, 1)
         #   z_flat: (batch_size * grid_size, latent_size)
         p_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
+        # The input to the decoder is simply p_flat; we only use different
+        # names to make the code more readable.
+        x = p_flat
+
         # Get weights and biases from hypernet
         weights_and_biases = self.hypernet(z_flat)
-        weight_1, weight_2, weight_3, bias_1, bias_2, bias_3 = torch.split(
-            weights_and_biases, [64, 64 * 64, 64, 64, 64, 1], dim=1,
-        )
-        weight_1 = weight_1.reshape(-1, 64)
-        weight_2 = weight_2.reshape(-1, 64, 64)
-        weight_3 = weight_3.reshape(-1, 64)
 
-        # Pass pressure through a tiny SIREN whose weights and biases we
-        # predicted using the hypernet
-        x = p_flat
-        x = torch.einsum('ij,ij->ij', x, weight_1) + bias_1
-        x = torch.sin(30 * x)
-        x = torch.einsum('ik,ijk->ij', x, weight_2) + bias_2
-        x = torch.sin(x)
-        x = torch.einsum('ij,ij->i', x, weight_3) + bias_3.T
+        # Loop over weights and biases and construct linear layers from them
+        # which correspond to the decoder
+        for weight_size, bias_size in zip(self.weight_sizes, self.bias_sizes):
 
-        # Reshape the SIREN output to (batch_size, grid_size), that is,
+            # Compute the number of weights in this layer
+            n = prod(weight_size)
+
+            # Get the weights and biases for this layer
+            weight = weights_and_biases[:, :n]
+            bias = weights_and_biases[:, n : n + bias_size]
+            weights_and_biases = weights_and_biases[:, n + bias_size :]
+
+            # Reshape weight and bias
+            weight = weight.reshape(batch_size * grid_size, *weight_size)
+            bias = bias.reshape(batch_size * grid_size, bias_size)
+
+            # Compute the pass through the linear layer
+            x = torch.einsum('bi,bij->bj', x, weight) + bias
+
+            # Apply activation function (except for the last layer)
+            if weights_and_biases.shape[1] > 0:
+                x = get_activation(self.decoder_activation)(x)
+
+        # Reshape the decoder output to (batch_size, grid_size), that is,
         # the original shape of `log_p`
         T_pred = x.reshape(batch_size, grid_size)
 
