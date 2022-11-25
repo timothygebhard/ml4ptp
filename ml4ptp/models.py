@@ -19,6 +19,7 @@ import pytorch_lightning as pl
 import torch
 
 from ml4ptp.importing import get_member_by_name
+from ml4ptp.mixins import NormalizerMixin
 from ml4ptp.mmd import compute_mmd
 from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
 
@@ -27,7 +28,7 @@ from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-class Model(pl.LightningModule):
+class Model(pl.LightningModule, NormalizerMixin):
     """
     A wrapper to combine the encoder and decoder for training.
     """
@@ -65,9 +66,12 @@ class Model(pl.LightningModule):
         self.decoder_config = decoder_config
         self.optimizer_config = optimizer_config
         self.loss_config = loss_config
-        self.normalization_config = normalization_config
         self.plotting_config = plotting_config
         self.lr_scheduler_config = lr_scheduler_config
+
+        # Store normalizer
+        self.T_offset = normalization_config['T_offset']
+        self.T_factor = normalization_config['T_factor']
 
         # Define some shortcuts
         self.beta = self.loss_config['beta']
@@ -146,12 +150,16 @@ class Model(pl.LightningModule):
         Compute the loss.
         """
 
-        # Compute the reconstruction loss
-        reconstruction_loss = (T_true - T_pred).pow(2).mean()
+        # Compute the reconstruction loss on the normalized temperatures
+        reconstruction_loss = (
+            (self.normalize(T_true) - self.normalize(T_pred)).pow(2).mean()
+        )
 
         # Compute the MMD between z and a sample from a standard Gaussian
         true_samples = torch.randn(
-            z.shape[0], self.encoder.latent_size, device=self.device,
+            z.shape[0],
+            self.encoder.latent_size,
+            device=self.device,
         )
         mmd_loss = compute_mmd(true_samples, z)
 
