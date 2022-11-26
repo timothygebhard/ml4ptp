@@ -11,7 +11,6 @@ from pathlib import Path
 
 import subprocess
 import sys
-import traceback
 
 from collections import deque
 
@@ -310,38 +309,24 @@ class DAGFile:
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
-def submit_dag(file_path: Path, dry_run: bool = False) -> str:
+def submit_dag(file_path: Path) -> None:
     """
     Submit a given DAG file as a workflow on the cluster.
 
     Args:
         file_path: Path to the *.dag file.
-        dry_run: If True, only the command that will be used to submit
-            is shown, but nothing is actually submitted.
-
-    Returns:
-        The output of the command that was used to submit the DAG file.
     """
 
     # Define the command to launch the DAG workflow
     cmd = ['condor_submit_dag', file_path.as_posix()]
 
-    # In case of a dry run, we abort here
-    if dry_run:
-        return f'Dry run: {" ".join(cmd)}'
-
     # Otherwise, we actually launch the workflow
-    else:
+    p = subprocess.run(args=cmd, capture_output=True)
 
-        try:
+    # Check if the workflow was successfully launched
+    if p.returncode != 0:
+        raise RuntimeError(
+            f'Error launching DAG workflow "{file_path}": {p.stderr.decode()}'
+        )
 
-            # Launch a process that runs the command
-            p = subprocess.run(args=cmd, capture_output=True)
-
-            # Wait for process to finish; get output
-            output = p.stdout.decode()
-            
-            return output
-
-        except Exception as e:
-            return f'There was a problem: {e}\n {traceback.format_exc()}'
+    return None
