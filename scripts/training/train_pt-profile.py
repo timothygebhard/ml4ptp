@@ -197,7 +197,14 @@ if __name__ == "__main__":
         lr_scheduler_config=config['lr_scheduler'],
         plotting_config=config['plotting'],
     )
-    print('Done!', flush=True)
+    print('Done!\n\n', flush=True)
+
+    # Print some information about the model
+    print('Encoder:')
+    print(model.encoder)
+    print()
+    print('Decoder:')
+    print(model.decoder)
 
     # -------------------------------------------------------------------------
     # Train the model
