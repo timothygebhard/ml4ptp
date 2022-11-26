@@ -47,11 +47,6 @@ def get_cli_args() -> argparse.Namespace:
         help='Number of CPUs to request for cluster job.',
     )
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Create *.sub file, but do not launch job on cluster.',
-    )
-    parser.add_argument(
         '--gpus',
         type=int,
         default=1,
@@ -207,9 +202,8 @@ if __name__ == "__main__":
 
         # Submit DAG file to cluster
         print('  Submitting DAG file...', end=' ', flush=True)
-        output = submit_dag(file_path=file_path, dry_run=args.dry_run)
+        submit_dag(file_path=file_path)
         print('Done!', flush=True)
-        print(f'  Output: "{output}"', flush=True)
 
         print('\n')
 
