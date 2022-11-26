@@ -75,6 +75,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Define some shortcuts
         self.beta = self.loss_config['beta']
+        self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
@@ -83,6 +84,21 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.decoder = get_member_by_name(
             module_name='ml4ptp.decoders', member_name=decoder_config['name']
         )(**decoder_config['parameters'], **normalization_config)
+
+    def get_loss_weights_like(self, x: torch.Tensor) -> torch.Tensor:
+
+        # If we are not using a weighted loss, every sample has the same weight
+        if not self.use_weighted_loss:
+            return torch.ones_like(x, device=x.device) / x.numel()
+
+        # Otherwise, we need to compute the weights
+        # The linear scheme used here is somewhat arbitrary
+        weights = torch.tile(
+            input=torch.linspace(0.001, 1.0, x.shape[1], device=x.device),
+            dims=(x.shape[0], 1),
+        )
+        weights = weights / weights.sum()
+        return weights
 
     @property
     def tensorboard_logger(self) -> TensorBoardLogger:
@@ -126,7 +142,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         return result
 
-    def forward(  # type: ignore
+    def forward(
         self,
         log_P: torch.Tensor,
         T: torch.Tensor,
@@ -150,13 +166,15 @@ class Model(pl.LightningModule, NormalizerMixin):
         Compute the loss.
         """
 
-        # Compute the reconstruction loss on the normalized temperatures
-        reconstruction_loss = (
-            (self.normalize(T_true) - self.normalize(T_pred)).pow(2).mean()
-        )
+        # Compute the reconstruction loss on the normalized temperatures.
+        # This is a manual version of an MSE loss which can also handle
+        # weighted samples (e.g., give more weight to higher pressure).
+        rl = (self.normalize(T_true) - self.normalize(T_pred)).pow(2)
+        rl = rl * self.get_loss_weights_like(rl)
+        reconstruction_loss = rl.sum()
 
         # Compute the MMD between z and a sample from a standard Gaussian
-        true_samples = torch.randn(
+        true_samples = torch.randn(  # type: ignore
             z.shape[0],
             self.encoder.latent_size,
             device=self.device,
@@ -168,21 +186,21 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         return total_loss, reconstruction_loss, mmd_loss
 
-    def training_step(  # type: ignore
+    def training_step(
         self,
         batch: List[torch.Tensor],
         batch_idx: int,
     ) -> torch.Tensor:
         return self._common_step(batch, batch_idx, "train")
 
-    def validation_step(  # type: ignore
+    def validation_step(
         self,
         batch: List[torch.Tensor],
         batch_idx: int,
     ) -> torch.Tensor:
         return self._common_step(batch, batch_idx, "val")
 
-    def test_step(  # type: ignore
+    def test_step(
         self,
         batch: List[torch.Tensor],
         batch_idx: int,
@@ -278,13 +296,13 @@ class Model(pl.LightningModule, NormalizerMixin):
         plt.close(figure)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
