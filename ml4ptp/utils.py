@@ -51,7 +51,7 @@ def get_batch_idx(
     Auxiliary functions to get the indices need to loop over `a` in
     batches of size `batch_size`. (Including optional shuffling.)
     """
- 
+
     # Create a new random number generator
     rng = np.random.default_rng(random_seed)
 
@@ -59,7 +59,7 @@ def get_batch_idx(
     idx = np.arange(len(a))
     if shuffle:
         rng.shuffle(idx)
- 
+
     # Split indices into batches and return
     return np.split(idx, np.arange(batch_size, len(a), batch_size))
 
