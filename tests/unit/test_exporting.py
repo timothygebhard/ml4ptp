@@ -148,8 +148,8 @@ def test__export_encoder_with_onnx(
         # Note: It's not clear if we can also check that the two different ways
         # of loading the model give the same results (except for passing some
         # inputs through the model and checking that the outputs are the same).
-        encoder_byte_string = onnx._serialize(onnx.load(file_path.as_posix()))
-        assert isinstance(ONNXEncoder(encoder_byte_string), ONNXEncoder)
+        encoder_bytes = onnx.load(file_path.as_posix()).SerializeToString()
+        assert isinstance(ONNXEncoder(encoder_bytes), ONNXEncoder)
 
         # Case 1 (original input size)
         z_original = encoder_original(log_P=log_P_1, T=T_1).detach().numpy()
@@ -202,8 +202,8 @@ def test__export_decoder_with_onnx(
         # Note: It's not clear if we can also check that the two different ways
         # of loading the model give the same results (except for passing some
         # inputs through the model and checking that the outputs are the same).
-        decoder_byte_string = onnx._serialize(onnx.load(file_path.as_posix()))
-        assert isinstance(ONNXDecoder(decoder_byte_string), ONNXDecoder)
+        decoder_bytes = onnx.load(file_path.as_posix()).SerializeToString()
+        assert isinstance(ONNXDecoder(decoder_bytes), ONNXDecoder)
 
         # Case 1 (original input size)
         T_pred_original = decoder_original(log_P=log_P_1, z=z_1).detach()
