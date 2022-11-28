@@ -32,6 +32,8 @@ setup(
         'matplotlib',
         'normflows',
         'numpy',
+        'onnx',
+        'onnxruntime',
         'pandas',
         'pytorch-lightning>=1.7',
         'pyyaml',
