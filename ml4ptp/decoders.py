@@ -12,7 +12,7 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import get_mlp_layers, get_activation
+from ml4ptp.layers import get_mlp_layers, get_activation, Identity
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -142,23 +142,17 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.n_layers = n_layers
         self.T_offset = float(T_offset)
         self.T_factor = float(T_factor)
+        self.activation_function = get_activation(activation)
 
-        # Instantiate list of layers (both Linear and activation functions)
-        self.layers = nn.ModuleList()
-
-        # Add first layer plus activation function
-        self.layers.append(
-            nn.Linear(latent_size + 1, layer_size - latent_size)
+        # Collect list of layers (excluding the final layer)
+        self.layers = nn.ModuleList(
+            [nn.Linear(latent_size + 1, layer_size - latent_size)]
         )
-        self.layers.append(get_activation(activation))
-
-        # Add hidden layers plus activation functions
         for i in range(n_layers):
             self.layers.append(nn.Linear(layer_size, layer_size - latent_size))
-            self.layers.append(get_activation(activation))
 
         # Add final layer (no activation function)
-        self.layers.append(nn.Linear(layer_size, 1))
+        self.final_layer = nn.Linear(layer_size, 1)
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
 
@@ -187,11 +181,15 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
 
             # Before sending through the layer, concatenate the latent
             # variable to the output of the previous layer
-            if isinstance(layer, nn.Linear):
-                x = torch.cat((x, z_flat), dim=1)
+            x = torch.cat((x, z_flat), dim=1)
 
-            # Send through layer (or apply activation function)
+            # Send through layer and apply activation function
             x = layer(x)
+            x = self.activation_function(x)
+
+        # Send through final layer (no activation function)
+        x = torch.cat((x, z_flat), dim=1)
+        x = self.final_layer(x)
 
         # Reshape the decoder output to (batch_size, grid_size), that is,
         # the original shape of `log_p`
@@ -253,6 +251,19 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         # Compute sizes of the weight and bias tensors for the decoder
         self.weight_sizes, self.bias_sizes = self._get_weight_and_bias_sizes()
 
+        # Collect activation functions for each layer
+        self.activations = nn.ModuleList(
+            [
+                get_activation(self.decoder_activation)
+                for _ in range(decoder_n_layers + 1)
+            ]
+            + [Identity()]  # Final layer has no activation function
+        )
+
+        # Make sure that all lengths match
+        dummy = [self.weight_sizes, self.bias_sizes, self.activations]
+        assert len(set(map(len, dummy))) == 1
+
         # Compute the total number of weights that the hypernet needs to output
         output_size = sum(prod(_) for _ in self.weight_sizes)
         output_size += sum(self.bias_sizes)
@@ -312,7 +323,9 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         # Loop over weights and biases and construct linear layers from them
         # which correspond to the decoder
         first_layer_flag = True
-        for weight_size, bias_size in zip(self.weight_sizes, self.bias_sizes):
+        for weight_size, bias_size, activation in zip(
+            self.weight_sizes, self.bias_sizes, self.activations
+        ):
 
             # Compute the number of weights in this layer
             n = prod(weight_size)
@@ -334,9 +347,8 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
                 x *= 30
                 first_layer_flag = False
 
-            # Apply activation function (except for the last layer)
-            if weights_and_biases.shape[1] > 0:
-                x = get_activation(self.decoder_activation)(x)
+            # Apply activation function
+            x = activation(x)
 
         # Reshape the decoder output to (batch_size, grid_size), that is,
         # the original shape of `log_p`

@@ -56,7 +56,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
 
         # Normalize temperatures and construct encoder input
         normalized_T = self.normalize(T)
-        encoder_input = torch.column_stack((log_P, normalized_T))
+        encoder_input = torch.concat(tensors=(log_P, normalized_T), dim=1)
 
         # Compute forward pass through encoder to get latent variable z
         z = self.layers(encoder_input)
@@ -119,7 +119,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         batch_size, grid_size = log_P.shape
         log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         normalized_T_flat = normalized_T.reshape(batch_size * grid_size, 1)
-        encoder_input = torch.column_stack((log_P_flat, normalized_T_flat))
+        encoder_input = torch.concat((log_P_flat, normalized_T_flat), dim=1)
 
         # Compute forward pass through first encoder part
         output = torch.nn.functional.leaky_relu(self.layers_1(encoder_input))
@@ -170,9 +170,9 @@ class CNPEncoder(nn.Module, NormalizerMixin):
 
         # Construct encoder input: Reshape grid into batch dimension
         batch_size, grid_size = log_P.shape
-        log_P = log_P.reshape(batch_size * grid_size, 1)
-        normalized_T = normalized_T.reshape(batch_size * grid_size, 1)
-        encoder_input = torch.column_stack((log_P, normalized_T))
+        log_P_flat = log_P.reshape(batch_size * grid_size, 1)
+        normalized_T_flat = normalized_T.reshape(batch_size * grid_size, 1)
+        encoder_input = torch.concat((log_P_flat, normalized_T_flat), dim=1)
 
         # Compute forward pass through encoder to get latent variable z
         z_values = self.layers(encoder_input)
