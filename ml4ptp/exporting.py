@@ -6,11 +6,14 @@ Utilities for exporting models.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from io import BytesIO
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import torch
+
+from ml4ptp.onnx import ONNXDecoder
 
 
 # -----------------------------------------------------------------------------
@@ -19,28 +22,17 @@ import torch
 
 class PTProfile:
     """
-    Wrapper class for exporting trained (decoder) models which represent
-    a (parameterized) pressure-temperature profile.
+    Wrapper class for loading a decoder model from a (ONNX) file that
+    provides an intuitive interface for running the model.
     """
 
-    def __init__(
-        self,
-        decoder_file_path: Path,
-        flow_file_path: Optional[Path] = None,
-    ) -> None:
+    def __init__(self, path_or_bytes: Union[str, BytesIO]) -> None:
 
         # Load the (decoder) model from the given file path
-        self.model = torch.jit.load(decoder_file_path)  # type: ignore
+        self.model = ONNXDecoder(path_or_bytes)
 
-        # If a flow file path is given, load the flow
-        self.flow = None
-        if flow_file_path is not None:
-            self.flow = torch.load(flow_file_path)  # type: ignore
-
-        # Make some other properties available
-        self.latent_size = self.model.latent_size
-        self.T_offset = self.model.T_offset
-        self.T_factor = self.model.T_factor
+        # Get the latent size from the model
+        self.latent_size = self.model.session.get_inputs()[0].shape[1]
 
     def __call__(
         self,
@@ -48,41 +40,83 @@ class PTProfile:
         log_P: Union[np.ndarray, float],
     ) -> np.ndarray:
 
-        # Convert log_P to array, if needed
-        if isinstance(log_P, float):
-            log_P = np.array([log_P])
+        # Ensure that the input arrays have the correct shape
+        z = np.atleast_2d(z)
+        log_P = np.atleast_2d(log_P)
 
-        # Make sure inputs have the right shape
-        if not z.shape == (self.model.latent_size,):
-            raise ValueError(f'z must be {self.model.latent_size}D!')
-        if log_P.ndim != 1:
-            raise ValueError('log_P must be 1D!')
-
-        # Apply flow, if needed
-        z_in = torch.from_numpy(z).float().unsqueeze(0)
-        if self.flow is not None:
-            with torch.no_grad():
-                for layer in self.flow.flows:
-                    z_in, _ = layer(z_in)
-
-        # Construct inputs to model
-        log_P_in = torch.from_numpy(log_P.reshape(-1, 1)).float()
-        z_in = torch.tile(z_in, (log_P.shape[0], 1))
+        # Run some sanity checks on the shapes
+        if not z.shape[1] == self.latent_size:
+            raise ValueError(f'z must be {self.latent_size}-dimensional!')
+        if not z.shape[0] == log_P.shape[0]:
+            raise ValueError('Batch size of z and log_P must match!')
 
         # Send through the model
-        with torch.no_grad():
-            T = self.model.forward(z=z_in, log_P=log_P_in).numpy()
+        T = self.model(z=z, log_P=log_P)
 
         return np.asarray(np.atleast_1d(T.squeeze()))
 
 
+def export_encoder_with_onnx(
+    model: torch.nn.Module,
+    example_inputs: Dict[str, torch.Tensor],
+    file_path: Path,
+) -> None:
+    """
+    Basic auxiliary function for exporting an encoder with ONNX.
+
+    Args:
+        model: The (trained) encoder model to export.
+        example_inputs: A dictionary with example inputs to the model.
+            Keys should be "log_P" and "T", values should be tensors
+            of shape `(batch_size, grid_size)`.
+        file_path: The file path to which to export the model.
+    """
+
+    torch.onnx.export(
+        model=model,
+        args=(example_inputs, ),
+        f=file_path.as_posix(),
+        dynamic_axes={
+            "log_P": {0: "batch_size"},
+            "T": {0: "batch_size"},
+            "z": {0: "batch_size"},
+        },
+        input_names=['log_P', 'T'],
+        output_names=['z'],
+    )
+
+
+def export_decoder_with_onnx(
+    model: torch.nn.Module,
+    example_inputs: Dict[str, torch.Tensor],
+    file_path: Path,
+) -> None:
+
+    torch.onnx.export(
+        model=model,
+        args=(example_inputs, ),
+        f=file_path.as_posix(),
+        dynamic_axes={
+            "z": {0: "batch_size"},
+            "log_P": {0: "batch_size", 1: "grid_size"},
+            "T_pred": {0: "batch_size", 1: "grid_size"},
+        },
+        input_names=['z', 'log_P'],
+        output_names=['T_pred'],
+    )
+
+
 def export_model_with_torchscript(
     model: torch.nn.Module,
+    example_inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...]],
     file_path: Path,
 ) -> None:
     """
     Basic auxiliary function for exporting a model with torchscript.
     """
 
-    script = torch.jit.script(model)
+    script = torch.jit.trace(  # type: ignore
+        func=model,
+        example_inputs=example_inputs,
+    )
     torch.jit.save(m=script, f=file_path)  # type: ignore

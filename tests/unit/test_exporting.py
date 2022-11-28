@@ -7,77 +7,349 @@ Unit tests for exporting.py
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
+from typing import Union
 
 import numpy as np
+import onnx
 import pytest
 import torch
 
-from ml4ptp.decoders import Decoder
-from ml4ptp.exporting import export_model_with_torchscript, PTProfile
+from ml4ptp.encoders import CNPEncoder, MLPEncoder, ModifiedMLPEncoder
+from ml4ptp.decoders import Decoder, SkipConnectionsDecoder, HypernetDecoder
+from ml4ptp.onnx import ONNXEncoder, ONNXDecoder
+from ml4ptp.exporting import (
+    export_encoder_with_onnx,
+    export_decoder_with_onnx,
+    export_model_with_torchscript,
+    PTProfile,
+)
+
+
+# -----------------------------------------------------------------------------
+# FIXTURES
+# -----------------------------------------------------------------------------
+
+@pytest.fixture()
+def mlp_encoder() -> MLPEncoder:
+    return MLPEncoder(
+        input_size=101,
+        latent_size=2,
+        layer_size=32,
+        n_layers=3,
+        T_offset=0,
+        T_factor=1,
+    )
+
+
+@pytest.fixture()
+def modified_mlp_encoder() -> ModifiedMLPEncoder:
+    return ModifiedMLPEncoder(
+        input_size=101,
+        latent_size=2,
+        layer_size=32,
+        n_layers=3,
+        T_offset=0,
+        T_factor=1,
+    )
+
+
+@pytest.fixture()
+def cnp_encoder() -> CNPEncoder:
+    return CNPEncoder(
+        latent_size=2,
+        layer_size=32,
+        n_layers=3,
+        T_offset=0,
+        T_factor=1,
+    )
+
+
+@pytest.fixture()
+def decoder() -> Decoder:
+    return Decoder(
+        latent_size=2,
+        layer_size=32,
+        n_layers=2,
+        T_offset=0,
+        T_factor=1,
+        activation='leaky_relu',
+    )
+
+
+@pytest.fixture()
+def skip_connections_decoder() -> SkipConnectionsDecoder:
+    return SkipConnectionsDecoder(
+        latent_size=2,
+        layer_size=32,
+        n_layers=2,
+        T_offset=0,
+        T_factor=1,
+        activation='leaky_relu',
+    )
+
+
+@pytest.fixture()
+def hypernet_decoder() -> HypernetDecoder:
+    return HypernetDecoder(
+        latent_size=2,
+        T_offset=0,
+        T_factor=1,
+        hypernet_layer_size=32,
+        hypernet_n_layers=2,
+        decoder_layer_size=32,
+        decoder_n_layers=2,
+        hypernet_activation='leaky_relu',
+        decoder_activation='siren',
+    )
 
 
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
 
-@pytest.fixture()
-def model() -> torch.nn.Sequential:
-    torch.manual_seed(42)
-    model = torch.nn.Sequential(
-        torch.nn.Linear(in_features=3, out_features=32),
-        torch.nn.LeakyReLU(),
-        torch.nn.Linear(in_features=32, out_features=1),
+def test__export_encoder_with_onnx(
+    tmp_path: Path,
+    mlp_encoder: MLPEncoder,
+    modified_mlp_encoder: ModifiedMLPEncoder,
+    cnp_encoder: CNPEncoder,
+) -> None:
+
+    # Define inputs for all test cases
+    # Note: The grid_size cannot change
+    log_P_1 = torch.rand(32, 101)
+    T_1 = torch.rand(32, 101)
+    log_P_2 = torch.rand(13, 101)
+    T_2 = torch.rand(13, 101)
+
+    # Loop over different encoders and test that we can export and load them
+    for encoder_original in [
+        mlp_encoder,
+        modified_mlp_encoder,
+        cnp_encoder,
+    ]:
+
+        # Export model with ONNX
+        file_name = f'exported_{encoder_original.__class__.__name__}.onnx'
+        file_path = tmp_path / file_name
+        export_encoder_with_onnx(
+            model=encoder_original,
+            example_inputs=dict(log_P=log_P_1, T=T_1),
+            file_path=file_path,
+        )
+
+        # Load model to run ONNX checks
+        encoder_loaded = onnx.load(file_path.as_posix())
+        onnx.checker.check_model(encoder_loaded)
+
+        # Load model into a ONNX runtime wrapper (for inference)
+        encoder_loaded = ONNXEncoder(file_path.as_posix())
+
+        # Case 1 (original input size)
+        z_original = encoder_original(log_P=log_P_1, T=T_1).detach().numpy()
+        z_loaded = encoder_loaded(log_P=log_P_1.numpy(), T=T_1.numpy())
+        assert np.allclose(z_original, z_loaded, atol=1e-6)
+
+        # Case 2 (different input size)
+        z_original = encoder_original(log_P=log_P_2, T=T_2).detach().numpy()
+        z_loaded = encoder_loaded(log_P=log_P_2.numpy(), T=T_2.numpy())
+        assert np.allclose(z_original, z_loaded, atol=1e-6)
+
+
+def test__export_decoder_with_onnx(
+    tmp_path: Path,
+    decoder: Decoder,
+    skip_connections_decoder: SkipConnectionsDecoder,
+    hypernet_decoder: HypernetDecoder,
+) -> None:
+
+    # Define inputs for all test cases
+    z_1 = torch.rand(32, 2)
+    z_2 = torch.rand(13, 2)
+    log_P_1 = torch.rand(32, 51)
+    log_P_2 = torch.rand(13, 51)
+
+    # Loop over different decoders and test that we can export and load them
+    for decoder_original in [
+        decoder,
+        skip_connections_decoder,
+        hypernet_decoder,
+    ]:
+
+        # Export model with ONNX
+        file_name = f'exported_{decoder_original.__class__.__name__}.onnx'
+        file_path = tmp_path / file_name
+        export_decoder_with_onnx(
+            model=decoder_original,
+            example_inputs=dict(z=z_1, log_P=log_P_1),
+            file_path=file_path,
+        )
+
+        # Load model to run ONNX checks
+        decoder_loaded = onnx.load(file_path.as_posix())
+        onnx.checker.check_model(decoder_loaded)
+
+        # Load model into a ONNX runtime wrapper (for inference)
+        decoder_loaded = ONNXDecoder(file_path.as_posix())
+
+        # Case 1 (original input size)
+        T_pred_original = decoder_original(log_P=log_P_1, z=z_1).detach()
+        T_pred_loaded = decoder_loaded(log_P=log_P_1.numpy(), z=z_1.numpy())
+        assert np.allclose(T_pred_original.numpy(), T_pred_loaded, atol=1e-6)
+
+        # Case 2 (different input size)
+        T_pred_original = decoder_original(log_P=log_P_2, z=z_2).detach()
+        T_pred_loaded = decoder_loaded(log_P=log_P_2.numpy(), z=z_2.numpy())
+        assert np.allclose(T_pred_original.numpy(), T_pred_loaded, atol=1e-6)
+
+
+def test__export_encoder_with_torchscript(
+    tmp_path: Path,
+    mlp_encoder: MLPEncoder,
+    modified_mlp_encoder: ModifiedMLPEncoder,
+    cnp_encoder: CNPEncoder,
+) -> None:
+
+    # Define inputs for all test cases
+    # Note: The grid_size cannot change
+    log_P_1 = torch.rand(32, 101)
+    T_1 = torch.rand(32, 101)
+    log_P_2 = torch.rand(13, 101)
+    T_2 = torch.rand(13, 101)
+
+    # Loop over different encoders and test that we can export and load them
+    for encoder_original in [
+        mlp_encoder,
+        modified_mlp_encoder,
+        cnp_encoder,
+    ]:
+
+        # Export model with TorchScript; load saved model
+        file_name = f'exported_{encoder_original.__class__.__name__}.pt'
+        file_path = tmp_path / file_name
+        export_model_with_torchscript(
+            model=encoder_original,
+            example_inputs=(log_P_1, T_1),
+            file_path=file_path,
+        )
+        encoder_loaded = torch.jit.load(file_path.as_posix())  # type: ignore
+
+        # Case 1 (original input size)
+        with torch.no_grad():
+            z_original = encoder_original(log_P=log_P_1, T=T_1).numpy()
+            z_loaded = encoder_loaded(log_P=log_P_1, T=T_1).numpy()
+            assert np.allclose(z_original, z_loaded, atol=1e-6)
+
+        # Case 2 (different input size)
+        with torch.no_grad():
+            z_original = encoder_original(log_P=log_P_2, T=T_2).numpy()
+            z_loaded = encoder_loaded(log_P=log_P_2, T=T_2).numpy()
+            assert np.allclose(z_original, z_loaded, atol=1e-6)
+
+
+def test__export_decoder_with_torchscript(
+    tmp_path: Path,
+    decoder: Decoder,
+    skip_connections_decoder: SkipConnectionsDecoder,
+    hypernet_decoder: HypernetDecoder,
+) -> None:
+
+    # Define inputs for all test cases
+    z_1 = torch.rand(32, 2)
+    z_2 = torch.rand(13, 2)
+    log_P_1 = torch.rand(32, 51)
+    log_P_2 = torch.rand(13, 51)
+
+    # Loop over different decoders and test that we can export and load them
+    for decoder_original in [
+        decoder,
+        skip_connections_decoder,
+        hypernet_decoder,
+    ]:
+
+        # Export model with TorchScript; load saved model
+        file_name = f'exported_{decoder_original.__class__.__name__}.pt'
+        file_path = tmp_path / file_name
+        export_model_with_torchscript(
+            model=decoder_original,
+            example_inputs=(z_1, log_P_1),
+            file_path=file_path,
+        )
+        decoder_loaded = torch.jit.load(file_path.as_posix())  # type: ignore
+
+        # Case 1 (original input size)
+        with torch.no_grad():
+            T_pred_original = decoder_original(log_P=log_P_1, z=z_1).numpy()
+            T_pred_loaded = decoder_loaded(log_P=log_P_1, z=z_1).numpy()
+            assert np.allclose(T_pred_original, T_pred_loaded, atol=1e-6)
+
+        # Case 2 (different input size)
+        with torch.no_grad():
+            T_pred_original = decoder_original(log_P=log_P_2, z=z_2).numpy()
+            T_pred_loaded = decoder_loaded(log_P=log_P_2, z=z_2).numpy()
+            assert np.allclose(T_pred_original, T_pred_loaded, atol=1e-6)
+
+
+def test__pt_profile(
+    decoder: Decoder,
+    tmp_path: Path,
+) -> None:
+
+    # Define inputs for all test cases
+    batch_size = 32
+    grid_size = 51
+    latent_size = decoder.latent_size
+
+    # Export the model with ONNX
+    file_path = tmp_path / 'decoder.onnx'
+    export_decoder_with_onnx(
+        model=decoder,
+        example_inputs=dict(
+            z=torch.randn(batch_size, latent_size),
+            log_P=torch.randn(batch_size, grid_size),
+        ),
+        file_path=file_path,
     )
-    return model
 
+    # Load the model into the PTProfile wrapper
+    pt_profile = PTProfile(file_path.as_posix())
 
-@pytest.fixture()
-def decoder() -> torch.nn.Module:
-    torch.manual_seed(42)
-    model = Decoder(
-        latent_size=2, layer_size=32, n_layers=2, T_offset=300, T_factor=50
-    )
-    return model
+    # Some type annotations
+    z: np.ndarray
+    log_P: Union[np.ndarray, float]
 
-
-def test__load_config(model: torch.nn.Sequential, tmp_path: Path) -> None:
-
-    # Case 1: Ensure that model gives same outputs after saving and loading
-    x_in = torch.rand(17, 3)
-    x_out_1: torch.Tensor = model.forward(x_in)  # type: ignore
-    file_path = tmp_path / 'exported_model.pt'
-    export_model_with_torchscript(model=model, file_path=file_path)
-    loaded_model = torch.jit.load(file_path)  # type: ignore
-    x_out_2 = loaded_model.forward(x_in)
-    assert torch.equal(x_out_1, x_out_2)
-
-
-def test__pt_profile(decoder: torch.nn.Module, tmp_path: Path) -> None:
-
-    file_path = tmp_path / 'decoder.pt'
-    export_model_with_torchscript(model=decoder, file_path=file_path)
-
-    # Case 1
-    pt_profile = PTProfile(decoder_file_path=file_path)
-    assert pt_profile.T_offset == 300
-    assert pt_profile.T_factor == 50
+    # Case 1: Check that we can reconstruct the latent size from ONNX
     assert pt_profile.latent_size == 2
 
-    z = np.zeros(pt_profile.latent_size)
-    log_P = np.linspace(-6, 0, 100)
-    T = pt_profile(z=z, log_P=log_P)
-    assert T.shape == (100, )
-    assert np.isclose(np.mean(T), 302.72156)
-
-    with pytest.raises(ValueError) as value_error:
-        pt_profile(z=np.array([0, 0, 0]), log_P=log_P)
-    assert 'z must be 2D!' in str(value_error)
-
-    with pytest.raises(ValueError) as value_error:
-        pt_profile(z=z, log_P=log_P.reshape((2, 2, 5, 5)))
-    assert 'log_P must be 1D!' in str(value_error)
-
     # Case 2
-    T = pt_profile(z=z, log_P=-3.0)
-    assert T.shape == (1,)
-    assert np.isclose(float(T), 302.4253)
+    z = np.array([0.0, 0.0])
+    log_P = np.linspace(0, 5, grid_size)
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert T_pred.shape == (grid_size,)
+
+    # Case 3
+    z = np.array([[0.0, 0.0], [1.0, 1.0]])
+    log_P = np.array(
+        [np.linspace(0, 5, 10), np.linspace(0, 5, 10)]
+    )
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert T_pred.shape == (2, 10)
+
+    # Case 4
+    z = np.array([0.0, 0.0, 0.0])
+    log_P = np.linspace(0, 5, grid_size)
+    with pytest.raises(ValueError) as value_error:
+        pt_profile(z=z, log_P=log_P)
+    assert 'z must be 2-dimensional!' in str(value_error)
+
+    # Case 5
+    z = np.array([[0.0, 0.0], [1.0, 1.0]])
+    log_P = np.linspace(0, 5, grid_size)
+    with pytest.raises(ValueError) as value_error:
+        pt_profile(z=z, log_P=log_P)
+    assert 'Batch size of z and log_P must match!' in str(value_error)
+
+    # Case 6
+    z = np.array([0.0, 0.0])
+    log_P = 3.0
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert T_pred.shape == (1, )
