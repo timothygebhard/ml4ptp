@@ -12,6 +12,7 @@ from shutil import copy
 import argparse
 import time
 
+import torch
 import yaml
 
 from lightning_lite.utilities.seed import seed_everything
@@ -26,7 +27,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from ml4ptp.config import load_config
 from ml4ptp.data_modules import DataModule
-from ml4ptp.exporting import export_model_with_torchscript
+from ml4ptp.exporting import export_encoder_with_onnx, export_decoder_with_onnx
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
@@ -220,13 +221,29 @@ if __name__ == "__main__":
 
     print('Exporting trained models...', end=' ', flush=True)
 
+    # Create example input for the export
+    batch_size = 32
+    grid_size = config['model']['encoder']['parameters'].get('input_size', 101)
+    latent_size = config['model']['encoder']['parameters']['latent_size']
+    log_P = torch.randn(batch_size, grid_size)
+    T = torch.randn(batch_size, grid_size)
+    z = torch.randn(batch_size, latent_size)
+
     # Export encoder
-    file_path = run_dir / 'encoder.pt'
-    export_model_with_torchscript(model=model.encoder, file_path=file_path)
+    file_path = run_dir / 'encoder.onnx'
+    export_encoder_with_onnx(
+        model=model.encoder,
+        example_inputs=dict(log_P=log_P, T=T),
+        file_path=file_path,
+    )
 
     # Export decoder
-    file_path = run_dir / 'decoder.pt'
-    export_model_with_torchscript(model=model.decoder, file_path=file_path)
+    file_path = run_dir / 'decoder.onnx'
+    export_decoder_with_onnx(
+        model=model.decoder,
+        example_inputs=dict(z=z, log_P=log_P),
+        file_path=file_path,
+    )
 
     print('Done!\n', flush=True)
 
