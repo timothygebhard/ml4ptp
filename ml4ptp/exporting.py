@@ -6,7 +6,6 @@ Utilities for exporting models.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from io import BytesIO
 from pathlib import Path
 from typing import Dict, Tuple, Union
 
@@ -26,7 +25,7 @@ class PTProfile:
     provides an intuitive interface for running the model.
     """
 
-    def __init__(self, path_or_bytes: Union[str, BytesIO]) -> None:
+    def __init__(self, path_or_bytes: Union[str, bytes]) -> None:
 
         # Load the (decoder) model from the given file path
         self.model = ONNXDecoder(path_or_bytes)
