@@ -30,7 +30,7 @@ def get_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--run-dir',
-        # required=True,
+        required=True,
         default=(
             '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_0'
         ),
