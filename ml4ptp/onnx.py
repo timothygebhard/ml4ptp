@@ -18,10 +18,21 @@ import onnxruntime
 
 class ONNXEncoder:
 
-    def __init__(self, path_or_bytes: Union[str, bytes]) -> None:
+    def __init__(
+        self,
+        path_or_bytes: Union[str, bytes],
+        n_threads: int = 1,
+    ) -> None:
+
+        # Define the session options
+        sess_options = onnxruntime.SessionOptions()
+        sess_options.intra_op_num_threads = n_threads
 
         # Create a session for the ONNX model
-        self.session = onnxruntime.InferenceSession(path_or_bytes)
+        self.session = onnxruntime.InferenceSession(
+            path_or_bytes=path_or_bytes,
+            sess_options=sess_options,
+        )
 
     def __call__(self, log_P: np.ndarray, T: np.ndarray) -> np.ndarray:
 
@@ -42,10 +53,21 @@ class ONNXDecoder:
     a simple ``__call__`` method that can be used to run the model.
     """
 
-    def __init__(self, path_or_bytes: Union[str, bytes]) -> None:
+    def __init__(
+        self,
+        path_or_bytes: Union[str, bytes],
+        n_threads: int = 1,
+    ) -> None:
+
+        # Define the session options
+        sess_options = onnxruntime.SessionOptions()
+        sess_options.intra_op_num_threads = n_threads
 
         # Create a session for the ONNX model
-        self.session = onnxruntime.InferenceSession(path_or_bytes)
+        self.session = onnxruntime.InferenceSession(
+            path_or_bytes=path_or_bytes,
+            sess_options=sess_options,
+        )
 
     def __call__(self, z: np.ndarray, log_P: np.ndarray) -> np.ndarray:
 
