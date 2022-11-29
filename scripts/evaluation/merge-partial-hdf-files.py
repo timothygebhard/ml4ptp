@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     print('Saving merged HDF file...', end=' ', flush=True)
 
-    with h5py.File(run_dir / 'results_on_test_set_2.hdf', 'w') as hdf_file:
+    with h5py.File(run_dir / 'results_on_test_set.hdf', 'w') as hdf_file:
 
         for key in data_as_arrays.keys():
 
