@@ -10,6 +10,7 @@ from pathlib import Path
 from shutil import copy
 
 import argparse
+import socket
 import time
 
 import torch
@@ -79,6 +80,9 @@ if __name__ == "__main__":
 
     script_start = time.time()
     print('\nTRAIN A MODEL\n', flush=True)
+
+    # Print hostname for debugging purposes
+    print(f'Running on machine: {socket.gethostname()}\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Get experiment dir and load configuration file

@@ -12,6 +12,7 @@ from typing import Dict, Union
 
 import argparse
 import logging
+import socket
 import time
 
 # from joblib import delayed, Parallel
@@ -180,6 +181,9 @@ if __name__ == "__main__":
 
     script_start = time.time()
     print('\nEVALUATE A MODEL\n', flush=True)
+
+    # Print hostname for debugging purposes
+    print(f'Running on machine: {socket.gethostname()}\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Get experiment dir and load configuration file
