@@ -20,7 +20,6 @@ from ml4ptp.paths import expandvars, get_scripts_dir
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-
 def get_cli_args() -> argparse.Namespace:
 
     # Set up argument parser
@@ -53,8 +52,13 @@ def get_cli_args() -> argparse.Namespace:
         help='Number of GPUs to request for cluster job.',
     )
     parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='If given, create the submit files but do not submit the DAG.',
+    )
+    parser.add_argument(
         '--experiment-dir',
-        # required=True,
+        required=True,
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
@@ -62,6 +66,12 @@ def get_cli_args() -> argparse.Namespace:
         type=int,
         default=16_384,
         help='Memory (in MB) to request for cluster job.',
+    )
+    parser.add_argument(
+        '--n-evaluation-splits',
+        type=int,
+        default=128,
+        help='Number of parallel jobs for evaluation.',
     )
     parser.add_argument(
         '--random-seeds',
@@ -139,14 +149,14 @@ if __name__ == "__main__":
 
         # Create submit file for training job and add it to DAG file
         print('  Creating submit file for training...', end=' ', flush=True)
-        training_submit_file = SubmitFile(
+        submit_file = SubmitFile(
             log_dir=htcondor_dir,
             memory=args.memory,
             cpus=args.cpus,
             gpus=args.gpus,
             requirements=args.requirements,
         )
-        training_submit_file.add_job(
+        submit_file.add_job(
             name='training',
             job_script=get_scripts_dir() / 'training' / 'train_pt-profile.py',
             arguments={
@@ -157,7 +167,7 @@ if __name__ == "__main__":
             bid=args.bid,
         )
         file_path = htcondor_dir / 'training.sub'
-        training_submit_file.save(file_path=file_path)
+        submit_file.save(file_path=file_path)
         dag_file.add_submit_file(
             name='training',
             attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
@@ -166,12 +176,12 @@ if __name__ == "__main__":
 
         # Create submit file for evaluation job and add it to DAG file
         print('  Creating submit file for evaluation...', end=' ', flush=True)
-        evaluation_submit_file = SubmitFile(
+        submit_file = SubmitFile(
             log_dir=htcondor_dir,
-            memory=65_536,
-            cpus=64,
+            memory=8192,
+            cpus=4,
         )
-        evaluation_submit_file.add_job(
+        submit_file.add_job(
             name='evaluation',
             job_script=(
                 get_scripts_dir()
@@ -181,14 +191,44 @@ if __name__ == "__main__":
             arguments={
                 'experiment-dir': experiment_dir.as_posix(),
                 'run-dir': run_dir.as_posix(),
+                'n-splits': args.n_evaluation_splits,
+                'split-idx': '$(Process)',
                 'random-seed': random_seed,
             },
             bid=args.bid,
+            queue=int(args.n_evaluation_splits),
         )
         file_path = htcondor_dir / 'evaluation.sub'
-        evaluation_submit_file.save(file_path=file_path)
+        submit_file.save(file_path=file_path)
         dag_file.add_submit_file(
             name='evaluation',
+            attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
+        )
+        print('Done!', flush=True)
+
+        # Create submit file for merging job and add it to DAG file
+        print('  Creating submit file for merging...', end=' ', flush=True)
+        submit_file = SubmitFile(
+            log_dir=htcondor_dir,
+            memory=16_384,
+            cpus=2,
+        )
+        submit_file.add_job(
+            name='merging',
+            job_script=(
+                get_scripts_dir()
+                / 'evaluation'
+                / 'merge-partial-hdf-files.py'
+            ),
+            arguments={
+                'run-dir': run_dir.as_posix(),
+            },
+            bid=args.bid,
+        )
+        file_path = htcondor_dir / 'merging.sub'
+        submit_file.save(file_path=file_path)
+        dag_file.add_submit_file(
+            name='merging',
             attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
         )
         print('Done!', flush=True)
@@ -196,14 +236,18 @@ if __name__ == "__main__":
         # Add dependencies to DAG file and save file
         print('  Saving DAG file...', end=' ', flush=True)
         dag_file.add_dependency('training', 'evaluation')
+        dag_file.add_dependency('evaluation', 'merging')
         file_path = htcondor_dir / 'run.dag'
         dag_file.save(file_path=file_path)
         print('Done!', flush=True)
 
         # Submit DAG file to cluster
-        print('  Submitting DAG file...', end=' ', flush=True)
-        submit_dag(file_path=file_path)
-        print('Done!', flush=True)
+        if not args.dry_run:
+            print('  Submitting DAG file...', end=' ', flush=True)
+            submit_dag(file_path=file_path)
+            print('Done!', flush=True)
+        else:
+            print('  Skipping submission of DAG file (dry run)!', flush=True)
 
         print('\n')
 
