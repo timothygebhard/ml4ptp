@@ -169,7 +169,7 @@ def find_optimal_z_with_nested_sampling(
 
     # noinspection PyTypeChecker
     result = sampler.run(
-        min_num_live_points=100,
+        min_num_live_points=400,
         show_status=False,
         viz_callback=False,
     )
