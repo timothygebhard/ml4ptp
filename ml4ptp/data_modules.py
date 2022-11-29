@@ -7,7 +7,7 @@ Data module(s) that encapsulate the data handling for PyTorch Lightning.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
@@ -209,3 +209,15 @@ class DataModule(pl.LightningDataModule):
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         raise NotImplementedError()
+
+    def get_test_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Auxiliary function to get the test data as numpy arrays.
+        """
+
+        if self.test_dataset is None:
+            raise RuntimeError("No test_dataset defined!")
+
+        log_P, T_true = self.test_dataset.tensors
+
+        return log_P.numpy(), T_true.numpy()
