@@ -8,14 +8,14 @@ Evaluate model on test set.
 
 from functools import partial
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import argparse
 import logging
 import socket
 import time
 
-from p_tqdm import p_map
+from p_tqdm import p_umap
 
 import h5py
 import scipy.stats
@@ -46,6 +46,21 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
+        '--split-idx',
+        default=0,
+        type=int,
+        help=(
+            'When running this script in parallel: '
+            'Index of the split to evaluate; must be in [0, n_splits).'
+        ),
+    )
+    parser.add_argument(
+        '--n-splits',
+        default=1,
+        type=int,
+        help='When running this script in parallel: How many splits to use.',
+    )
+    parser.add_argument(
         '--run-dir',
         default=(
             '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_0'
@@ -71,17 +86,26 @@ def get_cli_args() -> argparse.Namespace:
 def find_optimal_z_with_nested_sampling(
     log_P: np.ndarray,
     T_true: np.ndarray,
+    idx: int,
     encoder_bytes: bytes,
     decoder_bytes: bytes,
     latent_size: int,
-) -> dict:
+    random_seed: int,
+) -> Dict[str, Union[int, float, np.ndarray]]:
+
+    # Set random seed
+    np.random.seed(random_seed)
+
+    # Fix the shapes of the inputs
+    log_P = log_P.reshape(1, -1)
+    T_true = T_true.reshape(1, -1)
 
     # Load encoder and decoder from byte strings
     encoder = ONNXEncoder(encoder_bytes)
     decoder = ONNXDecoder(decoder_bytes)
 
     # Prepare dict with results
-    results: Dict[str, Union[float, np.ndarray]] = dict()
+    results: Dict[str, Union[int, float, np.ndarray]] = dict(idx=idx)
 
     # -------------------------------------------------------------------------
     # Get initial guess for z from encoder and compute error
@@ -145,7 +169,7 @@ def find_optimal_z_with_nested_sampling(
 
     # noinspection PyTypeChecker
     result = sampler.run(
-        min_num_live_points=400,
+        min_num_live_points=100,
         show_status=False,
         viz_callback=False,
     )
@@ -196,9 +220,14 @@ if __name__ == "__main__":
     print('Done!\n', flush=True)
 
     # Define shortcuts
+    split_idx = args.split_idx
+    n_splits = args.n_splits
     random_seed = args.random_seed
     run_dir = expandvars(Path(args.run_dir)).resolve()
     latent_size = config['model']['decoder']['parameters']['latent_size']
+
+    # Set random seed
+    np.random.seed(random_seed)
 
     # -------------------------------------------------------------------------
     # Prepare the dataset and load the trained encoder and decoder models
@@ -206,11 +235,7 @@ if __name__ == "__main__":
 
     # Instantiate the DataModule
     print('Instantiating DataModule...', end=' ', flush=True)
-    datamodule = DataModule(
-        **config['datamodule'],
-        test_batch_size=1,
-        random_state=random_seed,
-    )
+    datamodule = DataModule(**config['datamodule'])
     datamodule.prepare_data()
     print('Done!', flush=True)
 
@@ -230,51 +255,68 @@ if __name__ == "__main__":
     # Run fitting
     # -------------------------------------------------------------------------
 
+    # Prepare inputs for p_map
+    log_P, T_true = datamodule.get_test_data()
+    idx = np.arange(len(log_P))
+    log_P = log_P[split_idx::n_splits]
+    T_true = T_true[split_idx::n_splits]
+    idx = idx[split_idx::n_splits]
+
+    # Get number of cores to use
     n_jobs = get_number_of_available_cores()
     print(f'Number of available cores: {n_jobs}\n', flush=True)
     print('Fitting:', flush=True)
 
-    # Prepare inputs for p_map
-    log_P, T_true = [], []
-    for log_P_, T_true_ in datamodule.test_dataloader():
-        log_P.append(log_P_.numpy())
-        T_true.append(T_true_.numpy())
-
     # Run fitting (in parallel)
-    results = p_map(
+    # We use umap here, because it should (theoretically) be faster than map,
+    # and because we can sort by the `idx` of the input data afterwards.
+    results: List[Dict[str, Union[int, float, np.ndarray]]] = p_umap(
         partial(
             find_optimal_z_with_nested_sampling,
             encoder_bytes=encoder_bytes,
             decoder_bytes=decoder_bytes,
             latent_size=latent_size,
+            random_seed=random_seed,
         ),
         log_P,
         T_true,
+        idx,
         num_cpus=n_jobs,
     )
+
+    # Sort results by idx
+    results = sorted(results, key=lambda x: x['idx'])  # type: ignore
 
     # Convert results (i.e., list of dicts) to a dataframe for easier handling
     results_df = pd.DataFrame(results)
 
     # -------------------------------------------------------------------------
-    # Save the results to an HDF file
+    # Save the (partial) results to an HDF file
     # -------------------------------------------------------------------------
 
     print('\nSaving results...', end=' ', flush=True)
-    file_path = run_dir / 'results_on_test_set.hdf'
 
+    # Define name and path for the (partial) output HDF file
+    suffix = f'__{split_idx + 1:03d}-{n_splits:03d}' if n_splits > 1 else ''
+    file_name = f'results_on_test_set{suffix}.hdf'
+    file_path = run_dir / file_name
+
+    # Define keys to save
+    keys = [
+        'z_initial',
+        'z_refined',
+        'T_pred_initial',
+        'T_pred_refined',
+        'mse_initial',
+        'mse_refined',
+        'niter',
+    ]
+    if n_splits > 1:
+        keys += ['idx']
+
+    # Save results to HDF file
     with h5py.File(file_path, 'w') as hdf_file:
-
-        for key in (
-            'z_initial',
-            'z_refined',
-            'T_pred_initial',
-            'T_pred_refined',
-            'mse_initial',
-            'mse_refined',
-            'niter',
-        ):
-
+        for key in keys:
             hdf_file.create_dataset(
                 name=key,
                 data=np.row_stack(results_df[key].values),
