@@ -15,10 +15,7 @@ import logging
 import socket
 import time
 
-# from joblib import delayed, Parallel
 from p_tqdm import p_map
-
-# from tqdm.auto import tqdm
 
 import h5py
 import scipy.stats
@@ -235,39 +232,15 @@ if __name__ == "__main__":
 
     n_jobs = get_number_of_available_cores()
     print(f'Number of available cores: {n_jobs}\n', flush=True)
-
     print('Fitting:', flush=True)
 
-    # # With joblib parallelization
-    # results = Parallel(n_jobs=n_jobs)(
-    #     delayed(find_optimal_z_with_nested_sampling)(
-    #         log_P=log_P.numpy(),
-    #         T_true=T_true.numpy(),
-    #         encoder_bytes=encoder_bytes,
-    #         decoder_bytes=decoder_bytes,
-    #         latent_size=latent_size,
-    #     )
-    #     for log_P, T_true in tqdm(list(datamodule.test_dataloader())[:16])
-    # )
-
-    # # Without parallelization
-    # results = []
-    # for log_P, T_true in tqdm(list(datamodule.test_dataloader())[:3]):
-    #     result = find_optimal_z_with_nested_sampling(
-    #         log_P=log_P.numpy(),
-    #         T_true=T_true.numpy(),
-    #         encoder_bytes=encoder_bytes,
-    #         decoder_bytes=decoder_bytes,
-    #         latent_size=latent_size,
-    #     )
-    #     results.append(result)
-
-    # With p_map parallelization
+    # Prepare inputs for p_map
     log_P, T_true = [], []
-    for log_P_, T_true_ in list(datamodule.test_dataloader())[:16]:
+    for log_P_, T_true_ in datamodule.test_dataloader():
         log_P.append(log_P_.numpy())
         T_true.append(T_true_.numpy())
-    
+
+    # Run fitting (in parallel)
     results = p_map(
         partial(
             find_optimal_z_with_nested_sampling,
