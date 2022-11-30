@@ -95,6 +95,8 @@ if __name__ == "__main__":
 
     data_as_lists: Dict[str, List[np.ndarray]] = dict(
         idx=[],
+        log_P=[],
+        T_true=[],
         z_initial=[],
         z_refined=[],
         T_pred_initial=[],
@@ -138,7 +140,7 @@ if __name__ == "__main__":
 
         for key in data_as_arrays.keys():
 
-            # We do not need to save the `idx` array in the merged HDF file
+            # We do not need to save the `idx` in the merged HDF file
             if key == 'idx':
                 continue
 

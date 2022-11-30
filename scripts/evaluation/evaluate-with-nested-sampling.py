@@ -105,7 +105,11 @@ def find_optimal_z_with_nested_sampling(
     decoder = ONNXDecoder(decoder_bytes)
 
     # Prepare dict with results
-    results: Dict[str, Union[int, float, np.ndarray]] = dict(idx=idx)
+    results: Dict[str, Union[int, float, np.ndarray]] = dict(
+        idx=idx,
+        log_P=log_P,
+        T_true=T_true,
+    )
 
     # -------------------------------------------------------------------------
     # Get initial guess for z from encoder and compute error
@@ -118,7 +122,6 @@ def find_optimal_z_with_nested_sampling(
     results['z_initial'] = z_initial
     results['T_pred_initial'] = T_pred_initial
     results['mse_initial'] = mse_initial
-    results['T_true'] = T_true
 
     # -------------------------------------------------------------------------
     # Define (Gaussian) prior and likelihood
@@ -303,6 +306,8 @@ if __name__ == "__main__":
 
     # Define keys to save
     keys = [
+        'log_P',
+        'T_true',
         'z_initial',
         'z_refined',
         'T_pred_initial',
