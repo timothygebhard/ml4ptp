@@ -29,6 +29,12 @@ def get_cli_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--keep-partial-hdf-files',
+        action='store_true',
+        default=False,
+        help='If given, do not delete the partial HDF files.',
+    )
+    parser.add_argument(
         '--run-dir',
         required=True,
         default=(
@@ -152,6 +158,20 @@ if __name__ == "__main__":
             )
 
     print('Done!', flush=True)
+
+    # -------------------------------------------------------------------------
+    # Delete the partial HDF files
+    # -------------------------------------------------------------------------
+
+    if args.keep_partial_hdf_files:
+        print('Keeping partial HDF files!', flush=True)
+
+    else:
+        print('Deleting partial HDF files...', end=' ', flush=True)
+        for file_name in partial_hdf_files:
+            file_path = run_dir / file_name
+            file_path.unlink()
+        print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
