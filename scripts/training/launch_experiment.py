@@ -178,7 +178,7 @@ if __name__ == "__main__":
         print('  Creating submit file for evaluation...', end=' ', flush=True)
         submit_file = SubmitFile(
             log_dir=htcondor_dir,
-            memory=8192,
+            memory=16_384,
             cpus=4,
         )
         submit_file.add_job(
