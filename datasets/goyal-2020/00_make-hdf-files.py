@@ -142,7 +142,7 @@ def read_pt_profile(file_path: Path, *_: Any) -> dict:
     return data
 
 
-def read_chemical_abundances(file_path: Path, column_names: list[str]) -> dict:
+def read_chemical_abundances(file_path: Path, column_names: List[str]) -> dict:
     """
     Read in the chemical abundances from a *.txt file.
     """
