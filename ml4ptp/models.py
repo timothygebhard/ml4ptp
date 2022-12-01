@@ -165,17 +165,24 @@ class Model(pl.LightningModule, NormalizerMixin):
         T_true: torch.Tensor,
         T_pred: torch.Tensor,
         z: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute the loss.
         """
 
-        # Compute the reconstruction loss on the normalized temperatures.
+        # Compute the reconstruction loss on the *normalized* temperatures,
+        # so that the scale of the loss is independent of the temperature.
         # This is a manual version of an MSE loss which can also handle
         # weighted samples (e.g., give more weight to higher pressure).
         rl = (self.normalize(T_true) - self.normalize(T_pred)).pow(2)
         rl = rl * self.get_loss_weights_like(rl)
-        reconstruction_loss = rl.sum()
+        reconstruction_loss__normalized = rl.sum()
+
+        # For logging purposes, we also compute the unnormalized loss
+        with torch.no_grad():
+            rl = (T_true - T_pred).pow(2)
+            rl = rl * self.get_loss_weights_like(rl)
+            reconstruction_loss__unnormalized = rl.sum()
 
         # Compute the MMD between z and a sample from a standard Gaussian.
         # We do this multiple times to get a better estimate of the MMD.
@@ -190,15 +197,20 @@ class Model(pl.LightningModule, NormalizerMixin):
         mmd_loss = mmd_loss / 10.0
 
         # Compute the total loss
-        # Note: the `use_rl` parameter is used to turn off the reconstruction
-        # loss during the first few epochs for encoder pre-training. This is
-        # a hack to stop the encoder from collapsing to a single point.
+        # Note: the `rl_weight` parameter is slowly increased from 0 to 1 over
+        # the course of the first few epochs (for encoder pre-training). This
+        # is a hack to prevent the encoder from collapsing to a single point.
         total_loss = (
-            self.rl_weight * reconstruction_loss
+            self.rl_weight * reconstruction_loss__normalized
             + self.beta * mmd_loss
         )
 
-        return total_loss, reconstruction_loss, mmd_loss
+        return (
+            total_loss,
+            reconstruction_loss__normalized,
+            reconstruction_loss__unnormalized,
+            mmd_loss,
+        )
 
     def on_train_epoch_start(self) -> None:
 
@@ -251,15 +263,19 @@ class Model(pl.LightningModule, NormalizerMixin):
         z, T_pred = self.forward(log_P=log_P, T=T_true)
 
         # Compute the loss terms
-        total_loss, reconstruction_loss, latent_loss = self.loss(
-            T_true=T_true, T_pred=T_pred, z=z
-        )
+        (
+            total_loss,
+            rec_loss__normalized,
+            rec_loss__unnormalized,
+            latent_loss,
+        ) = self.loss(T_true=T_true, T_pred=T_pred, z=z)
 
         # Log the loss terms to TensorBoard
         self.log_dict(
             dictionary={
                 f"{stage}/total_loss": total_loss,
-                f"{stage}/reconstruction_loss": reconstruction_loss,
+                f"{stage}/rec_loss__normalized": rec_loss__normalized,
+                f"{stage}/rec_loss__unnormalized": rec_loss__unnormalized,
                 f"{stage}/latent_loss": latent_loss,
             },
             on_step=True,
