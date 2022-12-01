@@ -13,14 +13,14 @@ import torch
 import torch.nn as nn
 
 from ml4ptp.layers import get_mlp_layers
-from ml4ptp.mixins import NormalizerMixin
+from ml4ptp.mixins import NormalizerMixin, InitializeEncoderWeights
 
 
 # -----------------------------------------------------------------------------
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-class MLPEncoder(nn.Module, NormalizerMixin):
+class MLPEncoder(nn.Module, NormalizerMixin, InitializeEncoderWeights):
 
     def __init__(
         self,
@@ -51,6 +51,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             activation='leaky_relu',
             final_tanh=True,
         )
+        self.initialize_weights()
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
 
@@ -64,7 +65,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         return z
 
 
-class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
+class ModifiedMLPEncoder(nn.Module, NormalizerMixin, InitializeEncoderWeights):
     """
     A modified version of the MLP encoder that first maps each tuple
     `(log_P, T)` to a single value (via a small MLP), effectively
