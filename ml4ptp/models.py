@@ -194,7 +194,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # loss during the first few epochs for encoder pre-training. This is
         # a hack to stop the encoder from collapsing to a single point.
         total_loss = (
-            self.use_rl * reconstruction_loss
+            self.rl_weight * reconstruction_loss
             + self.beta * mmd_loss
         )
 
