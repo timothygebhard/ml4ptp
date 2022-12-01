@@ -77,6 +77,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.beta = self.loss_config['beta']
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
+        # Define other attributes
+        self.use_rl_loss = 0.0
+
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
             module_name='ml4ptp.encoders', member_name=encoder_config['name']
@@ -194,9 +197,20 @@ class Model(pl.LightningModule, NormalizerMixin):
         mmd_loss = compute_mmd(true_samples, z)
 
         # Compute the total loss
-        total_loss = reconstruction_loss + self.beta * mmd_loss
+        total_loss = (
+            self.use_rl_loss * reconstruction_loss
+            + self.beta * mmd_loss
+        )
 
         return total_loss, reconstruction_loss, mmd_loss
+
+    def on_train_epoch_start(self) -> None:
+
+        # We do not want to use the reconstruction loss during the first N
+        # epochs, in order to give the model time to learn a good initial
+        # latent space.
+        if self.current_epoch >= self.loss_config.get('pretrain_encoder', 0):
+            self.use_rl_loss = 1.0
 
     def training_step(
         self,
