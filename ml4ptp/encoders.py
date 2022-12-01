@@ -51,6 +51,8 @@ class MLPEncoder(nn.Module, NormalizerMixin, InitializeEncoderWeights):
             activation='leaky_relu',
             final_tanh=True,
         )
+
+        # Initialize weights
         self.initialize_weights()
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
@@ -110,6 +112,9 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin, InitializeEncoderWeights):
             activation='leaky_relu',
             final_tanh=True,
         )
+
+        # Initialize weights
+        self.initialize_weights()
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
 
