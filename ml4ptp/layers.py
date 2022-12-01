@@ -22,12 +22,20 @@ def get_activation(name: str) -> nn.Module:
     Get an activation function based on its `name`.
     """
 
+    if name == 'elu':
+        return nn.ELU()
+    if name == 'gelu':
+        return nn.GELU()
     if name == 'leaky_relu':
         return nn.LeakyReLU()
     if name == 'relu':
         return nn.ReLU()
+    if name == 'mish':
+        return nn.Mish()
     if name == 'sine' or name == 'siren':
         return Sine()
+    if name == 'swish':
+        return nn.SiLU()
     if name == 'tanh':
         return nn.Tanh()
 
