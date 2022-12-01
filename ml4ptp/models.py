@@ -271,7 +271,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Log the figure to TensorBoard
         self.tensorboard_logger.experiment.add_figure(
-            tag=f'Latent distribution ({label})',
+            tag=f'{label}/latent-distribution',
             figure=figure,
             global_step=self.current_epoch,
         )
@@ -299,7 +299,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Add figure to TensorBoard
         self.tensorboard_logger.experiment.add_figure(
-            tag=f'Example profiles ({label})',
+            tag=f'{label}/example-profiles',
             figure=figure,
             global_step=self.current_epoch,
         )
