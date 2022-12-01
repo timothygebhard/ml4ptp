@@ -84,7 +84,7 @@ def get_cli_args() -> argparse.Namespace:
         '--requirements',
         type=str,
         nargs='+',
-        default=['TARGET.CUDAGlobalMemoryMb > 15000'],
+        default=['TARGET.CUDAGlobalMemoryMb > 30000'],
         help='One more multuple strings with requirements (e.g., GPU memory).',
     )
     args = parser.parse_args()
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         print('  Creating submit file for evaluation...', end=' ', flush=True)
         submit_file = SubmitFile(
             log_dir=htcondor_dir,
-            memory=16_384,
+            memory=32_768,
             cpus=4,
         )
         submit_file.add_job(
