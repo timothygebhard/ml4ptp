@@ -50,7 +50,8 @@ class DataModule(pl.LightningDataModule):
         test_file_path: Optional[Path],
         train_size: int = 10_000,
         val_size: Union[float, int] = 0.1,
-        batch_size: int = 1_024,
+        train_batch_size: int = 1_024,
+        val_batch_size: int = 1_024,
         test_batch_size: int = 1_024,
         num_workers: int = 4,
         persistent_workers: bool = True,
@@ -70,7 +71,8 @@ class DataModule(pl.LightningDataModule):
         self.key_T = key_T
         self.train_size = train_size
         self.val_size = val_size
-        self.batch_size = batch_size
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
         self.persistent_workers = persistent_workers
@@ -163,7 +165,7 @@ class DataModule(pl.LightningDataModule):
 
         return DataLoader(
             dataset=self.train_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.train_batch_size,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
             shuffle=self.shuffle,
@@ -181,7 +183,7 @@ class DataModule(pl.LightningDataModule):
 
         return DataLoader(
             dataset=self.val_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.val_batch_size,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
             shuffle=False,
