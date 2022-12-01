@@ -45,5 +45,5 @@ class InitializeEncoderWeights:
         for child in self.children():
             for layer in child.children():
                 if isinstance(layer, torch.nn.Linear):
-                    torch.nn.init.kaiming_uniform_(layer.weight)
+                    torch.nn.init.kaiming_normal_(layer.weight)
                     torch.nn.init.constant_(layer.bias, 0.01)
