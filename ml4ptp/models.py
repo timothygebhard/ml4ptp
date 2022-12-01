@@ -220,7 +220,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         if pretrain_encoder == 0:
             self.rl_weight = 1.0
         else:
-            self.rl_weight = 1 / (1 + exp(-self.rl_weight + pretrain_encoder))
+            self.rl_weight = (
+                1 / (1 + exp(-self.current_epoch + pretrain_encoder))
+            )
 
     def training_step(
         self,
