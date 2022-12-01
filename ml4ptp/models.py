@@ -154,18 +154,6 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Run through encoder to get latent code
         z = self.encoder.forward(log_P=log_P, T=T)
 
-        # If the model has collapsed to a single point, we can try to reduce
-        # beta and reset the encoder weights to break the collapse
-        if torch.allclose(z, torch.zeros_like(z), atol=1e-2):
-            self.beta = self.beta * 0.9
-            print('\nReduced beta to:', self.beta, flush=True)
-            for child in self.encoder.children():
-                for layer in child.children():
-                    if isinstance(layer, torch.nn.Linear):
-                        layer.reset_parameters()
-            print('Reset encoder weights!\n', flush=True)
-            z = self.encoder.forward(log_P=log_P, T=T)
-
         # Run through decoder to get predicted temperatures
         T_pred = self.decoder.forward(z=z, log_P=log_P)
 
