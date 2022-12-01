@@ -78,7 +78,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Define other attributes
-        self.use_rl_loss = 0.0
+        self.use_rl = 0.0
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
@@ -176,17 +176,24 @@ class Model(pl.LightningModule, NormalizerMixin):
         rl = rl * self.get_loss_weights_like(rl)
         reconstruction_loss = rl.sum()
 
-        # Compute the MMD between z and a sample from a standard Gaussian
-        true_samples = torch.randn(  # type: ignore
-            z.shape[0],
-            self.encoder.latent_size,
-            device=self.device,
-        )
-        mmd_loss = compute_mmd(true_samples, z)
+        # Compute the MMD between z and a sample from a standard Gaussian.
+        # We do this multiple times to get a better estimate of the MMD.
+        mmd_loss = torch.zeros(z.shape[0], device=self.device)  # type: ignore
+        for i in range(10):
+            true_samples = torch.randn(  # type: ignore
+                z.shape[0],
+                self.encoder.latent_size,
+                device=self.device,
+            )
+            mmd_loss = compute_mmd(true_samples, z)
+        mmd_loss = mmd_loss / 10.0
 
         # Compute the total loss
+        # Note: the `use_rl` parameter is used to turn off the reconstruction
+        # loss during the first few epochs for encoder pre-training. This is
+        # a hack to stop the encoder from collapsing to a single point.
         total_loss = (
-            self.use_rl_loss * reconstruction_loss
+            self.use_rl * reconstruction_loss
             + self.beta * mmd_loss
         )
 
@@ -198,7 +205,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # epochs, in order to give the model time to learn a good initial
         # latent space.
         if self.current_epoch >= self.loss_config.get('pretrain_encoder', 0):
-            self.use_rl_loss = 1.0
+            self.use_rl = 1.0
 
     def training_step(
         self,
