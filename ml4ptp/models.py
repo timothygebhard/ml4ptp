@@ -6,6 +6,7 @@ Define models.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from math import exp
 from typing import List, Optional, Tuple
 
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -78,7 +79,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Define other attributes
-        self.use_rl = 0.0
+        self.rl_weight = 0.0
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
@@ -201,11 +202,13 @@ class Model(pl.LightningModule, NormalizerMixin):
 
     def on_train_epoch_start(self) -> None:
 
-        # We do not want to use the reconstruction loss during the first N
-        # epochs, in order to give the model time to learn a good initial
-        # latent space.
-        if self.current_epoch >= self.loss_config.get('pretrain_encoder', 0):
-            self.use_rl = 1.0
+        # Slowly turn on the reconstruction loss during the first few epochs
+        # to prevent the encoder from collapsing to a single point.
+        pretrain_encoder = self.loss_config.get('pretrain_encoder', 0)
+        if pretrain_encoder == 0:
+            self.rl_weight = 1.0
+        else:
+            self.rl_weight = 1 / (1 + exp(-self.rl_weight + pretrain_encoder))
 
     def training_step(
         self,
