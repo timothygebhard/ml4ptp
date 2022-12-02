@@ -6,7 +6,6 @@ Define models.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from math import exp
 from typing import List, Optional, Tuple
 
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -77,9 +76,6 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Define some shortcuts
         self.beta = self.loss_config['beta']
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
-
-        # Define other attributes
-        self.rl_weight = 0.0
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
@@ -200,10 +196,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Note: the `rl_weight` parameter is slowly increased from 0 to 1 over
         # the course of the first few epochs (for encoder pre-training). This
         # is a hack to prevent the encoder from collapsing to a single point.
-        total_loss = (
-            self.rl_weight * reconstruction_loss__normalized
-            + self.beta * mmd_loss
-        )
+        total_loss = reconstruction_loss__normalized + self.beta * mmd_loss
 
         return (
             total_loss,
@@ -211,18 +204,6 @@ class Model(pl.LightningModule, NormalizerMixin):
             reconstruction_loss__unnormalized,
             mmd_loss,
         )
-
-    def on_train_epoch_start(self) -> None:
-
-        # Slowly turn on the reconstruction loss during the first few epochs
-        # to prevent the encoder from collapsing to a single point.
-        pretrain_encoder = self.loss_config.get('pretrain_encoder', 0)
-        if pretrain_encoder == 0:
-            self.rl_weight = 1.0
-        else:
-            self.rl_weight = (
-                1 / (1 + exp(-self.current_epoch + pretrain_encoder))
-            )
 
     def training_step(
         self,
