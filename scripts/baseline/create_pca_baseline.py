@@ -25,14 +25,13 @@ from ml4ptp.paths import expandvars
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-
 def get_cli_args() -> argparse.Namespace:
 
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--experiment-dir',
-        # required=True,
+        required=True,
         default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/pca-baseline',
         help='Path to the experiment directory with the config.yaml.',
     )

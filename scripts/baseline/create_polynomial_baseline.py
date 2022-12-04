@@ -31,8 +31,8 @@ def get_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--experiment-dir',
-        # required=True,
-        default='$ML4PTP_EXPERIMENTS_DIR/goyal-2020/polynomial-baseline',
+        required=True,
+        default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/polynomial-baseline',
         help='Path to the experiment directory with the config.yaml.',
     )
     args = parser.parse_args()
