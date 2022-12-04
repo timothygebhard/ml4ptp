@@ -24,6 +24,7 @@ from matplotlib.ticker import FormatStrFormatter
 from scipy.stats import gaussian_kde
 
 import h5py
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -57,7 +58,6 @@ def get_cli_arguments() -> argparse.Namespace:
 
 
 def add_plot_group_to_figure(
-    idx: int,
     plot_group: Dict[str, Any],
     fig: plt.Figure,
     ax: plt.Axes,
@@ -92,12 +92,16 @@ def add_plot_group_to_figure(
     kde_mean = np.mean(kdes, axis=0)
     kde_std = np.std(kdes, axis=0)
 
+    # Determine color
+    color = f"C{plot_group['n'] - 1}"
+
     # Plot the mean KDE
     ax.plot(
         kde_grid,
         kde_mean,
         label=plot_group['label'],
-        color=f'C{idx}',
+        color=color,
+        lw=1,
     )
 
     # Plot the standard deviation of the KDE
@@ -105,7 +109,7 @@ def add_plot_group_to_figure(
         kde_grid,
         kde_mean - kde_std,
         kde_mean + kde_std,
-        facecolor=f'C{idx}',
+        facecolor=color,
         edgecolor='none',
         alpha=0.25,
     )
@@ -113,9 +117,9 @@ def add_plot_group_to_figure(
     # Add median to the plot
     ax.axvline(
         x=median,
-        color=f'C{idx}',
+        color=color,
         linestyle='--',
-        linewidth=1,
+        linewidth=0.5,
         zorder=99,
     )
 
@@ -146,12 +150,16 @@ if __name__ == "__main__":
     print('Loading configuration file...', end=' ', flush=True)
     file_path = expandvars(Path(args.config_file)).resolve()
     with open(file_path, 'r') as yaml_file:
-        plot_groups: List[Dict[str, Any]] = yaml.load(yaml_file, Loader=Loader)
-    print('Done!', flush=True)
+        config = yaml.load(yaml_file, Loader=Loader)
+    print('Done!\n', flush=True)
 
     print('Loaded the following from the configuration file:\n')
-    pprint(plot_groups)
+    pprint(config)
     print()
+
+    # Split the configuration into the different plot groups
+    title = config['title']
+    plot_groups: List[Dict[str, Any]] = config['plot_groups']
 
     # -------------------------------------------------------------------------
     # Determine plot options based on dataset
@@ -172,6 +180,10 @@ if __name__ == "__main__":
     # Loop over the plot groups and create the plots
     # -------------------------------------------------------------------------
 
+    # Set default font
+    mpl.rcParams['font.sans-serif'] = "Arial"
+    mpl.rcParams['font.family'] = "sans-serif"
+
     # Create a new figure
     pad_inches = 0.025
     fig, ax = plt.subplots(
@@ -181,9 +193,8 @@ if __name__ == "__main__":
     # Loop over the plot groups
     print('Creating plots...', end=' ', flush=True)
     medians = {}
-    for idx, plot_group in enumerate(plot_groups):
+    for plot_group in plot_groups:
         fig, ax, median = add_plot_group_to_figure(
-            idx=idx,
             plot_group=plot_group,
             fig=fig,
             ax=ax,
@@ -192,13 +203,27 @@ if __name__ == "__main__":
         medians[plot_group['label']] = median
     print('Done!\n', flush=True)
 
+    # Add legend
+    legend = ax.legend(loc='upper right', fontsize=6, frameon=False)
+    legend.set_title(
+        title=title,
+        prop={'size': 6, 'weight': 'bold'},
+    )
+
+    # Set font sizes
+    set_fontsize(ax, 5.5)
+    ax.xaxis.label.set_fontsize(6.5)
+    ax.yaxis.label.set_fontsize(6.5)
+
     # Set general plot options
-    ax.legend(loc='upper right', fontsize=6)
+    for axis in ['top', 'bottom', 'left', 'right']:
+        ax.spines[axis].set_linewidth(0.25)
+        ax.xaxis.set_tick_params(width=0.25)
+        ax.yaxis.set_tick_params(width=0.25)
     ax.set_xlabel('Root Mean Squared Error (in Kelvin)')
     ax.set_ylabel('Density')
     ax.set_xlim(kde_grid[0], kde_grid[-1])
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    set_fontsize(ax, 6)
     fig.tight_layout(pad=0)
 
     # Print the medians of the different plot groups
