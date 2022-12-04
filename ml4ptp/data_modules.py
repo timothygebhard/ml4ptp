@@ -7,7 +7,7 @@ Data module(s) that encapsulate the data handling for PyTorch Lightning.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Optional, Union, Tuple
+from typing import Any, Dict, Optional, Union, Tuple
 
 from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
@@ -82,12 +82,17 @@ class DataModule(pl.LightningDataModule):
         self.normalization = normalization
         self.random_state = random_state
 
-        # Initialize variables that will hold the normalization constants
+        # Initialize variables that will hold the normalization constants.
         # for the temperature. The `offset` is either the mean (for whitening)
         # or the minimum (for minmax); the `factor` is either the standard
         # deviation or the maximum minus the minimum.
-        self.T_offset: float = np.nan
-        self.T_factor: float = np.nan
+        self._normalization: Dict[str, Any] = dict(
+            normalization=self.normalization,
+            T_offset=np.nan,
+            T_factor=np.nan,
+            log_P_offset=np.nan,
+            log_P_factor=np.nan,
+        )
 
         # Initialize variables that will hold the data sets
         self.train_dataset: Optional[TensorDataset] = None
@@ -126,13 +131,21 @@ class DataModule(pl.LightningDataModule):
                 random_state=self.random_state,
             )
 
-            # Compute the normalization for T from training data
+            # Compute the normalization from training data
             if self.normalization == 'whiten':
-                self.T_offset = float(torch.mean(T))
-                self.T_factor = float(torch.std(T))
+                self._normalization['T_offset'] = float(torch.mean(T))
+                self._normalization['T_factor'] = float(torch.std(T))
+                self._normalization['log_P_offset'] = float(torch.mean(log_P))
+                self._normalization['log_P_factor'] = float(torch.std(log_P))
             elif self.normalization == 'minmax':
-                self.T_offset = float(torch.min(T))
-                self.T_factor = float(torch.max(T) - torch.min(T))
+                self._normalization['T_offset'] = float(torch.min(T))
+                self._normalization['T_factor'] = float(
+                    torch.max(T) - torch.min(T)
+                )
+                self._normalization['log_P_offset'] = float(torch.min(log_P))
+                self._normalization['log_P_factor'] = float(
+                    torch.max(log_P) - torch.min(log_P)
+                )
             else:
                 raise ValueError('Invalid normalization!')
 
@@ -154,6 +167,9 @@ class DataModule(pl.LightningDataModule):
 
             # Create data sets for testing
             self.test_dataset = TensorDataset(test_log_P, test_T)
+
+    def get_normalization(self) -> Dict[str, Any]:
+        return self._normalization
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         """

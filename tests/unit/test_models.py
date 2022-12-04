@@ -20,7 +20,7 @@ from ml4ptp.models import Model
 
 
 # -----------------------------------------------------------------------------
-# TESTS
+# FIXTURES
 # -----------------------------------------------------------------------------
 
 @pytest.fixture()
@@ -44,9 +44,31 @@ def hdf_file(tmp_path: Path) -> Path:
     return file_path
 
 
+# -----------------------------------------------------------------------------
+# TESTS
+# -----------------------------------------------------------------------------
+
 def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     seed_everything(42)
+
+    # -------------------------------------------------------------------------
+    # Setup data module
+    # -------------------------------------------------------------------------
+
+    datamodule = DataModule(
+        train_file_path=hdf_file,
+        test_file_path=hdf_file,
+        key_P='P',
+        key_T='T',
+        train_size=128,
+        val_size=64,
+        train_batch_size=16,
+    )
+
+    # -------------------------------------------------------------------------
+    # Setup model
+    # -------------------------------------------------------------------------
 
     encoder_config = dict(
         name='MLPEncoder',
@@ -66,11 +88,17 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
             activation='leaky_relu',
         ),
     )
-    optimizer_config = dict(name='AdamW', parameters=dict(lr=3e-4))
-    loss_config = dict(n_samples=100, beta=100)
-    normalization_config = dict(T_offset=0, T_factor=1)
+    optimizer_config = dict(
+        name='AdamW',
+        parameters=dict(lr=3e-4),
+    )
+    loss_config = dict(
+        n_samples=100,
+        beta=100,
+    )
     lr_scheduler_config = dict(
-        name='StepLR', parameters=dict(step_size=30, gamma=0.1)
+        name='StepLR',
+        parameters=dict(step_size=30, gamma=0.1),
     )
     plotting_config = dict(
         enable_plotting=True,
@@ -82,20 +110,14 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         decoder_config=decoder_config,
         optimizer_config=optimizer_config,
         loss_config=loss_config,
-        normalization_config=normalization_config,
+        normalization=datamodule.get_normalization(),
         lr_scheduler_config=lr_scheduler_config,
         plotting_config=plotting_config,
     )
 
-    datamodule = DataModule(
-        train_file_path=hdf_file,
-        test_file_path=hdf_file,
-        key_P='P',
-        key_T='T',
-        train_size=128,
-        val_size=64,
-        train_batch_size=16,
-    )
+    # -------------------------------------------------------------------------
+    # Setup Trainer and run tests
+    # -------------------------------------------------------------------------
 
     trainer = Trainer(
         default_root_dir=tmp_path.as_posix(),
@@ -106,15 +128,15 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
         trainer.logged_metrics['val/total_loss_epoch'],  # type: ignore
-        93724.5469
+        6.5680,
     )
     assert np.isclose(
         trainer.logged_metrics['train/total_loss_epoch'],  # type: ignore
-        1019.5235
+        5.6219,
     )
 
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
         trainer.logged_metrics['test/total_loss_epoch'],  # type: ignore
-        47371.6680
+        5.9053,
     )

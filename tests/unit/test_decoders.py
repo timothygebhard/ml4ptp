@@ -6,17 +6,35 @@ Unit tests for decoders.py
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from typing import Any, Dict
+
 import numpy as np
+import pytest
 import torch
 
 from ml4ptp.decoders import Decoder, SkipConnectionsDecoder, HypernetDecoder
 
 
 # -----------------------------------------------------------------------------
+# FIXTURES
+# -----------------------------------------------------------------------------
+
+@pytest.fixture()
+def normalization() -> Dict[str, Any]:
+    return dict(
+        normalization='whiten',
+        T_offset=0,
+        T_factor=1,
+        log_P_offset=0,
+        log_P_factor=1,
+    )
+
+
+# -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
 
-def test__decoder() -> None:
+def test__decoder(normalization: Dict[str, Any]) -> None:
 
     torch.manual_seed(42)
 
@@ -25,56 +43,60 @@ def test__decoder() -> None:
         latent_size=5,
         layer_size=16,
         n_layers=2,
-        T_offset=1,
-        T_factor=2,
+        normalization=normalization,
         activation='leaky_relu',
     )
     z = torch.randn(17, 5)
     log_P = torch.randn(17, 19)
-    output = decoder.forward(z=z, log_P=log_P)
-    assert len(decoder.layers) == 2 + 2 + 2 + 1  # type: ignore
-    assert output.shape == (17, 19)
-    assert np.isclose(output.mean().item(), 1.7334630489349365)
+    T_pred = decoder(z=z, log_P=log_P)
+
+    assert len(decoder.layers) == 2 + 2 + 2 + 1
+    assert T_pred.shape == (17, 19)
+    assert np.isclose(T_pred.mean().item(), 0.3667314648628235)
 
     # Case 2
     decoder = Decoder(
         latent_size=5,
         layer_size=16,
         n_layers=2,
-        T_offset=1,
-        T_factor=2,
+        normalization=normalization,
         activation='siren',
     )
     z = torch.randn(17, 5)
     log_P = torch.randn(17, 19)
-    output = decoder.forward(z=z, log_P=log_P)
-    assert output.shape == (17, 19)
-    assert np.isclose(output.mean().item(), 0.29760393500328064)
+    T_pred = decoder(z=z, log_P=log_P)
+
+    assert T_pred.shape == (17, 19)
+    assert np.isclose(T_pred.mean().item(), -0.3511980473995209)
 
 
-def test__skip_connections_decoder() -> None:
+def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
+
+    torch.manual_seed(42)
 
     # Case 1
     decoder = SkipConnectionsDecoder(
         latent_size=5,
         layer_size=16,
         n_layers=2,
-        T_offset=1,
-        T_factor=2,
+        normalization=normalization,
         activation='leaky_relu',
     )
     z = torch.randn(17, 5)
     log_P = torch.randn(17, 19)
     T_pred = decoder(z=z, log_P=log_P)
+
     assert T_pred.shape == log_P.shape
+    assert np.isclose(T_pred.mean().item(), -0.27519676089286804)
 
 
-def test__hypernet_decoder() -> None:
+def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:
+
+    torch.manual_seed(42)
 
     # Case 1
     model = HypernetDecoder(
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
         latent_size=2,
         hypernet_layer_size=16,
         decoder_layer_size=16,
@@ -87,4 +109,6 @@ def test__hypernet_decoder() -> None:
     z = torch.randn(17, 2)
     log_P = torch.randn(17, 39)
     T_pred = model(z=z, log_P=log_P)
+
     assert T_pred.shape == log_P.shape
+    assert np.isclose(T_pred.mean().item(), -0.21794116497039795)

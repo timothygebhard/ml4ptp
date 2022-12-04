@@ -39,7 +39,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         decoder_config: dict,
         optimizer_config: dict,
         loss_config: dict,
-        normalization_config: dict,
+        normalization: dict,
         plotting_config: dict,
         lr_scheduler_config: Optional[dict] = None,
     ) -> None:
@@ -51,7 +51,8 @@ class Model(pl.LightningModule, NormalizerMixin):
             decoder_config: Configuration for the decoder.
             optimizer_config: Configuration for the optimizer.
             loss_config: Configuration  for the loss.
-            normalization_config: Configuration for the normalization.
+            normalization: A dictionary containing the normalization
+                parameters for the pressure and temperature.
             plotting_config: Configuration for TensorBoard plots.
             lr_scheduler_config: Configuration for the LR scheduler.
         """
@@ -65,13 +66,10 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.encoder_config = encoder_config
         self.decoder_config = decoder_config
         self.optimizer_config = optimizer_config
+        self.normalization = normalization
         self.loss_config = loss_config
         self.plotting_config = plotting_config
         self.lr_scheduler_config = lr_scheduler_config
-
-        # Store normalizer
-        self.T_offset = normalization_config['T_offset']
-        self.T_factor = normalization_config['T_factor']
 
         # Define some shortcuts
         self.beta = self.loss_config['beta']
@@ -80,10 +78,10 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
             module_name='ml4ptp.encoders', member_name=encoder_config['name']
-        )(**encoder_config['parameters'], **normalization_config)
+        )(**encoder_config['parameters'], normalization=normalization)
         self.decoder = get_member_by_name(
             module_name='ml4ptp.decoders', member_name=decoder_config['name']
-        )(**decoder_config['parameters'], **normalization_config)
+        )(**decoder_config['parameters'], normalization=normalization)
 
     def get_loss_weights_like(self, x: torch.Tensor) -> torch.Tensor:
 
@@ -170,7 +168,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # so that the scale of the loss is independent of the temperature.
         # This is a manual version of an MSE loss which can also handle
         # weighted samples (e.g., give more weight to higher pressure).
-        rl = (self.normalize(T_true) - self.normalize(T_pred)).pow(2)
+        rl = (self.normalize_T(T_true) - self.normalize_T(T_pred)).pow(2)
         rl = rl * self.get_loss_weights_like(rl)
         reconstruction_loss__normalized = rl.sum()
 

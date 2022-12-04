@@ -7,7 +7,7 @@ Unit tests for exporting.py
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import onnx
@@ -30,70 +30,77 @@ from ml4ptp.exporting import (
 # -----------------------------------------------------------------------------
 
 @pytest.fixture()
-def mlp_encoder() -> MLPEncoder:
+def normalization() -> Dict[str, Any]:
+    return dict(
+        normalization='whiten',
+        T_offset=0,
+        T_factor=1,
+        log_P_offset=0,
+        log_P_factor=1,
+    )
+
+
+@pytest.fixture()
+def mlp_encoder(normalization: Dict[str, Any]) -> MLPEncoder:
     return MLPEncoder(
         input_size=101,
         latent_size=2,
         layer_size=32,
         n_layers=3,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
     )
 
 
 @pytest.fixture()
-def modified_mlp_encoder() -> ModifiedMLPEncoder:
+def modified_mlp_encoder(normalization: Dict[str, Any]) -> ModifiedMLPEncoder:
     return ModifiedMLPEncoder(
         input_size=101,
         latent_size=2,
         layer_size=32,
         n_layers=3,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
     )
 
 
 @pytest.fixture()
-def cnp_encoder() -> CNPEncoder:
+def cnp_encoder(normalization: Dict[str, Any]) -> CNPEncoder:
     return CNPEncoder(
         latent_size=2,
         layer_size=32,
         n_layers=3,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
     )
 
 
 @pytest.fixture()
-def decoder() -> Decoder:
+def decoder(normalization: Dict[str, Any]) -> Decoder:
     return Decoder(
         latent_size=2,
         layer_size=32,
         n_layers=2,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
         activation='leaky_relu',
     )
 
 
 @pytest.fixture()
-def skip_connections_decoder() -> SkipConnectionsDecoder:
+def skip_connections_decoder(
+    normalization: Dict[str, Any],
+) -> SkipConnectionsDecoder:
     return SkipConnectionsDecoder(
         latent_size=2,
         layer_size=32,
         n_layers=2,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
         activation='leaky_relu',
     )
 
 
 @pytest.fixture()
-def hypernet_decoder() -> HypernetDecoder:
+def hypernet_decoder(normalization: Dict[str, Any]) -> HypernetDecoder:
     return HypernetDecoder(
         latent_size=2,
-        T_offset=0,
-        T_factor=1,
+        normalization=normalization,
         hypernet_layer_size=32,
         hypernet_n_layers=2,
         decoder_layer_size=32,

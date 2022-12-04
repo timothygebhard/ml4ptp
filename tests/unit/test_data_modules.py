@@ -57,8 +57,8 @@ def test__data_module(hdf_file: Path) -> None:
     )
     dm.prepare_data()
 
-    assert np.isclose(dm.T_offset, 72)
-    assert np.isclose(dm.T_factor, 41.42462921142578)
+    assert np.isclose(dm.get_normalization()['T_offset'], 72)
+    assert np.isclose(dm.get_normalization()['T_factor'], 41.42462921142578)
     assert len(dm.train_dataloader()) == 8
     assert len(dm.val_dataloader()) == 1
 
@@ -103,8 +103,8 @@ def test__data_module(hdf_file: Path) -> None:
     )
     dm.prepare_data()
 
-    assert np.isclose(dm.T_offset, 1)
-    assert np.isclose(dm.T_factor, 11 * 13 - 1)
+    assert np.isclose(dm.get_normalization()['T_offset'], 1)
+    assert np.isclose(dm.get_normalization()['T_factor'], 11 * 13 - 1)
 
     # Case 4
     with pytest.raises(ValueError) as value_error:

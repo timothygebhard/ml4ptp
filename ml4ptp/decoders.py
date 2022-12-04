@@ -7,7 +7,7 @@ Define decoder architectures.
 # -----------------------------------------------------------------------------
 
 from math import prod
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import torch
 import torch.nn as nn
@@ -29,8 +29,8 @@ class Decoder(nn.Module, NormalizerMixin):
         latent_size: The size of the latent space.
         layer_size: The size of the hidden layers of the decoder.
         n_layers: The number of hidden layers of the decoder.
-        T_offset: The offset to use for the temperature normalization.
-        T_factor: The factor to use for the temperature normalization.
+        normalization: A dictionary containing the normalization
+            parameters for the pressure and temperature.
         activation: The activation function to use in the decoder.
     """
 
@@ -39,8 +39,7 @@ class Decoder(nn.Module, NormalizerMixin):
         latent_size: int,
         layer_size: int,
         n_layers: int,
-        T_offset: float,
-        T_factor: float,
+        normalization: Dict[str, Any],
         activation: str = 'leaky_relu',
     ) -> None:
 
@@ -50,13 +49,12 @@ class Decoder(nn.Module, NormalizerMixin):
         self.latent_size = latent_size
         self.layer_size = layer_size
         self.n_layers = n_layers
-        self.T_offset = float(T_offset)
-        self.T_factor = float(T_factor)
+        self.normalization = normalization
 
         # Define decoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we
         # want to evaluate the profile represented by this decoder.
-        self.layers: Callable[[torch.Tensor], torch.Tensor] = get_mlp_layers(
+        self.layers: torch.nn.Sequential = get_mlp_layers(
             input_size=latent_size + 1,
             n_layers=n_layers,
             layer_size=layer_size,
@@ -67,15 +65,15 @@ class Decoder(nn.Module, NormalizerMixin):
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
 
-        # Reminder:
-        #  * z has shape (batch_size, latent_size)
-        #  * log_p has shape (batch_size, grid_size)
-        #  * The decoder takes inputs of size latent_size + 1
-        #  * We now need to combine z and log_p into a single tensor of
-        #    shape (batch_size * grid_size, latent_size + 1) that we can
+        # Reminder / step-by-step explanation:
+        #  * z has shape `(batch_size, latent_size)`
+        #  * log_P has shape `(batch_size, grid_size)`
+        #  * The decoder takes inputs of size `latent_size + 1`
+        #  * We now need to combine `z` and `log_P` into a single tensor of
+        #    shape `(batch_size * grid_size, latent_size + 1)` that we can
         #    give to the decoder
         #  * After passing through the decoder, we want to reshape the output
-        #    to (batch_size, grid_size) again: one T for each log_P
+        #    to `(batch_size, grid_size)` again = one T for each log_P value
 
         # Get batch size and grid size
         batch_size, grid_size = log_P.shape
@@ -89,23 +87,29 @@ class Decoder(nn.Module, NormalizerMixin):
         # show have shapes:
         #   p_flat: (batch_size * grid_size, 1)
         #   z_flat: (batch_size * grid_size, latent_size)
-        p_flat = log_P.reshape(batch_size * grid_size, 1)
+        log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
-        # Get the decoder input by concatenating x and z. The shape should be:
+        # Normalize log_P and and concatenate to z to form decoder input.
+        # The shape should now be:
         #   (batch_size * n_points, 1 + z_dim)
-        decoder_input = torch.cat((p_flat, z_flat), dim=1)
+        decoder_input = torch.concat(
+            tensors=(
+                self.normalize_log_P(log_P_flat),
+                z_flat,
+            ),
+            dim=1,
+        )
 
         # Send through decoder. The decoder output will have shape:
         #   (batch_size * grid_size, 1)
-        decoded = self.layers(decoder_input)
+        decoded: torch.Tensor = self.layers(decoder_input)
 
-        # Reshape the decoder output to (batch_size, grid_size), that is,
-        # the original shape of `log_p`
+        # Reshape the decoder output back to to the original shape of log_P
         T_pred = decoded.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
-        T_pred = self.normalize(T_pred, undo=True)
+        T_pred = self.normalize_T(T_pred, undo=True)
 
         return T_pred
 
@@ -119,8 +123,8 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         latent_size: The size of the latent space.
         layer_size: The size of the hidden layers of the decoder.
         n_layers: The number of hidden layers of the decoder.
-        T_offset: The offset to use for the temperature normalization.
-        T_factor: The factor to use for the temperature normalization.
+        normalization: A dictionary containing the normalization
+            parameters for the pressure and temperature.
         activation: The activation function to use in the decoder.
     """
 
@@ -129,8 +133,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         latent_size: int,
         layer_size: int,
         n_layers: int,
-        T_offset: float,
-        T_factor: float,
+        normalization: Dict[str, Any],
         activation: str = 'leaky_relu',
     ) -> None:
 
@@ -140,21 +143,24 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.latent_size = latent_size
         self.layer_size = layer_size
         self.n_layers = n_layers
-        self.T_offset = float(T_offset)
-        self.T_factor = float(T_factor)
+        self.normalization = normalization
         self.activation_function = get_activation(activation)
 
-        # Collect list of layers (excluding the final layer)
+        # Collect list of layers without activation functions, and excluding
+        # the final layer (see below)
         self.layers = nn.ModuleList(
             [nn.Linear(latent_size + 1, layer_size - latent_size)]
         )
         for i in range(n_layers):
             self.layers.append(nn.Linear(layer_size, layer_size - latent_size))
 
-        # Add final layer (no activation function)
+        # Define final layer
         self.final_layer = nn.Linear(layer_size, 1)
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
+
+        # Most of this is analogous to the standard `Decoder` class, so see
+        # there for a more detailed explanation.
 
         # Get batch size and grid size
         batch_size, grid_size = log_P.shape
@@ -168,12 +174,11 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         # They now show have shapes:
         #   p_flat: (batch_size * grid_size, 1)
         #   z_flat: (batch_size * grid_size, latent_size)
-        p_flat = log_P.reshape(batch_size * grid_size, 1)
+        log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
-        # The input to the decoder is simply p_flat; we only use different
-        # names to make the code more readable.
-        x = p_flat
+        # Normalize log_P to create the first input to the decoder
+        x = self.normalize_log_P(log_P_flat)
 
         # Send through decoder (manually, so that we can take care of the skip
         # connections and concatenate z to the output of each layer)
@@ -181,7 +186,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
 
             # Before sending through the layer, concatenate the latent
             # variable to the output of the previous layer
-            x = torch.cat((x, z_flat), dim=1)
+            x = torch.cat(tensors=(x, z_flat), dim=1)
 
             # Send through layer and apply activation function
             x = layer(x)
@@ -191,12 +196,11 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         x = torch.cat((x, z_flat), dim=1)
         x = self.final_layer(x)
 
-        # Reshape the decoder output to (batch_size, grid_size), that is,
-        # the original shape of `log_p`
+        # Reshape the decoder output back to to the original shape of log_P
         T_pred = x.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
-        T_pred = self.normalize(T_pred, undo=True)
+        T_pred = self.normalize_T(T_pred, undo=True)
 
         return T_pred
 
@@ -208,8 +212,8 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
 
     Arguments:
         latent_size: The size of the latent variable `z`.
-        T_offset: The offset used to normalize the temperature.
-        T_factor: The factor used to normalize the temperature.
+        normalization: A dictionary containing the normalization
+            parameters for the pressure and temperature.
         hypernet_layer_size: The size of the (hidden) layers in the
             hypernetwork.
         decoder_layer_size: The size of the (hidden) layers in the
@@ -225,12 +229,11 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
     def __init__(
         self,
         latent_size: int,
-        T_offset: float,
-        T_factor: float,
         hypernet_layer_size: int,
         decoder_layer_size: int,
         hypernet_n_layers: int,
         decoder_n_layers: int,
+        normalization: Dict[str, Any],
         hypernet_activation: str = 'leaky_relu',
         decoder_activation: str = 'siren',
     ) -> None:
@@ -245,8 +248,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         self.decoder_n_layers = decoder_n_layers
         self.hypernet_activation = hypernet_activation
         self.decoder_activation = decoder_activation
-        self.T_offset = float(T_offset)
-        self.T_factor = float(T_factor)
+        self.normalization = normalization
 
         # Compute sizes of the weight and bias tensors for the decoder
         self.weight_sizes, self.bias_sizes = self._get_weight_and_bias_sizes()
@@ -310,12 +312,11 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         # They now show have shapes:
         #   p_flat: (batch_size * grid_size, 1)
         #   z_flat: (batch_size * grid_size, latent_size)
-        p_flat = log_P.reshape(batch_size * grid_size, 1)
+        log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
-        # The input to the decoder is simply p_flat; we only use different
-        # names to make the code more readable.
-        x = p_flat
+        # Normalize log_P to create the first input to the decoder
+        x = self.normalize_log_P(log_P_flat)
 
         # Get weights and biases from hypernet
         weights_and_biases = self.hypernet(z_flat)
@@ -355,6 +356,6 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         T_pred = x.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
-        T_pred = self.normalize(T_pred, undo=True)
+        T_pred = self.normalize_T(T_pred, undo=True)
 
         return T_pred
