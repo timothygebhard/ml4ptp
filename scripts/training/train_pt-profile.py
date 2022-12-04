@@ -161,7 +161,7 @@ if __name__ == "__main__":
             checkpoint_callback,
             early_stopping_callback,
             LearningRateMonitor(logging_interval='step'),
-            RichProgressBar(),
+            RichProgressBar(leave=True),
         ],
         default_root_dir=expandvars(experiment_dir).as_posix(),
         logger=logger,
