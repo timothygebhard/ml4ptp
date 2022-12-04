@@ -32,14 +32,8 @@ def get_cli_args() -> argparse.Namespace:
     parser.add_argument(
         '--experiment-dir',
         # required=True,
-        default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/baseline',
+        default='$ML4PTP_EXPERIMENTS_DIR/goyal-2020/polynomial-baseline',
         help='Path to the experiment directory with the config.yaml.',
-    )
-    parser.add_argument(
-        '--n-parameters',
-        type=int,
-        default=2,
-        help='Number of free parameters to use for fitting (= degree + 1).',
     )
     args = parser.parse_args()
 
@@ -57,7 +51,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     script_start = time.time()
-    print('\nCOMPUTE POLYNOMIAL BASELINE\n', flush=True)
+    print('\nCREATE POLYNOMIAL BASELINE\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Get experiment dir and load configuration file
@@ -72,58 +66,71 @@ if __name__ == "__main__":
     config = load_config(experiment_dir / 'config.yaml')
     print('Done!', flush=True)
 
+    # Define shortcuts
+    min_n_parameters = int(config['min_n_parameters'])
+    max_n_parameters = int(config['max_n_parameters'])
+
     # -------------------------------------------------------------------------
-    # Load the test set from HDF
+    # Load the test set from HDF; reset output HDF file
     # -------------------------------------------------------------------------
 
+    # Load test set from HDF
     print('Loading test set...', end=' ', flush=True)
     file_path = expandvars(Path(config['test_file_path']))
     with h5py.File(file_path, 'r') as hdf_file:
         log_P = np.log10(np.array(hdf_file[config['key_P']]))
-        T = np.array(hdf_file[config['key_T']])
+        T_true = np.array(hdf_file[config['key_T']])
+    print('Done!\n', flush=True)
+
+    # Make sure output HDF file exists and is empty
+    print('Resetting output HDF file...', end=' ', flush=True)
+    output_file_path = experiment_dir / 'results_on_test_set.hdf'
+    with h5py.File(output_file_path, 'w') as hdf_file:
+        pass
     print('Done!\n', flush=True)
 
     # -------------------------------------------------------------------------
-    # Load the test set from HDF
+    # For each degree, fit the test set with a polynomial and store the results
     # -------------------------------------------------------------------------
 
-    # Store fit results
-    coefs = []
-    T_pred = []
+    # Loop over degrees
+    for degree in range(min_n_parameters - 1, max_n_parameters):
 
-    # Loop over all profiles in test set and fit them with a polynomial
-    for x, y in track(
-        sequence=zip(log_P, T),
-        description='Fitting profiles:',
-        total=len(log_P),
-    ):
-        p = np.polyfit(x, y, deg=args.n_parameters - 1)
-        t = np.polyval(p=p, x=x)
-        coefs.append(p)
-        T_pred.append(t)
-    print()
+        # Fit the test set with a polynomial
+        print(f'Fitting test set with a polynomial of degree {degree}:')
 
-    # -------------------------------------------------------------------------
-    # Save results to an HDF file
-    # -------------------------------------------------------------------------
+        # Store fit results
+        coefs = np.full((len(log_P), degree + 1), np.nan)
+        T_pred = np.full_like(T_true, np.nan)
 
-    print('Saving results to HDF file...', end=' ', flush=True)
-    file_path = experiment_dir / f'n-parameters_{args.n_parameters}.hdf'
-    with h5py.File(file_path, 'w') as hdf_file:
-        hdf_file.create_dataset(name='log_P', data=log_P)
-        hdf_file.create_dataset(name='T_true', data=T)
-        hdf_file.create_dataset(name='T_pred', data=np.array(T_pred))
-        hdf_file.create_dataset(name='coefficients', data=np.array(coefs))
-    print('Done!\n', flush=True)
+        # Loop over all profiles in test set and fit them with a polynomial
+        for i, (x, y) in track(
+            sequence=enumerate(zip(log_P, T_true)),
+            description='',
+            total=len(log_P),
+        ):
 
-    # -------------------------------------------------------------------------
-    # Compute average error
-    # -------------------------------------------------------------------------
+            # Fit the profile with a polynomial
+            p = np.polyfit(x, y, deg=degree)
+            t = np.polyval(p=p, x=x)
 
-    absolute_error = np.sqrt(np.mean(np.square(np.array(T_pred) - T)))
-    relative_error = np.sqrt(np.mean(np.square((np.array(T_pred) - T) / T)))
-    print(f'Mean absolute error: {absolute_error:.2f}')
-    print(f'Mean relative error: {relative_error:.2f}')
+            # Store fit results
+            coefs[i] = p
+            T_pred[i] = t
+
+        # Compute the mean squared error
+        mse = np.mean((T_true - T_pred) ** 2, axis=1)
+
+        # Store fit results in HDF file
+        print('Storing fit results in HDF file...', end=' ', flush=True)
+        with h5py.File(output_file_path, 'a') as hdf_file:
+            group = hdf_file.create_group(f'{degree + 1}-fit-parameters')
+            group.create_dataset('coefs', data=coefs)
+            group.create_dataset('log_P', data=log_P)
+            group.create_dataset('T_true', data=T_true)
+            group.create_dataset('T_pred', data=T_pred)
+            group.create_dataset('mse', data=mse)
+        print('Done!\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries
