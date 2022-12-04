@@ -183,14 +183,6 @@ if __name__ == "__main__":
     # Set up the model
     # -------------------------------------------------------------------------
 
-    # Collect the parameters for the normalization from the data module,
-    # unless we explicitly specify values in the configuration file
-    if 'normalization' not in config['model'].keys():
-        config['normalization'] = dict(
-            T_offset=datamodule.T_offset,
-            T_factor=datamodule.T_factor,
-        )
-
     # Instantiate the model as prescribed by the configuration file
     print('Setting up model...', end=' ', flush=True)
     model = Model(
@@ -198,7 +190,7 @@ if __name__ == "__main__":
         decoder_config=config['model']['decoder'],
         optimizer_config=config['optimizer'],
         loss_config=config['loss'],
-        normalization_config=config['normalization'],
+        normalization=datamodule.get_normalization(),
         lr_scheduler_config=config['lr_scheduler'],
         plotting_config=config['plotting'],
     )
