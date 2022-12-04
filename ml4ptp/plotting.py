@@ -66,7 +66,7 @@ def add_colorbar_to_ax(
     return cbar
 
 
-def set_fontsize(ax: plt.Axes, fontsize: int) -> None:
+def set_fontsize(ax: plt.Axes, fontsize: float) -> None:
     """
     Set the ``fontsize`` for all labels (title, x- and y-label, and tick
     labels) of a target ``ax`` at once.
