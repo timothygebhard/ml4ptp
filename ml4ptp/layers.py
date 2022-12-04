@@ -28,10 +28,12 @@ def get_activation(name: str) -> nn.Module:
         return nn.GELU()
     if name == 'leaky_relu':
         return nn.LeakyReLU()
-    if name == 'relu':
-        return nn.ReLU()
     if name == 'mish':
         return nn.Mish()
+    if name == 'prelu':
+        return nn.PReLU()
+    if name == 'relu':
+        return nn.ReLU()
     if name == 'sine' or name == 'siren':
         return Sine()
     if name == 'swish':
