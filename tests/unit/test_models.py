@@ -52,16 +52,16 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         name='MLPEncoder',
         parameters=dict(
             input_size=13,
-            layer_size=2,
-            latent_size=1,
+            layer_size=32,
+            latent_size=3,
             n_layers=2,
         ),
     )
     decoder_config = dict(
         name='Decoder',
         parameters=dict(
-            layer_size=2,
-            latent_size=1,
+            layer_size=32,
+            latent_size=3,
             n_layers=2,
             activation='leaky_relu',
         ),
@@ -94,7 +94,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         key_T='T',
         train_size=128,
         val_size=64,
-        batch_size=16,
+        train_batch_size=16,
     )
 
     trainer = Trainer(
@@ -105,13 +105,16 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
-        trainer.logged_metrics['val/total_loss_epoch'], 93747.0859
+        trainer.logged_metrics['val/total_loss_epoch'],  # type: ignore
+        93724.5469
     )
     assert np.isclose(
-        trainer.logged_metrics['train/total_loss_epoch'], 1064.8157
+        trainer.logged_metrics['train/total_loss_epoch'],  # type: ignore
+        1019.5235
     )
 
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
-        trainer.logged_metrics['test/total_loss_epoch'], 47404.3047
+        trainer.logged_metrics['test/total_loss_epoch'],  # type: ignore
+        47371.6680
     )
