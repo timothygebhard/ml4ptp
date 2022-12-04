@@ -52,6 +52,21 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             final_tanh=True,
         )
 
+        # Initialize weights
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+        """
+        Initialize weights of encoder layers. Preliminary experiments
+        show that this can help to prevent the encoder from predicting
+        all zeros (which leads to the model not learning anything).
+        """
+
+        for layer in self.layers:
+            if isinstance(layer, nn.Linear):
+                nn.init.kaiming_uniform_(layer.weight)
+                nn.init.constant_(layer.bias, 0.01)
+
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
 
         # Normalize temperatures and construct encoder input
@@ -109,6 +124,26 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             activation='leaky_relu',
             final_tanh=True,
         )
+
+        # Initialize weights
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+        """
+        Initialize weights of encoder layers. Preliminary experiments
+        show that this can help to prevent the encoder from predicting
+        all zeros (which leads to the model not learning anything).
+        """
+
+        # Initialize weights
+        for layer in self.layers_1:
+            if isinstance(layer, nn.Linear):
+                nn.init.kaiming_uniform_(layer.weight)
+                nn.init.constant_(layer.bias, 0.01)
+        for layer in self.layers_2:
+            if isinstance(layer, nn.Linear):
+                nn.init.kaiming_uniform_(layer.weight)
+                nn.init.constant_(layer.bias, 0.01)
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
 
