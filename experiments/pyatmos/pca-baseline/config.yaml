@@ -1,0 +1,8 @@
+# The PCA baseline requires both a training and a test set
+train_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/train.hdf
+test_file_path: $ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf
+key_P: "P"
+key_T: "T"
+min_n_parameters: 2
+max_n_parameters: 5
+random_seeds: [0, 1, 2]

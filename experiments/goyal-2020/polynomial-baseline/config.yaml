@@ -1,4 +1,6 @@
-# For the baseline, we only need to specify the test file
+# For the polynomial baseline, we only need to specify the test file
 test_file_path: $ML4PTP_DATASETS_DIR/goyal-2020/output/test.hdf
 key_P: "/pt_profiles/pressure"
 key_T: "/pt_profiles/temperature"
+min_n_parameters: 2
+max_n_parameters: 5
