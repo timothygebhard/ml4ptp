@@ -31,7 +31,6 @@ from ml4ptp.data_modules import DataModule
 from ml4ptp.exporting import export_encoder_with_onnx, export_decoder_with_onnx
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
-from ml4ptp.models import compute_mmd
 from ml4ptp.paths import expandvars
 from ml4ptp.utils import get_run_dir
 
@@ -208,19 +207,7 @@ if __name__ == "__main__":
     # Train the model
     # -------------------------------------------------------------------------
 
-    print('\n\nPre-training encoder...', end=' ', flush=True)
-    optimizer = torch.optim.Adam(params=model.encoder.parameters(), lr=3e-4)
-    for epoch in range(10):
-        for log_P, T in datamodule.train_dataloader():  # type: ignore
-            optimizer.zero_grad()
-            z_pred = model.encoder(log_P=log_P, T=T)
-            z_true = torch.randn_like(z_pred)
-            mmd_loss = compute_mmd(z_true, z_pred)
-            mmd_loss.backward()  # type: ignore
-            optimizer.step()
-    print('Done!\n', flush=True)
-
-    print('Starting training:\n', flush=True)
+    print('\n\nStarting training:\n\n', flush=True)
     trainer.fit(model=model, datamodule=datamodule)
     print()
 
