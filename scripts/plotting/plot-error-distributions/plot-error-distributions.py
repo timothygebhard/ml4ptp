@@ -8,17 +8,11 @@ experiments (or baselines), which is given via a configuration file.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from pprint import pprint
 from typing import Any, Dict, List, Tuple
-try:
-    from yaml import CLoader as Loader
-except ImportError:  # pragma: no cover
-    from yaml import Loader  # type: ignore
 
 import argparse
 import time
 import warnings
-import yaml
 
 from matplotlib.ticker import FormatStrFormatter
 from scipy.stats import gaussian_kde
@@ -28,6 +22,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ml4ptp.config import load_yaml
 from ml4ptp.paths import expandvars
 from ml4ptp.plotting import set_fontsize
 
@@ -44,13 +39,23 @@ def get_cli_arguments() -> argparse.Namespace:
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--config-file',
-        required=True,
-        default='./configs/pyatmos__polynomial.yaml',
+        '--config-files',
+        # required=True,
+        nargs='+',
+        default=[
+            './configs/pyatmos__polynomial.yaml',
+            './configs/pyatmos__pca.yaml',
+            './configs/pyatmos__our-method.yaml',
+        ],
         help=(
-            'Path to the configuration file which specifies which error '
+            'Path to the configuration file(s) which specifies which error '
             'distributions we are plotting.'
         ),
+    )
+    parser.add_argument(
+        '--output-file-name',
+        default='pyatmos__all.pdf',
+        help='Name of the output file (including file extension).',
     )
     args = parser.parse_args()
 
@@ -122,8 +127,40 @@ def add_plot_group_to_figure(
         linewidth=0.5,
         zorder=99,
     )
+    ax.text(
+        x=median / np.max(kde_grid),
+        y=0.5,
+        s=f'{median:.1f}',
+        rotation=90,
+        va='center',
+        ha='center',
+        transform=ax.transAxes,
+        fontsize=4,
+        color=color,
+        bbox=dict(
+            facecolor='white',
+            alpha=0.9,
+            edgecolor='none',
+            boxstyle='round,pad=0.1',
+        ),
+        zorder=100,
+    )
 
     return fig, ax, median
+
+
+def get_plot_options(dataset: str) -> dict:
+
+    plot_options = {}
+
+    if dataset == 'pyatmos':
+        plot_options['kde_grid'] = np.linspace(0, 16, 500)
+    elif dataset == 'goyal-2020':
+        plot_options['kde_grid'] = np.linspace(0, 160, 500)
+    else:
+        raise ValueError(f'Unknown dataset: {dataset}')
+
+    return plot_options
 
 
 # -----------------------------------------------------------------------------
@@ -139,45 +176,11 @@ if __name__ == "__main__":
     script_start = time.time()
     print('\nPLOT ERROR DISTRIBUTIONS\n', flush=True)
 
-    # -------------------------------------------------------------------------
-    # Get CLI arguments and load configuration file
-    # -------------------------------------------------------------------------
-
     # Get CLI arguments
     args = get_cli_arguments()
 
-    # Load configuration file
-    print('Loading configuration file...', end=' ', flush=True)
-    file_path = expandvars(Path(args.config_file)).resolve()
-    with open(file_path, 'r') as yaml_file:
-        config = yaml.load(yaml_file, Loader=Loader)
-    print('Done!\n', flush=True)
-
-    print('Loaded the following from the configuration file:\n')
-    pprint(config)
-    print()
-
-    # Split the configuration into the different plot groups
-    title = config['title']
-    plot_groups: List[Dict[str, Any]] = config['plot_groups']
-
     # -------------------------------------------------------------------------
-    # Determine plot options based on dataset
-    # -------------------------------------------------------------------------
-
-    # Get dataset
-    dataset = file_path.name.split('__')[0]
-
-    # Set plot options based on dataset
-    if dataset == 'pyatmos':
-        kde_grid = np.linspace(0, 15, 500)
-    elif dataset == 'goyal-2020':
-        kde_grid = np.linspace(0, 120, 500)
-    else:
-        raise ValueError(f'Unknown dataset: {dataset}')
-
-    # -------------------------------------------------------------------------
-    # Loop over the plot groups and create the plots
+    # Create new figure and loop over configuration files
     # -------------------------------------------------------------------------
 
     # Set default font
@@ -186,58 +189,99 @@ if __name__ == "__main__":
 
     # Create a new figure
     pad_inches = 0.025
-    fig, ax = plt.subplots(
-        figsize=(17 / 2.54 - 2 * pad_inches,  3.5 / 2.54 - 2 * pad_inches),
+    fig, axes = plt.subplots(
+        nrows=len(args.config_files),
+        figsize=(
+            17 / 2.54 - 2 * pad_inches,
+            len(args.config_files) * 2.5 / 2.54 - 2 * pad_inches,
+        ),
+        sharex='all',
     )
+    axes = np.atleast_1d(axes)
+    plt.subplots_adjust(hspace=0.1, wspace=0.1)
 
-    # Loop over the plot groups
-    print('Creating plots...', end=' ', flush=True)
-    medians = {}
-    for plot_group in plot_groups:
-        fig, ax, median = add_plot_group_to_figure(
-            plot_group=plot_group,
-            fig=fig,
-            ax=ax,
-            kde_grid=kde_grid,
+    # Loop over configuration files
+    for i, config_file in enumerate(args.config_files):
+
+        # Load configuration file
+        print('\nLoading configuration file...', end=' ', flush=True)
+        file_path = expandvars(Path(config_file)).resolve()
+        config = load_yaml(file_path)
+        print('Done!', flush=True)
+
+        # Define shortcuts
+        ax = axes[i]
+        dataset = file_path.name.split('__')[0]
+        title = config['title']
+        plot_groups: List[Dict[str, Any]] = config['plot_groups']
+
+        # Get plot options
+        plot_options = get_plot_options(dataset)
+
+        # Loop over the plot groups
+        print('Creating plots...', end=' ', flush=True)
+        medians = {}
+        for plot_group in plot_groups:
+            fig, ax, median = add_plot_group_to_figure(
+                plot_group=plot_group,
+                fig=fig,
+                ax=ax,
+                kde_grid=plot_options['kde_grid'],
+            )
+            medians[plot_group['label']] = median
+        print('Done!\n', flush=True)
+    
+        # Add legend
+        legend = ax.legend(loc='center right', fontsize=5.5)
+        legend.set_title(
+            title=title,
+            prop={'size': 5.5, 'weight': 'bold'},
         )
-        medians[plot_group['label']] = median
-    print('Done!\n', flush=True)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.9)
+        legend.get_frame().set_linewidth(0)
 
-    # Add legend
-    legend = ax.legend(loc='upper right', fontsize=6, frameon=False)
-    legend.set_title(
-        title=title,
-        prop={'size': 6, 'weight': 'bold'},
-    )
+        # Set general plot options
+        for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_linewidth(0.25)
+            ax.xaxis.set_tick_params(width=0.25)
+            ax.yaxis.set_tick_params(width=0.25)
 
-    # Set font sizes
-    set_fontsize(ax, 5.5)
-    ax.xaxis.label.set_fontsize(6.5)
-    ax.yaxis.label.set_fontsize(6.5)
+        ax.set_ylabel('Density')
+        ax.set_xlim(
+            plot_options['kde_grid'][0],
+            plot_options['kde_grid'][-1],
+        )
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        set_fontsize(ax, 5.5)
+        ax.xaxis.label.set_fontsize(6.5)
+        ax.yaxis.label.set_fontsize(6.5)
+        ax.tick_params('y', length=2, width=0.25, which='major')
+        ax.tick_params('x', length=0, width=0.25, which='major')
 
-    # Set general plot options
-    for axis in ['top', 'bottom', 'left', 'right']:
-        ax.spines[axis].set_linewidth(0.25)
-        ax.xaxis.set_tick_params(width=0.25)
-        ax.yaxis.set_tick_params(width=0.25)
-    ax.set_xlabel('Root Mean Squared Error (in Kelvin)')
-    ax.set_ylabel('Density')
-    ax.set_xlim(kde_grid[0], kde_grid[-1])
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    fig.tight_layout(pad=0)
+        if i == len(args.config_files) - 1:
+            ax.set_xlabel('Root Mean Squared Error (in Kelvin)')
+            ax.tick_params('x', length=2, width=0.25, which='major')
 
-    # Print the medians of the different plot groups
-    print('Medians of the different plot groups:\n')
-    for label, median in medians.items():
-        print(f'  {label}: {median:.2f}')
+        # Print the medians of the different plot groups
+        print('Medians of the different plot groups:\n')
+        for label, median in medians.items():
+            print(f'  {label}: {median:.2f}')
+        print()
 
+    # -------------------------------------------------------------------------
     # Save the figure
+    # -------------------------------------------------------------------------
+
     print('\nSaving figure to PDF...', end=' ', flush=True)
+
     plots_dir = Path(__file__).resolve().parent / 'plots'
     plots_dir.mkdir(exist_ok=True)
-    file_name = Path(args.config_file).name.replace('.yaml', '.pdf')
-    file_path = plots_dir / file_name
+
+    file_path = plots_dir / args.output_file_name
+    fig.tight_layout(pad=0)
     fig.savefig(file_path, dpi=300, bbox_inches='tight', pad_inches=pad_inches)
+
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
