@@ -24,7 +24,7 @@ import onnx
 import pandas as pd
 import ultranest
 
-from ml4ptp.config import load_config
+from ml4ptp.config import load_experiment_config
 from ml4ptp.data_modules import DataModule
 from ml4ptp.onnx import ONNXEncoder, ONNXDecoder
 from ml4ptp.paths import expandvars
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     # Load experiment configuration from YAML
     print('Loading experiment configuration...', end=' ', flush=True)
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
-    config = load_config(experiment_dir / 'config.yaml')
+    config = load_experiment_config(experiment_dir / 'config.yaml')
     print('Done!\n', flush=True)
 
     # Define shortcuts

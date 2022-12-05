@@ -22,7 +22,7 @@ import numpy as np
 
 import torch
 
-from ml4ptp.config import load_config
+from ml4ptp.config import load_experiment_config
 from ml4ptp.data_modules import DataModule
 from ml4ptp.utils import get_batch_idx
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     # Load the experiment configuration
     file_path = experiment_dir / 'config.yaml'
-    config = load_config(file_path)
+    config = load_experiment_config(file_path)
 
     # Set up device (CPU or CUDA)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

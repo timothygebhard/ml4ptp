@@ -15,7 +15,7 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ml4ptp.config import load_config
+from ml4ptp.config import load_experiment_config
 from ml4ptp.paths import expandvars
 from ml4ptp.plotting import set_fontsize
 from ml4ptp.utils import find_run_dirs_with_results
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # Load experiment configuration from YAML
     print('Loading experiment configuration...', end=' ', flush=True)
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
-    config = load_config(experiment_dir / 'config.yaml')
+    config = load_experiment_config(experiment_dir / 'config.yaml')
     plot_config = config['plotting']['pt_profile']
     latent_size = int(config['model']['decoder']['parameters']['latent_size'])
     print('Done!', flush=True)
