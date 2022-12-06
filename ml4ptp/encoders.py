@@ -29,6 +29,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -39,6 +40,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.batch_norm = batch_norm
 
         # Define encoder architecture
         self.layers: torch.nn.Sequential = get_mlp_layers(
@@ -48,6 +50,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             output_size=self.latent_size,
             activation='leaky_relu',
             final_tanh=True,
+            batch_norm=batch_norm,
         )
 
         # Initialize weights
@@ -97,6 +100,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -107,6 +111,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.batch_norm = batch_norm
 
         # Define encoder architecture
         self.layers_1: torch.nn.Sequential = get_mlp_layers(
@@ -116,6 +121,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             output_size=1,
             activation='leaky_relu',
             final_tanh=False,
+            batch_norm=batch_norm,
         )
         self.layers_2: torch.nn.Sequential = get_mlp_layers(
             input_size=self.input_size,
@@ -124,6 +130,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             output_size=self.latent_size,
             activation='leaky_relu',
             final_tanh=True,
+            batch_norm=batch_norm,
         )
 
         # Initialize weights
@@ -182,6 +189,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -191,6 +199,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.batch_norm = batch_norm
 
         # Define encoder architecture
         self.layers: torch.nn.Sequential = get_mlp_layers(
@@ -200,6 +209,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
             output_size=self.latent_size,
             activation='leaky_relu',
             final_tanh=True,
+            batch_norm=batch_norm,
         )
 
     def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:

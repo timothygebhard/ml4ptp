@@ -51,6 +51,7 @@ def get_mlp_layers(
     output_size: int = 1,
     activation: str = 'leaky_relu',
     final_tanh: bool = True,
+    batch_norm: bool = False,
 ) -> nn.Sequential:
     """
     Create a multi-layer perceptron with the layer sizes.
@@ -67,6 +68,7 @@ def get_mlp_layers(
             Sitzmann et al. (2020).
         final_tanh: If True, add a scaled Tanh() activation after the
             last layer to limit outputs to [-5, 5]. (For encoders.)
+        batch_norm: Whether to use batch normalization.
 
     Returns:
         A `nn.Sequential` container with the desired MLP.
@@ -75,10 +77,18 @@ def get_mlp_layers(
     # Set up "normal" activation function
     nonlinearity = get_activation(name=activation)
 
-    # Define layers
+    # Define layers: Start with input layer
     layers = [nn.Linear(input_size, layer_size), nonlinearity]
+    if batch_norm:
+        layers.append(nn.BatchNorm1d(layer_size))
+
+    # Add hidden layers
     for i in range(n_layers):
         layers += [nn.Linear(layer_size, layer_size), nonlinearity]
+        if batch_norm:
+            layers.append(nn.BatchNorm1d(layer_size))
+
+    # Add output layer
     layers += [nn.Linear(layer_size, output_size)]
 
     # Add final tanh activation, if desired

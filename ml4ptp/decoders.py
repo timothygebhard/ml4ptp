@@ -32,6 +32,7 @@ class Decoder(nn.Module, NormalizerMixin):
         normalization: A dictionary containing the normalization
             parameters for the pressure and temperature.
         activation: The activation function to use in the decoder.
+        batch_norm: Whether to use batch normalization in the decoder.
     """
 
     def __init__(
@@ -41,6 +42,7 @@ class Decoder(nn.Module, NormalizerMixin):
         n_layers: int,
         normalization: Dict[str, Any],
         activation: str = 'leaky_relu',
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -50,6 +52,7 @@ class Decoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.batch_norm = batch_norm
 
         # Define decoder architecture
         # Note: The `+ 1` on the input is for the (log) pressure at which we
@@ -61,6 +64,7 @@ class Decoder(nn.Module, NormalizerMixin):
             output_size=1,
             activation=activation,
             final_tanh=False,
+            batch_norm=batch_norm,
         )
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
@@ -126,6 +130,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         normalization: A dictionary containing the normalization
             parameters for the pressure and temperature.
         activation: The activation function to use in the decoder.
+        batch_norm: Whether to use batch normalization in the decoder.
     """
 
     def __init__(
@@ -135,6 +140,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         n_layers: int,
         normalization: Dict[str, Any],
         activation: str = 'leaky_relu',
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -145,6 +151,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.n_layers = n_layers
         self.normalization = normalization
         self.activation_function = get_activation(activation)
+        self.batch_norm = batch_norm
 
         # Collect list of layers without activation functions, and excluding
         # the final layer (see below)
@@ -153,6 +160,19 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         )
         for i in range(n_layers):
             self.layers.append(nn.Linear(layer_size, layer_size - latent_size))
+
+        # Collect batch normalization layers
+        if batch_norm:
+            self.batch_norms = nn.ModuleList(
+                [
+                    nn.BatchNorm1d(layer_size - latent_size)
+                    for _ in range(n_layers)
+                ]
+            )
+        else:
+            self.batch_norms = nn.ModuleList(
+                [Identity() for _ in range(n_layers)]
+            )
 
         # Define final layer
         self.final_layer = nn.Linear(layer_size, 1)
@@ -182,15 +202,20 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
 
         # Send through decoder (manually, so that we can take care of the skip
         # connections and concatenate z to the output of each layer)
-        for layer in self.layers:
+        for i in range(self.n_layers):
 
             # Before sending through the layer, concatenate the latent
             # variable to the output of the previous layer
             x = torch.cat(tensors=(x, z_flat), dim=1)
 
             # Send through layer and apply activation function
-            x = layer(x)
+            # Note: If we do not use batch normalization, the `batch_norm`
+            # layer is an identity function. This is because using control
+            # flow here (i.e., `if batch_norm: ... else: ...`) often breaks
+            # during export with ONNX or TorchScript.
+            x = self.layers[i](x)
             x = self.activation_function(x)
+            x = self.batch_norms[i](x)
 
         # Send through final layer (no activation function)
         x = torch.cat((x, z_flat), dim=1)
@@ -224,6 +249,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
             hypernetwork.
         decoder_activation: The activation function to use in the
             decoder.
+        batch_norm: Whether to use batch normalization in the hypernet.
     """
 
     def __init__(
@@ -236,6 +262,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         normalization: Dict[str, Any],
         hypernet_activation: str = 'leaky_relu',
         decoder_activation: str = 'siren',
+        batch_norm: bool = False,
     ) -> None:
 
         super().__init__()
@@ -249,6 +276,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
         self.hypernet_activation = hypernet_activation
         self.decoder_activation = decoder_activation
         self.normalization = normalization
+        self.batch_norm = batch_norm
 
         # Compute sizes of the weight and bias tensors for the decoder
         self.weight_sizes, self.bias_sizes = self._get_weight_and_bias_sizes()
@@ -278,6 +306,7 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
             output_size=output_size,
             activation=hypernet_activation,
             final_tanh=False,
+            batch_norm=batch_norm,
         )
 
     def _get_weight_and_bias_sizes(self) -> tuple:
