@@ -138,6 +138,7 @@ if __name__ == "__main__":
             fontweight='bold',
         )
 
+    ax.set_aspect('equal')
     ax.set_xlabel(r'$z_1$')
     ax.set_ylabel(r'$z_2$')
     ax.set_xlim(-5, 5)
@@ -150,11 +151,12 @@ if __name__ == "__main__":
     ax.tick_params('both', length=2, width=0.25, which='major')
 
     # Plot the scatter plot
+    marker_size = 1 if args.dataset == 'pyatmos' else 4
     ax.scatter(
         z_refined[:, 0],
         z_refined[:, 1],
         c=target,
-        s=1,
+        s=marker_size,
         marker='.',
         cmap='viridis',
         edgecolors='none',
@@ -173,7 +175,8 @@ if __name__ == "__main__":
     plots_dir.mkdir(exist_ok=True)
 
     use_log = 'log_' if args.use_log else ''
-    file_name = f'{args.dataset}__{use_log}{args.key}.pdf'
+    key = args.key.split('/')[-1]
+    file_name = f'{args.dataset}__{use_log}{key}.pdf'
     file_path = plots_dir / file_name
     fig.tight_layout(pad=0)
     fig.savefig(file_path, dpi=600, bbox_inches='tight', pad_inches=pad_inches)
