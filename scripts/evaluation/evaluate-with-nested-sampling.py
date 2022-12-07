@@ -293,6 +293,7 @@ if __name__ == "__main__":
         T_true,
         idx,
         num_cpus=n_jobs,
+        ncol=80,  # for tqdm
     )
 
     # Sort results by idx
