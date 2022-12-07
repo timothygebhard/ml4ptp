@@ -110,6 +110,8 @@ if __name__ == "__main__":
         mse_initial=[],
         mse_refined=[],
         niter=[],
+        ncall=[],
+        converged=[],
     )
 
     # Loop over partial HDF files and read them in
