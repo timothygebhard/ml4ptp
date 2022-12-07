@@ -63,7 +63,7 @@ def get_cli_args() -> argparse.Namespace:
     parser.add_argument(
         '--run-dir',
         default=(
-            '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_0'
+            '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_1'
         ),
         type=str,
         required=True,
@@ -171,15 +171,16 @@ def find_optimal_z_with_nested_sampling(
     )
 
     # Empirically, we found that when the nested sampling procedure converges,
-    # the number of iterations is always less than 20k (for latent_size=4). We
-    # set the maximum number of iterations to 100k just to be on the safe side.
+    # the number of likelihood evaluations (`ncall`) is usually less than 30k
+    # (for latent_size=4). We set the maximum number of iterations to 100k to
+    # be on the safe side.
     #
     # noinspection PyTypeChecker
     result = sampler.run(
         min_num_live_points=400,
         show_status=False,
         viz_callback=False,
-        max_iters=100_000,
+        max_ncalls=100_000,
     )
 
     # -------------------------------------------------------------------------
@@ -188,7 +189,9 @@ def find_optimal_z_with_nested_sampling(
 
     z_refined = np.asarray(result['maximum_likelihood']['point'])
     results['z_refined'] = z_refined.squeeze()
+    results['ncall'] = int(result['ncall'])
     results['niter'] = int(result['niter'])
+    results['converged'] = int(result['insertion_order_MWW_test']['converged'])
 
     T_pred_refined = decoder(log_P=log_P, z=np.atleast_2d(z_refined))
     mse_refined = float(np.mean((T_pred_refined - T_true) ** 2))
@@ -319,7 +322,9 @@ if __name__ == "__main__":
         'T_pred_refined',
         'mse_initial',
         'mse_refined',
+        'ncall',
         'niter',
+        'converged',
     ]
     if n_splits > 1:
         keys += ['idx']
