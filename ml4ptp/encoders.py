@@ -80,9 +80,9 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         )
 
         # Compute forward pass through encoder to get latent variable z
-        z = self.layers(encoder_input)
+        z: torch.Tensor = self.layers(encoder_input)
 
-        return torch.as_tensor(z)
+        return z
 
 
 class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
@@ -176,9 +176,9 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         output = output.reshape(batch_size, grid_size)
 
         # Compute forward pass through second encoder part
-        z = self.layers_2(output)
+        z: torch.Tensor = self.layers_2(output)
 
-        return torch.as_tensor(z)
+        return z
 
 
 class CNPEncoder(nn.Module, NormalizerMixin):
@@ -235,6 +235,6 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         z_values = z_values.reshape(batch_size, grid_size, self.latent_size)
 
         # Aggregate along grid dimension to get final z
-        z = torch.mean(z_values, dim=1)
+        z: torch.Tensor = torch.mean(z_values, dim=1)
 
         return z
