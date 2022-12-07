@@ -170,11 +170,16 @@ def find_optimal_z_with_nested_sampling(
         vectorized=True,
     )
 
+    # Empirically, we found that when the nested sampling procedure converges,
+    # the number of iterations is always less than 20k (for latent_size=4). We
+    # set the maximum number of iterations to 100k just to be on the safe side.
+    #
     # noinspection PyTypeChecker
     result = sampler.run(
         min_num_live_points=400,
         show_status=False,
         viz_callback=False,
+        max_iters=100_000,
     )
 
     # -------------------------------------------------------------------------
