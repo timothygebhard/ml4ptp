@@ -92,10 +92,10 @@ def get_mlp_layers(
     layers += [nn.Linear(layer_size, output_size)]
 
     # Add final tanh activation, if desired
-    # This function is approximately linear from -3 to 3, but makes sure that
-    # all values are inside [-5, 5], which is want we want for sampling z.
+    # This function is approximately linear from -1.5 to 1.5, but makes sure
+    # all values are inside [-3, 3], which is want we want for sampling z.
     if final_tanh:
-        layers += [ScaledTanh(5.0, 5.0)]
+        layers += [ScaledTanh(3.0, 3.0)]
 
     # Apply special initialization scheme for SIREN networks
     if activation == 'siren':
@@ -188,7 +188,7 @@ class ScaledTanh(nn.Module):
     Scaled version of a Tanh activation function: `a * tanh(x / b)`.
     """
 
-    def __init__(self, a: float = 5.0, b: float = 5.0):
+    def __init__(self, a: float = 3.0, b: float = 3.0):
         super().__init__()
         self.a = a
         self.b = b

@@ -97,7 +97,7 @@ def plot_z_to_tensorboard(z: torch.Tensor) -> plt.Figure:
     figure = corner(
         data=z_numpy,
         bins=25,
-        range=z_numpy.shape[1] * [(-5, 5)],
+        range=z_numpy.shape[1] * [(-4, 4)],
         plot_density=False,
         plot_contours=False,
     )
