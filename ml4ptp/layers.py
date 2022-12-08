@@ -139,6 +139,21 @@ class PrintShape(torch.nn.Module):
         return tensor
 
 
+class PrintValue(torch.nn.Module):
+    """
+    An identity mapping that prints the value of the tensor that is
+    passed through it; optionally with a label (for the layer name).
+    """
+
+    def __init__(self, label: str = '') -> None:
+        super().__init__()
+        self.label = label
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        print(self.label + ':\n', tensor)
+        return tensor
+
+
 class Sine(torch.nn.Module):
     """
     A wrapper around 'torch.sin()` to use it as an activation function.
