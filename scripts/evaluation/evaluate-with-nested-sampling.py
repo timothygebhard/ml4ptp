@@ -18,7 +18,6 @@ import time
 from p_tqdm import p_umap
 
 import h5py
-import scipy.stats
 import numpy as np
 import onnx
 import pandas as pd
@@ -127,17 +126,14 @@ def find_optimal_z_with_nested_sampling(
     # Define (Gaussian) prior and likelihood
     # -------------------------------------------------------------------------
 
-    # noinspection PyUnresolvedReferences
-    gaussdistribution = scipy.stats.norm(0, 1)
-
-    def gaussian_prior(cube: np.ndarray) -> np.ndarray:
+    def prior(cube: np.ndarray) -> np.ndarray:
         """
-        Gaussian prior for z.
+        Prior for z. (Currently uniform in [-3, 3].)
         """
 
         params = cube.copy()
         for i in range(latent_size):
-            params[:, i] = gaussdistribution.ppf(cube[:, i])
+            params[:, i] = 6 * (params[:, i] - 0.5)
 
         return params
 
@@ -166,13 +162,13 @@ def find_optimal_z_with_nested_sampling(
     sampler = ultranest.ReactiveNestedSampler(
         param_names=[f'z{i}' for i in range(latent_size)],
         loglike=likelihood,
-        transform=gaussian_prior,
+        transform=prior,
         vectorized=True,
     )
 
     # Empirically, we found that when the nested sampling procedure converges,
-    # the number of likelihood evaluations (`ncall`) is usually less than 30k
-    # (for latent_size=4). We set the maximum number of iterations to 100k to
+    # the number of likelihood evaluations (`ncall`) is usually less than 100k
+    # (for latent_size=4). We set the maximum number of iterations to 500k to
     # be on the safe side.
     #
     # noinspection PyTypeChecker
@@ -180,7 +176,7 @@ def find_optimal_z_with_nested_sampling(
         min_num_live_points=400,
         show_status=False,
         viz_callback=False,
-        max_ncalls=100_000,
+        max_ncalls=500_000,
     )
 
     # -------------------------------------------------------------------------
