@@ -14,6 +14,7 @@ import argparse
 import logging
 import socket
 import time
+import traceback
 
 from p_tqdm import p_umap
 
@@ -175,7 +176,7 @@ def find_optimal_z_with_nested_sampling(
     # something that happens inside `ultranest.mlfriends`. In these cases,
     # we just try again with a different random seed.
     n_failures = 0
-    while n_failures < 3:
+    while n_failures < 5:
 
         try:
 
@@ -193,17 +194,17 @@ def find_optimal_z_with_nested_sampling(
             )
             break
 
-        except (AssertionError, ValueError) as e:
+        except (AssertionError, ValueError):
 
             n_failures += 1
             np.random.seed(random_seed + n_failures)
 
-            print(f'\nNested sampling failed on profile {idx}:\n\n')
-            print(e)
-            print('\n\nTrying again with a different random seed.\n')
+            print(f'\n\nNested sampling failed on profile {idx}:\n\n')
+            traceback.print_exc()
+            print('\n\nTrying again with a different random seed.\n\n')
 
-    # If we failed three times, raise the last error
-    if n_failures == 3:
+    # If we failed too many times, raise the last error
+    if n_failures == 5:
         raise RuntimeError('Failed three times to run nested sampling!')
 
     # -------------------------------------------------------------------------
