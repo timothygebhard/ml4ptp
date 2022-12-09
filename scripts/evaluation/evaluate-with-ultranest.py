@@ -14,6 +14,7 @@ import argparse
 import logging
 import socket
 import time
+import traceback
 
 from p_tqdm import p_umap
 
@@ -176,32 +177,60 @@ def find_optimal_z(
     )
 
     # Run sampler
-    # Empirically, we found that when the nested sampling procedure converges,
-    # the number of likelihood evaluations (`ncall`) is usually less than 100k
-    # (for latent_size=4). We set the maximum number of calls to 500k to be on
-    # the safe side.
-    # Likewise, we occasionally get a `ValueError` or `AssertionError` from
-    # ultranest if we use only the default 400 live points. Choosing a higher
-    # number of live points seems to fix this issue.
-    #
-    # noinspection PyTypeChecker
-    result = sampler.run(
-        min_num_live_points=400,
-        show_status=False,
-        viz_callback=False,
-        max_ncalls=500_000,
-        frac_remain=0.05,
-    )
+    # This sometimes fails with rather creative, hard-to-debug errors, so we
+    # try it multiple times, and it keeps failing, we return the initial guess
+    n_tries = 0
+    while n_tries < 3:
+
+        try:
+
+            # `frac_remain=0.05` seems to help with cases where the likelihood
+            # has a plateau, which results in many live points being removed
+            # without replacement, which then leads to an error when `nlive`
+            # becomes zero.
+            # noinspection PyTypeChecker
+            result = sampler.run(
+                min_num_live_points=400,
+                show_status=False,
+                viz_callback=False,
+                max_ncalls=500_000,
+                frac_remain=0.05,
+            )
+
+            z_refined = np.asarray(result['maximum_likelihood']['point'])
+            results['z_refined'] = z_refined.squeeze()
+            results['ncall'] = int(result['ncall'])
+            results['niter'] = int(result['niter'])
+            results['success'] = int(
+                result['insertion_order_MWW_test']['converged']
+            )
+
+            break
+
+        except Exception as e:
+
+            print(f'\n\nError in ultranest:\n {str(e)}')
+            traceback.print_exc()
+            print('\n\n')
+            n_tries += 1
+            np.random.seed(random_seed + n_tries)
+
+    # The `else` clause is executed if we do not `break` out of the while loop,
+    # that is, if we did NOT find a solution with nested sampling.
+    else:
+
+        print('\n\nFailed to run ultranest!')
+        print(f'Using initial guess for profile {idx}.\n\n')
+
+        z_refined = z_initial
+        results['z_refined'] = z_refined.squeeze()
+        results['ncall'] = -1
+        results['niter'] = -1
+        results['success'] = 0
 
     # -------------------------------------------------------------------------
     # Decode refined z and compute error
     # -------------------------------------------------------------------------
-
-    z_refined = np.asarray(result['maximum_likelihood']['point'])
-    results['z_refined'] = z_refined.squeeze()
-    results['ncall'] = int(result['ncall'])
-    results['niter'] = int(result['niter'])
-    results['converged'] = int(result['insertion_order_MWW_test']['converged'])
 
     T_pred_refined = decoder(log_P=log_P, z=np.atleast_2d(z_refined))
     mse_refined = float(np.mean((T_pred_refined - T_true) ** 2))
