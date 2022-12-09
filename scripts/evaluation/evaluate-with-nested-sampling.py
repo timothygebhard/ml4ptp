@@ -155,29 +155,56 @@ def find_optimal_z_with_nested_sampling(
     # Set up nested sampling and run
     # -------------------------------------------------------------------------
 
+    # Disable extensive logging from ultranest
     logger = logging.getLogger("ultranest")
     logger.addHandler(logging.NullHandler())
     logger.setLevel(logging.WARNING)
 
+    # Set up sampler
     sampler = ultranest.ReactiveNestedSampler(
         param_names=[f'z{i}' for i in range(latent_size)],
         loglike=likelihood,
         transform=prior,
         vectorized=True,
     )
+    result = {}
 
-    # Empirically, we found that when the nested sampling procedure converges,
-    # the number of likelihood evaluations (`ncall`) is usually less than 100k
-    # (for latent_size=4). We set the maximum number of iterations to 500k to
-    # be on the safe side.
-    #
-    # noinspection PyTypeChecker
-    result = sampler.run(
-        min_num_live_points=400,
-        show_status=False,
-        viz_callback=False,
-        max_ncalls=500_000,
-    )
+    # Run sampler
+    # We potentially need to run this multiple times, as in some rare cases
+    # the sampler crashes with rather byzantine errore that seem related to
+    # something that happens inside `ultranest.mlfriends`. In these cases,
+    # we just try again with a different random seed.
+    n_failures = 0
+    while n_failures < 3:
+
+        try:
+
+            # Empirically, we found that when the nested sampling procedure
+            # converges, the number of likelihood evaluations (`ncall`) is
+            # usually less than 100k (for latent_size=4). We set the maximum
+            # number of calls to 500k to be on the safe side.
+            #
+            # noinspection PyTypeChecker
+            result = sampler.run(
+                min_num_live_points=400,
+                show_status=False,
+                viz_callback=False,
+                max_ncalls=500_000,
+            )
+            break
+
+        except (AssertionError, ValueError) as e:
+
+            n_failures += 1
+            np.random.seed(random_seed + n_failures)
+
+            print(f'\nNested sampling failed on profile {idx}:\n\n')
+            print(e)
+            print('\n\nTrying again with a different random seed.\n')
+
+    # If we failed three times, raise the last error
+    if n_failures == 3:
+        raise RuntimeError('Failed three times to run nested sampling!')
 
     # -------------------------------------------------------------------------
     # Decode refined z and compute error
