@@ -172,6 +172,7 @@ def find_optimal_z(
         loglike=likelihood,
         transform=prior,
         vectorized=True,
+        # log_dir='.',
     )
 
     # Run sampler
@@ -185,10 +186,11 @@ def find_optimal_z(
     #
     # noinspection PyTypeChecker
     result = sampler.run(
-        min_num_live_points=1_000,
+        min_num_live_points=400,
         show_status=False,
         viz_callback=False,
         max_ncalls=500_000,
+        frac_remain=0.05,
     )
 
     # -------------------------------------------------------------------------
@@ -301,6 +303,22 @@ if __name__ == "__main__":
         num_cpus=n_jobs,
         ncols=80,  # for tqdm
     )
+
+    # Run fitting (serially)
+    # results: List[Dict[str, Union[int, float, np.ndarray]]] = []
+    # for i, (log_P_i, T_true_i, idx_i) in enumerate(zip(log_P, T_true, idx)):
+    #     if idx_i != 456:
+    #         continue
+    #     print(f'\n\nRunning for idx={idx_i}:\n', flush=True)
+    #     result = find_optimal_z(
+    #         log_P_i,
+    #         T_true_i,
+    #         idx_i,
+    #         encoder_bytes=encoder_bytes,
+    #         decoder_bytes=decoder_bytes,
+    #         random_seed=random_seed,
+    #     )
+    #     results.append(result)
 
     # Sort results by idx
     results = sorted(results, key=lambda x: x['idx'])  # type: ignore
