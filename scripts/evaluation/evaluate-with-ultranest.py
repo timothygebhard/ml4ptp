@@ -378,7 +378,7 @@ if __name__ == "__main__":
         'mse_refined',
         'ncall',
         'niter',
-        'converged',
+        'success',
     ]
     if n_splits > 1:
         keys += ['idx']
