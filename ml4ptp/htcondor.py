@@ -279,9 +279,12 @@ class DAGFile:
 
         contents = list()
 
-        # Add all jobs (i.e., nodes)
+        # Add all jobs (i.e., nodes); potentially mark them as DONE
         for node in self.topological_sort():
-            contents.append(f'JOB {node.name} {node.attributes["file_path"]}')
+            done = 'DONE' if node.attributes.get('done', False) else ''
+            contents.append(
+                f'JOB {node.name} {node.attributes["file_path"]} {done}'
+            )
 
         contents.append('')
 
