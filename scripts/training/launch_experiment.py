@@ -62,6 +62,12 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
+        '--evaluate-with',
+        default='scipy',
+        choices=['scipy', 'ultranest'],
+        help='Which evaluation method to use.',
+    )
+    parser.add_argument(
         '--memory',
         type=int,
         default=16_384,
@@ -72,6 +78,11 @@ def get_cli_args() -> argparse.Namespace:
         type=int,
         default=128,
         help='Number of parallel jobs for evaluation.',
+    )
+    parser.add_argument(
+        '--no-training',
+        action='store_true',
+        help='If given, mark the training job as "DONE" in the DAG.',
     )
     parser.add_argument(
         '--random-seeds',
@@ -109,9 +120,15 @@ if __name__ == "__main__":
     # Get command line arguments, prepare runs directory for experiment
     # -------------------------------------------------------------------------
 
-    # Get command line arguments; resolve experiment_dir
+    # Get command line arguments
     args = get_cli_args()
+
+    # Define shortcuts
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
+    if args.evaluate_with == 'ultranest':
+        evaluation_script = 'evaluate-with-ultranest.py'
+    else:
+        evaluation_script = 'evaluate-with-scipy.py'
 
     print('Received the following arguments:\n')
     for key, value in vars(args).items():
@@ -170,7 +187,11 @@ if __name__ == "__main__":
         submit_file.save(file_path=file_path)
         dag_file.add_submit_file(
             name='training',
-            attributes=dict(file_path=file_path.as_posix(), bid=args.bid),
+            attributes=dict(
+                file_path=file_path.as_posix(),
+                bid=args.bid,
+                done=args.no_training,
+            ),
         )
         print('Done!', flush=True)
 
@@ -186,7 +207,7 @@ if __name__ == "__main__":
             job_script=(
                 get_scripts_dir()
                 / 'evaluation'
-                / 'evaluate-with-nested-sampling.py'
+                / evaluation_script
             ),
             arguments={
                 'experiment-dir': experiment_dir.as_posix(),
