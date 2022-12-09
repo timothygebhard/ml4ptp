@@ -321,12 +321,11 @@ def submit_dag(file_path: Path, force: bool = False) -> None:
         force: If True, overwrite existing DAG files.
     """
 
-    # Define the command to launch the DAG workflow
-    cmd = ['condor_submit_dag', file_path.as_posix()]
-
-    # Add the force flag if requested
+    # Define the command to launch the DAG; add the force flag if requested
     if force:
-        cmd.append('-force')
+        cmd = ['condor_submit_dag', '-force', file_path.as_posix()]
+    else:
+        cmd = ['condor_submit_dag', file_path.as_posix()]
 
     # Otherwise, we actually launch the workflow
     p = subprocess.run(args=cmd, capture_output=True)
@@ -334,7 +333,8 @@ def submit_dag(file_path: Path, force: bool = False) -> None:
     # Check if the workflow was successfully launched
     if p.returncode != 0:
         raise RuntimeError(
-            f'Error launching DAG workflow "{file_path}": {p.stderr.decode()}'
+            f'Error launching DAG workflow "{file_path}":\n '
+            f'{p.stderr.decode()}'
         )
 
     return None
