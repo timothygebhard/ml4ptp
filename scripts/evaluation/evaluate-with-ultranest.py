@@ -1,5 +1,5 @@
 """
-Evaluate model on test set.
+Evaluate model on test set using `ultranest`.
 """
 
 # -----------------------------------------------------------------------------
@@ -14,7 +14,6 @@ import argparse
 import logging
 import socket
 import time
-import traceback
 
 from p_tqdm import p_umap
 
@@ -69,7 +68,7 @@ def get_cli_args() -> argparse.Namespace:
         required=True,
         help=(
             'Path to the directory of the run to evaluate. Should contain the '
-            'saved encoder and decoder models: encoder.pt and decoder.pt.'
+            'saved encoder and decoder models: encoder.onnx and decoder.onnx.'
         ),
     )
     parser.add_argument(
@@ -83,15 +82,21 @@ def get_cli_args() -> argparse.Namespace:
     return args
 
 
-def find_optimal_z_with_nested_sampling(
+def find_optimal_z(
     log_P: np.ndarray,
     T_true: np.ndarray,
     idx: int,
     encoder_bytes: bytes,
     decoder_bytes: bytes,
-    latent_size: int,
     random_seed: int,
 ) -> Dict[str, Union[int, float, np.ndarray]]:
+    """
+    Use nested sampling to find the optimal latent variable `z` for a
+    given PT profile.
+    """
+
+    # Set random seed
+    np.random.seed(random_seed)
 
     # Fix the shapes of the inputs
     log_P = log_P.reshape(1, -1)
@@ -126,12 +131,12 @@ def find_optimal_z_with_nested_sampling(
 
     def prior(cube: np.ndarray) -> np.ndarray:
         """
-        Prior for z. (Currently uniform in [-3, 3].)
+        Prior for z. (Currently uniform in [-5, 5].)
         """
 
         params = cube.copy()
-        for i in range(latent_size):
-            params[:, i] = 6 * (params[:, i] - 0.5)
+        for i in range(params.shape[1]):
+            params[:, i] = 10 * (params[:, i] - 0.5)
 
         return params
 
@@ -147,7 +152,10 @@ def find_optimal_z_with_nested_sampling(
         T_pred = decoder(log_P=log_P_, z=z)
         mse = np.asarray(np.mean((T_true_ - T_pred) ** 2, axis=1))
 
-        return -mse
+        if np.isnan(mse).any():
+            return -1e300 * np.ones_like(mse)
+        else:
+            return -mse
 
     # -------------------------------------------------------------------------
     # Set up nested sampling and run
@@ -158,55 +166,30 @@ def find_optimal_z_with_nested_sampling(
     logger.addHandler(logging.NullHandler())
     logger.setLevel(logging.WARNING)
 
-    # Set up and run nested sampling.
-    # We potentially need to run this multiple times, as in some rare cases
-    # the sampler crashes with rather byzantine errore that seem related to
-    # something that happens inside `ultranest.mlfriends`. In these cases,
-    # we just try again with a different random seed.
+    # Set up sampler
+    sampler = ultranest.ReactiveNestedSampler(
+        param_names=[f'z{i}' for i in range(z_initial.shape[1])],
+        loglike=likelihood,
+        transform=prior,
+        vectorized=True,
+    )
 
-    n_failures = 0
-    result = {}
-
-    while n_failures < 5:
-
-        try:
-
-            # Set random seed
-            np.random.seed(random_seed + n_failures)
-
-            # Set up sampler
-            sampler = ultranest.ReactiveNestedSampler(
-                param_names=[f'z{i}' for i in range(latent_size)],
-                loglike=likelihood,
-                transform=prior,
-                vectorized=True,
-            )
-
-            # Run sampler
-            # Empirically, we found that when the nested sampling procedure
-            # converges, the number of likelihood evaluations (`ncall`) is
-            # usually less than 100k (for latent_size=4). We set the maximum
-            # number of calls to 500k to be on the safe side.
-            #
-            # noinspection PyTypeChecker
-            result = sampler.run(
-                min_num_live_points=400,
-                show_status=False,
-                viz_callback=False,
-                max_ncalls=500_000,
-            )
-            break
-
-        except (AssertionError, ValueError):
-
-            n_failures += 1
-            print(f'\n\nNested sampling failed on profile {idx}:\n\n')
-            traceback.print_exc()
-            print('\n\nTrying again with a different random seed.\n\n')
-
-    # If we failed too many times, raise the last error
-    if n_failures == 5:
-        raise RuntimeError('Failed too many times to run nested sampling!')
+    # Run sampler
+    # Empirically, we found that when the nested sampling procedure converges,
+    # the number of likelihood evaluations (`ncall`) is usually less than 100k
+    # (for latent_size=4). We set the maximum number of calls to 500k to be on
+    # the safe side.
+    # Likewise, we occasionally get a `ValueError` or `AssertionError` from
+    # ultranest if we use only the default 400 live points. Choosing a higher
+    # number of live points seems to fix this issue.
+    #
+    # noinspection PyTypeChecker
+    result = sampler.run(
+        min_num_live_points=1_000,
+        show_status=False,
+        viz_callback=False,
+        max_ncalls=500_000,
+    )
 
     # -------------------------------------------------------------------------
     # Decode refined z and compute error
@@ -260,7 +243,6 @@ if __name__ == "__main__":
     n_splits = args.n_splits
     random_seed = args.random_seed
     run_dir = expandvars(Path(args.run_dir)).resolve()
-    latent_size = config['model']['decoder']['parameters']['latent_size']
 
     # Set random seed
     np.random.seed(random_seed)
@@ -308,10 +290,9 @@ if __name__ == "__main__":
     # and because we can sort by the `idx` of the input data afterwards.
     results: List[Dict[str, Union[int, float, np.ndarray]]] = p_umap(
         partial(
-            find_optimal_z_with_nested_sampling,
+            find_optimal_z,
             encoder_bytes=encoder_bytes,
             decoder_bytes=decoder_bytes,
-            latent_size=latent_size,
             random_seed=random_seed,
         ),
         log_P,
