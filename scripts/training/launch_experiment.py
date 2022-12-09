@@ -46,6 +46,11 @@ def get_cli_args() -> argparse.Namespace:
         help='Number of CPUs to request for cluster job.',
     )
     parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Use -force flag when calling condor_submit_dag.',
+    )
+    parser.add_argument(
         '--gpus',
         type=int,
         default=1,
@@ -265,7 +270,7 @@ if __name__ == "__main__":
         # Submit DAG file to cluster
         if not args.dry_run:
             print('  Submitting DAG file...', end=' ', flush=True)
-            submit_dag(file_path=file_path)
+            submit_dag(file_path=file_path, force=args.force)
             print('Done!', flush=True)
         else:
             print('  Skipping submission of DAG file (dry run)!', flush=True)

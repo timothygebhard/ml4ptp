@@ -312,16 +312,21 @@ class DAGFile:
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
-def submit_dag(file_path: Path) -> None:
+def submit_dag(file_path: Path, force: bool = False) -> None:
     """
     Submit a given DAG file as a workflow on the cluster.
 
     Args:
         file_path: Path to the *.dag file.
+        force: If True, overwrite existing DAG files.
     """
 
     # Define the command to launch the DAG workflow
     cmd = ['condor_submit_dag', file_path.as_posix()]
+
+    # Add the force flag if requested
+    if force:
+        cmd.append('-force')
 
     # Otherwise, we actually launch the workflow
     p = subprocess.run(args=cmd, capture_output=True)
