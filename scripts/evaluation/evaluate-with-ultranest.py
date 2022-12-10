@@ -96,9 +96,6 @@ def find_optimal_z(
     given PT profile.
     """
 
-    # Set random seed
-    np.random.seed(random_seed)
-
     # Fix the shapes of the inputs
     log_P = log_P.reshape(1, -1)
     T_true = T_true.reshape(1, -1)
@@ -167,22 +164,30 @@ def find_optimal_z(
     logger.addHandler(logging.NullHandler())
     logger.setLevel(logging.WARNING)
 
-    # Set up sampler
-    sampler = ultranest.ReactiveNestedSampler(
-        param_names=[f'z{i}' for i in range(z_initial.shape[1])],
-        loglike=likelihood,
-        transform=prior,
-        vectorized=True,
-        # log_dir='.',
-    )
-
-    # Run sampler
-    # This sometimes fails with rather creative, hard-to-debug errors, so we
-    # try it multiple times, and it keeps failing, we return the initial guess
+    # Run ultranest
+    # In a few, rare cases, this fails with rather creative, hard-to-debug
+    # errors, so we try it multiple times, and if it keeps failing, we return
+    # the initial guess.
     n_tries = 0
     while n_tries < 3:
 
         try:
+
+            if n_tries == 0:
+                raise RuntimeError('This is a test')
+
+            # Set random seed
+            np.random.seed(random_seed + n_tries)
+
+            # Set up sampler
+            # This needs to re-created for each try, otherwise we do not get
+            # different results for the different tries
+            sampler = ultranest.ReactiveNestedSampler(
+                param_names=[f'z{i}' for i in range(z_initial.shape[1])],
+                loglike=likelihood,
+                transform=prior,
+                vectorized=True,
+            )
 
             # `frac_remain=0.05` seems to help with cases where the likelihood
             # has a plateau, which results in many live points being removed
@@ -205,15 +210,15 @@ def find_optimal_z(
                 result['insertion_order_MWW_test']['converged']
             )
 
+            # If we get here, we have successfully run the sampler, so we can
+            # break out of the loop
             break
 
         except Exception as e:
 
-            print(f'\n\nError in ultranest:\n {str(e)}')
-            traceback.print_exc()
-            print('\n\n')
+            print(f'\nError in ultranest (profile {idx}): {str(e)}\n')
+            print(traceback.format_exc())
             n_tries += 1
-            np.random.seed(random_seed + n_tries)
 
     # The `else` clause is executed if we do not `break` out of the while loop,
     # that is, if we did NOT find a solution with nested sampling.
@@ -332,22 +337,6 @@ if __name__ == "__main__":
         num_cpus=n_jobs,
         ncols=80,  # for tqdm
     )
-
-    # Run fitting (serially)
-    # results: List[Dict[str, Union[int, float, np.ndarray]]] = []
-    # for i, (log_P_i, T_true_i, idx_i) in enumerate(zip(log_P, T_true, idx)):
-    #     if idx_i != 456:
-    #         continue
-    #     print(f'\n\nRunning for idx={idx_i}:\n', flush=True)
-    #     result = find_optimal_z(
-    #         log_P_i,
-    #         T_true_i,
-    #         idx_i,
-    #         encoder_bytes=encoder_bytes,
-    #         decoder_bytes=decoder_bytes,
-    #         random_seed=random_seed,
-    #     )
-    #     results.append(result)
 
     # Sort results by idx
     results = sorted(results, key=lambda x: x['idx'])  # type: ignore
