@@ -37,17 +37,14 @@ def get_cli_arguments() -> argparse.Namespace:
         '--idx',
         nargs='+',
         type=int,
-        default=[0, 5_000, 10_000, 20_000, -1],
+        default=[0],
         help='Index (or indices) of the profile to plot in the HDF file.',
     )
     parser.add_argument(
         '--run-dir',
         type=str,
-        # required=True,
-        default=(
-            '/Users/timothy/mount/mpicluster/projects/ml4ptp/'
-            'experiments/pyatmos/narwhal/runs/run_0'
-        ),
+        required=True,
+        default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/runs/run_0',
         help='Path to the directory containing the results_on_test_set.hdf',
     )
     parser.add_argument(
