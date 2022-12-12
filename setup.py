@@ -29,6 +29,7 @@ setup(
         'gitpython',
         'h5py',
         'joblib',
+        'KDEpy',
         'matplotlib',
         'normflows',
         'numpy',
