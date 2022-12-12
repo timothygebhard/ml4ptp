@@ -14,8 +14,8 @@ import argparse
 import time
 import warnings
 
+from KDEpy import TreeKDE
 from matplotlib.ticker import FormatStrFormatter
-from scipy.stats import gaussian_kde
 
 import h5py
 import matplotlib as mpl
@@ -68,34 +68,64 @@ def add_plot_group_to_figure(
     ax: plt.Axes,
     kde_grid: np.ndarray,
 ) -> Tuple[plt.Figure, plt.Axes, float]:
+    """
+    Add a plot group to the figure.
+    A plot group consists of several runs with the same settings, for
+    which we plot the mean and standard deviation.
+    """
 
-    # Read in the RSME (root mean squared error) for different runs
-    # Note: We assume that the error stored in the HDF file is the MSE.
+    # -------------------------------------------------------------------------
+    # Load data from HDF file
+    # -------------------------------------------------------------------------
+
+    # Collect all data from all runs
     rmses = []
     for run in plot_group['runs']:
 
+        # Check if the file exists
         file_path = expandvars(Path(run['file_path'])).resolve()
         if not file_path.exists():
             warnings.warn(f'File {file_path} does not exist!')
             continue
 
+        # Open HDF file and get the RSME
         with h5py.File(file_path, 'r') as hdf_file:
-            rsme = np.sqrt(np.array(hdf_file[run['key']])).squeeze()
+
+            # Get all (R)MSEs
+            rsme = np.sqrt(np.array(hdf_file[run['key']]))
+
+            # Only keep the RMSEs where the nested sampling did not fail
+            if 'success' in hdf_file.keys():
+                success = np.array(hdf_file['success']).astype(bool)
+                rsme = rsme[success]
+
             rmses.append(rsme)
 
+    # If we have no data, return the figure as is
     if not rmses:
         warnings.warn(f'No runs found for plot group {plot_group["label"]}')
         return fig, ax, np.nan
 
+    # -------------------------------------------------------------------------
+    # Compute median and KDE
+    # -------------------------------------------------------------------------
+
     # Compute the median (or rather: the mean of the median of each run)
     median = float(np.mean([np.median(_) for _ in rmses]))
 
-    # Compute a KDE for each run and evaluate it on the given grid
-    kdes = [gaussian_kde(_)(kde_grid) for _ in rmses]
+    # Compute a histogram for each run
+    kdes = []
+    for i, rmse in enumerate(rmses):
+        kde = TreeKDE(kernel='gaussian', bw='ISJ').fit(rmse)
+        kdes.append(kde.evaluate(kde_grid))
 
     # Compute the mean and standard deviation of the KDE
     kde_mean = np.mean(kdes, axis=0)
     kde_std = np.std(kdes, axis=0)
+
+    # -------------------------------------------------------------------------
+    # Plot median and KDE
+    # -------------------------------------------------------------------------
 
     # Determine color
     color = f"C{plot_group['n'] - 1}"
@@ -119,50 +149,61 @@ def add_plot_group_to_figure(
         alpha=0.25,
     )
 
-    # Add median to the plot
-    ax.axvline(
-        x=median,
-        color=color,
-        linestyle='--',
-        linewidth=0.5,
-        zorder=99,
-    )
-    ax.text(
-        x=median / np.max(kde_grid),
-        y=0.5,
-        s=f'{median:.1f}',
-        rotation=90,
-        va='center',
-        ha='center',
-        transform=ax.transAxes,
-        fontsize=4,
-        color=color,
-        bbox=dict(
-            facecolor='white',
-            alpha=0.9,
-            edgecolor='none',
-            boxstyle='round,pad=0.1',
-        ),
-        zorder=100,
-    )
+    # Add dashed line with the median to the plot
+    for i, (c, lw, ls) in enumerate([('white', 1, '-'), (color, 0.5, '--')]):
+        ax.axvline(
+            x=median,
+            color=c,
+            ls=ls,
+            lw=lw,
+            zorder=98 + i,
+        )
 
+    # Add text box with median
+    for c, alpha in [('white', 1), (color, 0)]:
+        ax.text(
+            x=(
+                (np.log10(median) - np.log10(kde_grid[0]))
+                / (np.log10(np.max(kde_grid)) - np.log10(kde_grid[0]))
+            ),
+            y=0.9,
+            s=f' {median:.2f} ',
+            rotation=90,
+            va='top',
+            ha='center',
+            transform=ax.transAxes,
+            fontsize=3.5,
+            color=c,
+            bbox=dict(
+                fc='white', ec='none', alpha=alpha, boxstyle='square,pad=0'
+            ),
+            zorder=100 - alpha,
+        )
+ 
     return fig, ax, median
 
 
 def get_plot_options(dataset: str) -> dict:
+    """
+    Get plot options for a given dataset ("pyatmos" or "goyal-2020").
+    """
 
-    plot_options = {}
+    plot_options: Dict[str, Any] = {}
 
     if dataset == 'pyatmos':
-        plot_options['kde_grid'] = np.linspace(0, 16, 500)
+        plot_options['kde_grid'] = np.geomspace(0.01, 50, 1000)
+        plot_options['ylim'] = (0.01, 20)
+        plot_options['yformatter'] = FormatStrFormatter('%.2f')
     elif dataset == 'goyal-2020':
-        plot_options['kde_grid'] = np.linspace(0, 160, 500)
+        plot_options['kde_grid'] = np.geomspace(1, 300, 1000)
+        plot_options['ylim'] = (0.001, 2)
+        plot_options['yformatter'] = FormatStrFormatter('%.3f')
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
 
     return plot_options
 
-
+ 
 # -----------------------------------------------------------------------------
 # MAIN CODE
 # -----------------------------------------------------------------------------
@@ -230,9 +271,9 @@ if __name__ == "__main__":
             )
             medians[plot_group['label']] = median
         print('Done!\n', flush=True)
-    
+
         # Add legend
-        legend = ax.legend(loc='center right', fontsize=5.5)
+        legend = ax.legend(loc='center left', fontsize=5.5)
         legend.set_title(
             title=title,
             prop={'size': 5.5, 'weight': 'bold'},
@@ -241,27 +282,38 @@ if __name__ == "__main__":
         legend.get_frame().set_alpha(0.9)
         legend.get_frame().set_linewidth(0)
 
-        # Set general plot options
+        # Set width and z-order of the frame
         for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_zorder(1000)
             ax.spines[axis].set_linewidth(0.25)
             ax.xaxis.set_tick_params(width=0.25)
             ax.yaxis.set_tick_params(width=0.25)
 
-        ax.set_ylabel('Density')
-        ax.set_xlim(
-            plot_options['kde_grid'][0],
-            plot_options['kde_grid'][-1],
-        )
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        # Set x- and y-limits (and make them log-scale); format ticks
+        ax.set_xlim(plot_options['kde_grid'][0], plot_options['kde_grid'][-1])
+        ax.set_ylim(*plot_options['ylim'])
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.yaxis.set_major_formatter(plot_options['yformatter'])
+
+        # Set font sizes
         set_fontsize(ax, 5.5)
         ax.xaxis.label.set_fontsize(6.5)
         ax.yaxis.label.set_fontsize(6.5)
-        ax.tick_params('y', length=2, width=0.25, which='major')
-        ax.tick_params('x', length=0, width=0.25, which='major')
 
+        # Set x- and y-labels
+        ax.set_ylabel('Density')
         if i == len(args.config_files) - 1:
             ax.set_xlabel('Root Mean Squared Error (in Kelvin)')
+
+        # Set width and length of the tick marks
+        ax.tick_params('x', length=0, width=0.25, which='major')
+        ax.tick_params('y', length=2, width=0.25, which='major')
+        ax.tick_params('x', length=0, width=0.25, which='minor')
+        ax.tick_params('y', length=1, width=0.25, which='minor')
+        if i == len(args.config_files) - 1:
             ax.tick_params('x', length=2, width=0.25, which='major')
+            ax.tick_params('x', length=1, width=0.25, which='minor')
 
         # Print the medians of the different plot groups
         print('Medians of the different plot groups:\n')
