@@ -179,7 +179,7 @@ def add_plot_group_to_figure(
             ),
             zorder=100 - alpha,
         )
- 
+
     return fig, ax, median
 
 
@@ -203,7 +203,7 @@ def get_plot_options(dataset: str) -> dict:
 
     return plot_options
 
- 
+
 # -----------------------------------------------------------------------------
 # MAIN CODE
 # -----------------------------------------------------------------------------

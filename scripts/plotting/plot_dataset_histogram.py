@@ -22,13 +22,12 @@ from ml4ptp.plotting import set_fontsize, add_colorbar_to_ax
 # DEFINITIONS
 # -----------------------------------------------------------------------------
 
-
 def get_cli_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dataset',
-        # required=True,
+        required=True,
         default='pyatmos',
         choices=['pyatmos', 'goyal-2020'],
         help='Name of the dataset for which to plot the histogram.',
@@ -135,7 +134,7 @@ if __name__ == '__main__':
     # Set the font size
     set_fontsize(ax, 8)
 
-    print(f'Done!', flush=True)
+    print('Done!', flush=True)
 
     # Save the figure
     print('Saving plot...', end=' ', flush=True)
@@ -146,7 +145,7 @@ if __name__ == '__main__':
         bbox_inches='tight',
         pad_inches=pad_inches,
     )
-    print(f'Done!', flush=True)
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Postliminaries

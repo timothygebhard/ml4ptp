@@ -30,7 +30,7 @@ class NormalizerMixin:
 
         offset = float(self.normalization['T_offset'])
         factor = float(self.normalization['T_factor'])
-        assert factor != 0.0, f'factor must not be zero!'
+        assert factor != 0.0, 'factor must not be zero!'
 
         return T * factor + offset if undo else (T - offset) / factor
 
@@ -42,6 +42,6 @@ class NormalizerMixin:
 
         offset = float(self.normalization['log_P_offset'])
         factor = float(self.normalization['log_P_factor'])
-        assert factor != 0.0, f'factor must not be zero!'
+        assert factor != 0.0, 'factor must not be zero!'
 
         return log_P * factor + offset if undo else (log_P - offset) / factor

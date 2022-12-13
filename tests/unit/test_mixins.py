@@ -73,7 +73,7 @@ def test__normalizer_mixin() -> None:
     # -------------------------------------------------------------------------
     # Case 2: Test the normalization of log_P
     # -------------------------------------------------------------------------
-    
+
     assert torch.equal(
         dummy.normalize_log_P(log_P=torch.Tensor([3.0, 5.0, 7.0]), undo=False),
         torch.Tensor([1.0, 2.0, 3.0]),

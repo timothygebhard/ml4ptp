@@ -155,7 +155,7 @@ if __name__ == "__main__":
         print(f'Creating run for random seed {random_seed}:', flush=True)
 
         # Construct the directory for this run
-        print(f'  Creating run directory...', end=' ', flush=True)
+        print('  Creating run directory...', end=' ', flush=True)
         run_dir = runs_dir / f'run_{random_seed}'
         run_dir.mkdir(exist_ok=True)
         print('Done!', flush=True)
