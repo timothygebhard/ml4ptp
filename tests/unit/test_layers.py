@@ -15,6 +15,7 @@ from ml4ptp.layers import (
     Identity,
     Mean,
     PrintShape,
+    PrintValue,
     ScaledTanh,
     Sine,
     Squeeze,
@@ -28,10 +29,15 @@ from ml4ptp.layers import (
 
 def test__get_activation() -> None:
 
+    assert isinstance(get_activation('elu'), torch.nn.ELU)
+    assert isinstance(get_activation('gelu'), torch.nn.GELU)
     assert isinstance(get_activation('leaky_relu'), torch.nn.LeakyReLU)
+    assert isinstance(get_activation('mish'), torch.nn.Mish)
+    assert isinstance(get_activation('prelu'), torch.nn.PReLU)
     assert isinstance(get_activation('relu'), torch.nn.ReLU)
     assert isinstance(get_activation('sine'), Sine)
     assert isinstance(get_activation('siren'), Sine)
+    assert isinstance(get_activation('swish'), torch.nn.SiLU)
     assert isinstance(get_activation('tanh'), torch.nn.Tanh)
 
     with pytest.raises(ValueError) as value_error:
@@ -105,6 +111,20 @@ def test_print_shape(capfd: pytest.CaptureFixture) -> None:
     # Case 2
     out, err = capfd.readouterr()
     assert 'Some layer:  torch.Size([5, 7])' in str(out)
+
+
+def test_print_value(capfd: pytest.CaptureFixture) -> None:
+
+    print_value = PrintValue(label='Some layer')
+
+    # Case 1
+    x_in = torch.tensor([1.0, 2.0, 3.0])
+    x_out = print_value(x_in)
+    assert torch.equal(x_out, x_in)
+
+    # Case 2
+    out, err = capfd.readouterr()
+    assert 'Some layer:\n tensor([1., 2., 3.])' in str(out)
 
 
 def test_scaled_tanh() -> None:

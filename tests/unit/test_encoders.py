@@ -12,7 +12,12 @@ import numpy as np
 import pytest
 import torch
 
-from ml4ptp.encoders import CNPEncoder, MLPEncoder, ModifiedMLPEncoder
+from ml4ptp.encoders import (
+    CNPEncoder,
+    ConvolutionalEncoder,
+    MLPEncoder,
+    ModifiedMLPEncoder,
+)
 
 
 # -----------------------------------------------------------------------------
@@ -52,7 +57,7 @@ def test__mlp_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 0.04472377523779869)
+    assert np.isclose(z.mean().item(), 0.03190105780959129)
 
     # Case 2: batch_norm = True
     encoder = MLPEncoder(
@@ -68,7 +73,7 @@ def test__mlp_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 0.022653179243206978)
+    assert np.isclose(z.mean().item(), 0.03323226049542427)
 
 
 def test__modified_mlp_encoder(normalization: Dict[str, Any]) -> None:
@@ -88,8 +93,9 @@ def test__modified_mlp_encoder(normalization: Dict[str, Any]) -> None:
     T = torch.randn(17, 29)
     z = encoder(log_P=log_P, T=T)
 
+    assert sum(_.numel() for _ in encoder.layers_1.parameters()) == 8577
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), -0.021120455116033554)
+    assert np.isclose(z.mean().item(), -0.02111166901886463)
 
     # Case 2: batch_norm = True
     encoder = ModifiedMLPEncoder(
@@ -105,7 +111,60 @@ def test__modified_mlp_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 4.957984492648393e-05)
+    assert np.isclose(z.mean().item(), 0.060839228332042694)
+
+
+def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
+
+    torch.manual_seed(42)
+
+    # Case 1: batch_norm = False
+    encoder = ConvolutionalEncoder(
+        input_size=29,
+        latent_size=5,
+        layer_size=16,
+        n_layers=2,
+        normalization=normalization,
+        n_channels=64,
+        batch_norm=False,
+    )
+    log_P = torch.randn(17, 29)
+    T = torch.randn(17, 29)
+    z = encoder(log_P=log_P, T=T)
+
+    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 8577
+    assert z.shape == (17, 5)
+    assert np.isclose(z.mean().item(), -0.5346720814704895)
+
+    # Case 2: batch_norm = True
+    encoder = ConvolutionalEncoder(
+        input_size=29,
+        latent_size=5,
+        layer_size=16,
+        n_layers=2,
+        normalization=normalization,
+        n_channels=64,
+        batch_norm=False,
+    )
+    log_P = torch.randn(17, 29)
+    T = torch.randn(17, 29)
+    z = encoder(log_P=log_P, T=T)
+
+    assert z.shape == (17, 5)
+    assert np.isclose(z.mean().item(), 0.02669019065797329)
+
+    # Case 3: bigger convolutional network
+    encoder = ConvolutionalEncoder(
+        input_size=29,
+        latent_size=5,
+        layer_size=16,
+        n_layers=2,
+        normalization=normalization,
+        n_channels=512,
+        batch_norm=False,
+    )
+
+    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 527_361
 
 
 def test__cnp_encoder(normalization: Dict[str, Any]) -> None:
@@ -124,7 +183,7 @@ def test__cnp_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 0.00246062851510942)
+    assert np.isclose(z.mean().item(), 0.002570506650954485)
 
     # Case 2: batch_norm = True
     encoder = CNPEncoder(
@@ -138,4 +197,4 @@ def test__cnp_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 0.09216536581516266)
+    assert np.isclose(z.mean().item(), 0.0920729786157608)

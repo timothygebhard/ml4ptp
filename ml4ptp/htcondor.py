@@ -312,7 +312,13 @@ class DAGFile:
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
-def submit_dag(file_path: Path, force: bool = False) -> None:
+# The following function is excluded from the unit tests because it requires
+# a working HTCondor installation to run (because of `condor_submit_dag`).
+
+def submit_dag(
+    file_path: Path,
+    force: bool = False,
+) -> None:  # pragma: no cover
     """
     Submit a given DAG file as a workflow on the cluster.
 

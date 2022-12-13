@@ -14,8 +14,17 @@ import onnx
 import pytest
 import torch
 
-from ml4ptp.encoders import CNPEncoder, MLPEncoder, ModifiedMLPEncoder
-from ml4ptp.decoders import Decoder, SkipConnectionsDecoder, HypernetDecoder
+from ml4ptp.encoders import (
+    CNPEncoder,
+    ConvolutionalEncoder,
+    MLPEncoder,
+    ModifiedMLPEncoder,
+)
+from ml4ptp.decoders import (
+    Decoder,
+    HypernetDecoder,
+    SkipConnectionsDecoder,
+)
 from ml4ptp.onnx import ONNXEncoder, ONNXDecoder
 from ml4ptp.exporting import (
     export_encoder_with_onnx,
@@ -59,6 +68,20 @@ def modified_mlp_encoder(normalization: Dict[str, Any]) -> ModifiedMLPEncoder:
         layer_size=32,
         n_layers=3,
         normalization=normalization,
+    )
+
+
+@pytest.fixture()
+def convolutional_encoder(
+    normalization: Dict[str, Any],
+) -> ConvolutionalEncoder:
+    return ConvolutionalEncoder(
+        input_size=101,
+        latent_size=2,
+        layer_size=32,
+        n_layers=3,
+        normalization=normalization,
+        n_channels=64,
     )
 
 
@@ -119,6 +142,7 @@ def test__export_encoder_with_onnx(
     mlp_encoder: MLPEncoder,
     modified_mlp_encoder: ModifiedMLPEncoder,
     cnp_encoder: CNPEncoder,
+    convolutional_encoder: ConvolutionalEncoder,
 ) -> None:
 
     # Define inputs for all test cases
@@ -133,6 +157,7 @@ def test__export_encoder_with_onnx(
         mlp_encoder,
         modified_mlp_encoder,
         cnp_encoder,
+        convolutional_encoder,
     ]:
 
         # Export model with ONNX
@@ -228,6 +253,7 @@ def test__export_encoder_with_torchscript(
     mlp_encoder: MLPEncoder,
     modified_mlp_encoder: ModifiedMLPEncoder,
     cnp_encoder: CNPEncoder,
+    convolutional_encoder: ConvolutionalEncoder,
 ) -> None:
 
     # Define inputs for all test cases
@@ -242,6 +268,7 @@ def test__export_encoder_with_torchscript(
         mlp_encoder,
         modified_mlp_encoder,
         cnp_encoder,
+        convolutional_encoder,
     ]:
 
         # Export model with TorchScript; load saved model

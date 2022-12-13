@@ -120,3 +120,35 @@ def test__data_module(hdf_file: Path) -> None:
         )
         dm.prepare_data()
     assert 'Invalid normalization!' in str(value_error)
+
+    # Case 5a: get_test_dataset() with test_file_path
+    dm = DataModule(
+        key_P='P',
+        key_T='T',
+        train_file_path=None,
+        test_file_path=hdf_file,
+        test_batch_size=2,
+        normalization='whiten'
+    )
+    dm.prepare_data()
+
+    log_P, T_true = dm.get_test_data()
+    assert isinstance(log_P, np.ndarray)
+    assert isinstance(T_true, np.ndarray)
+    assert log_P.shape == (17, 13)
+    assert T_true.shape == (17, 13)
+
+    # Case 5b: get_test_dataset() without test_file_path
+    dm = DataModule(
+        key_P='P',
+        key_T='T',
+        train_file_path=hdf_file,
+        test_file_path=None,
+        test_batch_size=2,
+        normalization='whiten'
+    )
+    dm.prepare_data()
+
+    with pytest.raises(RuntimeError) as runtime_error:
+        dm.get_test_data()
+    assert "No test_dataset defined!" in str(runtime_error)
