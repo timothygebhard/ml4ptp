@@ -78,10 +78,13 @@ def convolutional_encoder(
     return ConvolutionalEncoder(
         input_size=101,
         latent_size=2,
-        layer_size=32,
-        n_layers=3,
+        cnn_n_layers=2,
+        cnn_n_channels=64,
+        cnn_kernel_size=1,
+        mlp_layer_size=32,
+        mlp_n_layers=3,
         normalization=normalization,
-        n_channels=64,
+        batch_norm=False,
     )
 
 

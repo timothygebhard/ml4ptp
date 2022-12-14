@@ -122,11 +122,12 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
     encoder = ConvolutionalEncoder(
         input_size=29,
         latent_size=5,
-        layer_size=16,
-        n_layers=2,
+        cnn_n_layers=2,
+        cnn_n_channels=64,
+        cnn_kernel_size=1,
+        mlp_n_layers=3,
+        mlp_layer_size=256,
         normalization=normalization,
-        n_channels=64,
-        kernel_size=1,
         batch_norm=False,
     )
     log_P = torch.randn(17, 29)
@@ -135,17 +136,18 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
 
     assert sum(_.numel() for _ in encoder.convnet.parameters()) == 8577
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), -0.5346720814704895)
+    assert np.isclose(z.mean().item(), -0.6860975623130798)
 
     # Case 2: batch_norm = True
     encoder = ConvolutionalEncoder(
         input_size=29,
         latent_size=5,
-        layer_size=16,
-        n_layers=2,
+        cnn_n_layers=4,
+        cnn_n_channels=16,
+        cnn_kernel_size=1,
+        mlp_n_layers=3,
+        mlp_layer_size=256,
         normalization=normalization,
-        n_channels=64,
-        kernel_size=3,
         batch_norm=True,
     )
     log_P = torch.randn(17, 29)
@@ -153,21 +155,22 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), -0.018513932824134827)
+    assert np.isclose(z.mean().item(), 0.01976597122848034)
 
     # Case 3: bigger convolutional network
     encoder = ConvolutionalEncoder(
         input_size=29,
         latent_size=5,
-        layer_size=16,
-        n_layers=2,
+        cnn_n_layers=4,
+        cnn_n_channels=512,
+        cnn_kernel_size=1,
+        mlp_n_layers=1,
+        mlp_layer_size=256,
         normalization=normalization,
-        n_channels=512,
-        kernel_size=3,
         batch_norm=False,
     )
 
-    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 1_579_009
+    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 1_052_673
 
 
 def test__cnp_encoder(normalization: Dict[str, Any]) -> None:

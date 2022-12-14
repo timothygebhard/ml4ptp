@@ -6,11 +6,13 @@ Unit tests for layers.py
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+import numpy as np
 import pytest
 import torch
 
 from ml4ptp.layers import (
     get_activation,
+    get_cnn_layers,
     get_mlp_layers,
     Identity,
     Mean,
@@ -72,6 +74,43 @@ def test__get_mlp_layers() -> None:
     assert len(layers) == 5
     assert isinstance(layers[0], torch.nn.Linear)
     assert isinstance(layers[1], torch.nn.ReLU)
+
+
+def test__get_cnn_layers() -> None:
+
+    torch.manual_seed(42)
+
+    # Case 1
+    layers = get_cnn_layers(
+        n_layers=2,
+        n_channels=8,
+        kernel_size=3,
+        activation='leaky_relu',
+        batch_norm=False,
+    )
+    assert len(layers) == 8
+    assert isinstance(layers[0], torch.nn.Conv1d)
+    assert isinstance(layers[1], torch.nn.LeakyReLU)
+    x = torch.randn(17, 2, 101)
+    y = layers(x)
+    assert y.shape == (17, 101 - (2 + 2) * (3 - 1))
+    assert np.isclose(y.mean().item(), 0.1323554664850235)
+
+    # Case 2
+    layers = get_cnn_layers(
+        n_layers=0,
+        n_channels=8,
+        kernel_size=5,
+        activation='leaky_relu',
+        batch_norm=True,
+    )
+    assert len(layers) == 5
+    assert isinstance(layers[0], torch.nn.Conv1d)
+    assert isinstance(layers[1], torch.nn.LeakyReLU)
+    x = torch.randn(17, 2, 101)
+    y = layers(x)
+    assert y.shape == (17, 101 - (2 + 0) * (5 - 1))
+    assert np.isclose(y.mean().item(), 0.04575807601213455)
 
 
 def test__identity() -> None:
