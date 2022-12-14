@@ -220,7 +220,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
 
         # Compute CNN output size (note: we are not using padding)
         cnn_output_size = (
-            self.input_size - (cnn_n_channels + 2) * (cnn_kernel_size - 1)
+            self.input_size - (cnn_n_layers + 2) * (cnn_kernel_size - 1)
         )
 
         # Define encoder architecture
