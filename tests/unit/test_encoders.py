@@ -126,6 +126,7 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
         n_layers=2,
         normalization=normalization,
         n_channels=64,
+        kernel_size=1,
         batch_norm=False,
     )
     log_P = torch.randn(17, 29)
@@ -144,14 +145,15 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
         n_layers=2,
         normalization=normalization,
         n_channels=64,
-        batch_norm=False,
+        kernel_size=3,
+        batch_norm=True,
     )
     log_P = torch.randn(17, 29)
     T = torch.randn(17, 29)
     z = encoder(log_P=log_P, T=T)
 
     assert z.shape == (17, 5)
-    assert np.isclose(z.mean().item(), 0.02669019065797329)
+    assert np.isclose(z.mean().item(), -0.018513932824134827)
 
     # Case 3: bigger convolutional network
     encoder = ConvolutionalEncoder(
@@ -161,10 +163,11 @@ def test__convolutional_encoder(normalization: Dict[str, Any]) -> None:
         n_layers=2,
         normalization=normalization,
         n_channels=512,
+        kernel_size=3,
         batch_norm=False,
     )
 
-    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 527_361
+    assert sum(_.numel() for _ in encoder.convnet.parameters()) == 1_579_009
 
 
 def test__cnp_encoder(normalization: Dict[str, Any]) -> None:

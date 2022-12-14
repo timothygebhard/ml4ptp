@@ -190,6 +190,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         n_layers: int,
         normalization: Dict[str, Any],
         n_channels: int = 64,
+        kernel_size: int = 3,
         batch_norm: bool = False,
     ) -> None:
 
@@ -206,25 +207,36 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         # Define encoder architecture
         self.convnet = nn.Sequential(
             torch.nn.Conv1d(
-                in_channels=2, out_channels=n_channels, kernel_size=1
+                in_channels=2,
+                out_channels=n_channels,
+                kernel_size=kernel_size,
             ),
             torch.nn.LeakyReLU(),
+            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
             torch.nn.Conv1d(
-                in_channels=n_channels, out_channels=n_channels, kernel_size=1
+                in_channels=n_channels,
+                out_channels=n_channels,
+                kernel_size=kernel_size,
             ),
             torch.nn.LeakyReLU(),
+            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
             torch.nn.Conv1d(
-                in_channels=n_channels, out_channels=n_channels, kernel_size=1
+                in_channels=n_channels,
+                out_channels=n_channels,
+                kernel_size=kernel_size,
             ),
             torch.nn.LeakyReLU(),
+            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
             torch.nn.Conv1d(
-                in_channels=n_channels, out_channels=1, kernel_size=1
+                in_channels=n_channels,
+                out_channels=1,
+                kernel_size=kernel_size,
             ),
             torch.nn.LeakyReLU(),
             Squeeze(),
         )
         self.mlp: torch.nn.Sequential = get_mlp_layers(
-            input_size=self.input_size,
+            input_size=self.input_size - 4 * (kernel_size - 1),  # no padding
             layer_size=self.layer_size,
             n_layers=self.n_layers,
             output_size=self.latent_size,
