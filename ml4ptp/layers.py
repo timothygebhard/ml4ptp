@@ -107,6 +107,77 @@ def get_mlp_layers(
     return nn.Sequential(*layers)
 
 
+def get_cnn_layers(
+    n_layers: int,
+    n_channels: int,
+    kernel_size: int,
+    activation: str = 'leaky_relu',
+    batch_norm: bool = False,
+) -> nn.Sequential:
+    """
+    Create a 1D convolutional neural network with 2 input and 1 output
+    channels, and the given number of "hidden" layers.
+
+    Args:
+        n_layers: Number of *hidden* convolutional layers: If this is
+            set to 0, the resulting network still have 2 layers for
+            input and output.
+        n_channels: Number of channels in the hidden layers.
+        kernel_size: Size of the 1D convolutional kernels.
+        activation: Which kind of activation function to use.
+        batch_norm: Whether to use batch normalization.
+
+    Returns:
+        A `nn.Sequential` container with the desired CNN.
+    """
+
+    # Set up "normal" activation function
+    nonlinearity = get_activation(name=activation)
+
+    # Define layers: Start with input layer
+    layers = [
+        nn.Conv1d(
+            in_channels=2,
+            out_channels=n_channels,
+            kernel_size=kernel_size,
+        ),
+        nonlinearity,
+    ]
+    if batch_norm:
+        layers.append(
+            nn.BatchNorm1d(num_features=n_channels, track_running_stats=False)
+        )
+
+    # Add hidden layers
+    for i in range(n_layers):
+        layers += [
+            nn.Conv1d(
+                in_channels=n_channels,
+                out_channels=n_channels,
+                kernel_size=kernel_size,
+            ),
+            nonlinearity,
+        ]
+        if batch_norm:
+            layers.append(
+                nn.BatchNorm1d(
+                    num_features=n_channels, track_running_stats=False
+                )
+            )
+
+    # Add output layer (and squeeze out the channel dimension)
+    layers += [
+        nn.Conv1d(
+            in_channels=n_channels,
+            out_channels=1,
+            kernel_size=kernel_size,
+        ),
+        Squeeze(),
+    ]
+
+    return nn.Sequential(*layers)
+
+
 # -----------------------------------------------------------------------------
 # CLASS DEFINITIONS
 # -----------------------------------------------------------------------------
