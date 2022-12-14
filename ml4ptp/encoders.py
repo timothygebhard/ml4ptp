@@ -12,7 +12,7 @@ from typing import Any, Dict
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import get_mlp_layers, Squeeze
+from ml4ptp.layers import get_mlp_layers, get_cnn_layers
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -21,6 +21,11 @@ from ml4ptp.mixins import NormalizerMixin
 # -----------------------------------------------------------------------------
 
 class MLPEncoder(nn.Module, NormalizerMixin):
+    """
+    The default MLP encoder: concatenate log_P and T, and send it
+    through a series of fully-connected layers.
+    """
+
     def __init__(
         self,
         input_size: int,
@@ -181,16 +186,22 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
 
 
 class ConvolutionalEncoder(nn.Module, NormalizerMixin):
+    """
+    A convolutional encoder that first combines log_P and T into a
+    two-channel input, sends it through a series of convolutional
+    layers, and then passes the output through an MLP.
+    """
 
     def __init__(
         self,
         input_size: int,
         latent_size: int,
-        layer_size: int,
-        n_layers: int,
+        cnn_n_layers: int,
+        cnn_n_channels: int,
+        cnn_kernel_size: int,
+        mlp_n_layers: int,
+        mlp_layer_size: int,
         normalization: Dict[str, Any],
-        n_channels: int = 64,
-        kernel_size: int = 3,
         batch_norm: bool = False,
     ) -> None:
 
@@ -199,46 +210,31 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         # Store constructor arguments
         self.input_size = input_size
         self.latent_size = latent_size
-        self.layer_size = layer_size
-        self.n_layers = n_layers
+        self.cnn_n_layers = cnn_n_layers
+        self.cnn_n_channels = cnn_n_channels
+        self.cnn_kernel_size = cnn_kernel_size
+        self.mlp_n_layers = mlp_n_layers
+        self.mlp_layer_size = mlp_layer_size
         self.normalization = normalization
         self.batch_norm = batch_norm
 
+        # Compute CNN output size (note: we are not using padding)
+        cnn_output_size = (
+            self.input_size - (cnn_n_channels + 2) * (cnn_kernel_size - 1)
+        )
+
         # Define encoder architecture
-        self.convnet = nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=2,
-                out_channels=n_channels,
-                kernel_size=kernel_size,
-            ),
-            torch.nn.LeakyReLU(),
-            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
-            torch.nn.Conv1d(
-                in_channels=n_channels,
-                out_channels=n_channels,
-                kernel_size=kernel_size,
-            ),
-            torch.nn.LeakyReLU(),
-            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
-            torch.nn.Conv1d(
-                in_channels=n_channels,
-                out_channels=n_channels,
-                kernel_size=kernel_size,
-            ),
-            torch.nn.LeakyReLU(),
-            torch.nn.BatchNorm1d(n_channels) if batch_norm else nn.Identity(),
-            torch.nn.Conv1d(
-                in_channels=n_channels,
-                out_channels=1,
-                kernel_size=kernel_size,
-            ),
-            torch.nn.LeakyReLU(),
-            Squeeze(),
+        self.convnet = get_cnn_layers(
+            n_layers=self.cnn_n_layers,
+            n_channels=self.cnn_n_channels,
+            kernel_size=self.cnn_kernel_size,
+            activation='leaky_relu',
+            batch_norm=self.batch_norm,
         )
         self.mlp: torch.nn.Sequential = get_mlp_layers(
-            input_size=self.input_size - 4 * (kernel_size - 1),  # no padding
-            layer_size=self.layer_size,
-            n_layers=self.n_layers,
+            input_size=cnn_output_size,
+            layer_size=self.mlp_layer_size,
+            n_layers=self.mlp_n_layers,
             output_size=self.latent_size,
             activation='leaky_relu',
             final_tanh=True,
@@ -278,8 +274,9 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         )
 
         # Compute forward pass through encoder to get latent variable z
-        x: torch.Tensor = self.convnet(encoder_input)
-        z: torch.Tensor = self.mlp(x)
+        z: torch.Tensor = self.convnet(encoder_input)
+        z = torch.nn.LeakyReLU()(z)
+        z = self.mlp(z)
 
         return z
 
