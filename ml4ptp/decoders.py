@@ -165,7 +165,10 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         if batch_norm:
             self.batch_norms = nn.ModuleList(
                 [
-                    nn.BatchNorm1d(layer_size - latent_size)
+                    nn.BatchNorm1d(
+                        num_features=layer_size - latent_size,
+                        track_running_stats=False,
+                    )
                     for _ in range(n_layers)
                 ]
             )

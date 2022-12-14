@@ -80,13 +80,19 @@ def get_mlp_layers(
     # Define layers: Start with input layer
     layers = [nn.Linear(input_size, layer_size), nonlinearity]
     if batch_norm:
-        layers.append(nn.BatchNorm1d(layer_size))
+        layers.append(
+            nn.BatchNorm1d(num_features=layer_size, track_running_stats=False)
+        )
 
     # Add hidden layers
     for i in range(n_layers):
         layers += [nn.Linear(layer_size, layer_size), nonlinearity]
         if batch_norm:
-            layers.append(nn.BatchNorm1d(layer_size))
+            layers.append(
+                nn.BatchNorm1d(
+                    num_features=layer_size, track_running_stats=False
+                )
+            )
 
     # Add output layer
     layers += [nn.Linear(layer_size, output_size)]
