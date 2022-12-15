@@ -8,7 +8,6 @@ Define models.
 
 from typing import List, Optional, Tuple
 
-from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
@@ -98,13 +97,6 @@ class Model(pl.LightningModule, NormalizerMixin):
         weights = weights / weights.sum()
         return weights
 
-    @property
-    def tensorboard_logger(self) -> TensorBoardLogger:
-        if not isinstance(self.logger, TensorBoardLogger):  # pragma: no cover
-            raise RuntimeError('No TensorBoard logger found!')
-        # noinspection PyTypeChecker
-        return self.logger
-
     def configure_optimizers(self) -> dict:
         """
         Set up the optimizer (and, optionally, the LR scheduler).
@@ -151,15 +143,17 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Check if we got unlucky with the weight initialization (i.e., the
         # norm of our generated latents is too small or too big) and we need
-        # to re-initialize the encoder to prevent the model from collapsing
-        while True:
-            mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
-            if 0.1 < mean_norm < 2.5:
-                break
-            print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
-            print('Re-initializing encoder network!\n', flush=True)
-            self.encoder.initialize_weights()
-            z = self.encoder.forward(log_P=log_P, T=T)
+        # to re-initialize the encoder to prevent the model from collapsing.
+        # This is a hack, but it seems to work?
+        if self.current_epoch < 3:
+            while True:
+                mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
+                if 0.1 < mean_norm < 2.5:
+                    break
+                print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
+                print('Re-initializing encoder network!\n', flush=True)
+                self.encoder.initialize_weights()
+                z = self.encoder.forward(log_P=log_P, T=T)
 
         # Run through decoder to get predicted temperatures
         T_pred = self.decoder.forward(z=z, log_P=log_P)
@@ -192,6 +186,10 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Compute the MMD between z and a sample from a standard Gaussian.
         # We do this multiple times to get a better estimate of the MMD.
+        # Perhaps we could also increase the size of the `true_samples` tensor,
+        # but the MMD scaled quadratically with the number of samples, so maybe
+        # just doing several iterations is better? (Or maybe this not useful at
+        # all, and we should just use a single sample?)
         mmd_loss = torch.zeros(z.shape[0], device=self.device)  # type: ignore
         for i in range(10):
             true_samples = torch.randn(  # type: ignore
@@ -287,18 +285,20 @@ class Model(pl.LightningModule, NormalizerMixin):
 
     def plot_z_to_tensorboard(self, z: torch.Tensor, label: str) -> None:
 
-        # Create the figure
-        figure = plot_z_to_tensorboard(z)
+        if self.logger:
 
-        # Log the figure to TensorBoard
-        self.tensorboard_logger.experiment.add_figure(
-            tag=f'{label}/latent-distribution',
-            figure=figure,
-            global_step=self.current_epoch,
-        )
+            # Create the figure
+            figure = plot_z_to_tensorboard(z)
 
-        # Close the figure
-        plt.close(figure)
+            # Log the figure to TensorBoard
+            self.logger.experiment.add_figure(  # type: ignore
+                tag=f'{label}/latent-distribution',
+                figure=figure,
+                global_step=self.current_epoch,
+            )
+
+            # Close the figure
+            plt.close(figure)
 
     def plot_profile_to_tensorboard(
         self,
@@ -309,24 +309,26 @@ class Model(pl.LightningModule, NormalizerMixin):
         label: str,
     ) -> None:
 
-        # Create the figure
-        figure = plot_profile_to_tensorboard(
-            z,
-            log_P,
-            T_true,
-            T_pred,
-            self.plotting_config['pt_profile'],
-        )
+        if self.logger:
 
-        # Add figure to TensorBoard
-        self.tensorboard_logger.experiment.add_figure(
-            tag=f'{label}/example-profiles',
-            figure=figure,
-            global_step=self.current_epoch,
-        )
+            # Create the figure
+            figure = plot_profile_to_tensorboard(
+                z,
+                log_P,
+                T_true,
+                T_pred,
+                self.plotting_config['pt_profile'],
+            )
 
-        # Close the figure
-        plt.close(figure)
+            # Add figure to TensorBoard
+            self.logger.experiment.add_figure(  # type: ignore
+                tag=f'{label}/example-profiles',
+                figure=figure,
+                global_step=self.current_epoch,
+            )
+
+            # Close the figure
+            plt.close(figure)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         raise NotImplementedError  # pragma: no cover
