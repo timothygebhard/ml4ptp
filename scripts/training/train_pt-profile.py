@@ -8,6 +8,7 @@ Train a model for a PT profile parameterization.
 
 from pathlib import Path
 from shutil import copy
+from typing import List
 
 import argparse
 import socket
@@ -19,10 +20,12 @@ import yaml
 from lightning_lite.utilities.seed import seed_everything
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
+    Callback,
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
     RichProgressBar,
+    StochasticWeightAveraging,
 )
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -45,7 +48,7 @@ def get_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--experiment-dir',
-        required=True,
+        # required=True,
         default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2',
         help='Path to the experiment directory with the config.yaml',
     )
@@ -129,6 +132,51 @@ if __name__ == "__main__":
     print()
 
     # -------------------------------------------------------------------------
+    # Collect callbacks for the Trainer
+    # -------------------------------------------------------------------------
+
+    print('Collecting callbacks...', end=' ', flush=True)
+
+    # Set up callbacks
+    callbacks: List[Callback] = []
+
+    # Create a callback for creating (best) checkpoints
+    callback: Callback = ModelCheckpoint(
+        filename='best',
+        save_top_k=1,
+        save_last=True,
+        monitor="val/total_loss",
+    )
+    callbacks.append(callback)
+
+    # Create a callback for early stopping
+    callback = EarlyStopping(
+        monitor="val/total_loss",
+        **config['callbacks']['early_stopping'],
+    )
+    callbacks.append(callback)
+
+    # Create a callback for logging the learning rate
+    callback = LearningRateMonitor(logging_interval='step')
+    callbacks.append(callback)
+
+    # Create a callback for the rich progress bar
+    callback = RichProgressBar(leave=True)
+    callbacks.append(callback)
+
+    # If desired, create a callback for stochastic weight averaging
+    if 'stochastic_weight_averaging' in config['callbacks'].keys():
+        callback = StochasticWeightAveraging(
+            **config['callbacks']['stochastic_weight_averaging'],
+        )
+        callbacks.append(callback)
+
+    print('Done!', flush=True)
+    if 'stochastic_weight_averaging' in config['callbacks'].keys():
+        print('Note: Stochastic weight averaging (SWA) is enabled!')
+    print()
+
+    # -------------------------------------------------------------------------
     # Setup the Trainer
     # -------------------------------------------------------------------------
 
@@ -141,28 +189,10 @@ if __name__ == "__main__":
         save_dir=run_dir.parent.as_posix(), name="", version=run_dir.name
     )
 
-    # Create a callback for creating (best) checkpoints
-    checkpoint_callback = ModelCheckpoint(
-        filename='best',
-        save_top_k=1,
-        save_last=True,
-        monitor="val/total_loss",
-    )
-
-    # Create a callback for early stopping
-    early_stopping_callback = EarlyStopping(
-        monitor="val/total_loss", **config['callbacks']['early_stopping']
-    )
-
-    # Finally, create the trainer
+    # Create the trainer
     print('\nPreparing Trainer:', flush=True)
     trainer = Trainer(
-        callbacks=[
-            checkpoint_callback,
-            early_stopping_callback,
-            LearningRateMonitor(logging_interval='step'),
-            RichProgressBar(leave=True),
-        ],
+        callbacks=callbacks,
         default_root_dir=expandvars(experiment_dir).as_posix(),
         logger=logger,
         **config['trainer'],
