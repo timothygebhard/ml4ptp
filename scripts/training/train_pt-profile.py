@@ -8,7 +8,7 @@ Train a model for a PT profile parameterization.
 
 from pathlib import Path
 from shutil import copy
-from typing import List
+from typing import List, Union
 
 import argparse
 import socket
@@ -27,7 +27,6 @@ from pytorch_lightning.callbacks import (
     RichProgressBar,
     StochasticWeightAveraging,
 )
-from pytorch_lightning.loggers import TensorBoardLogger
 
 from ml4ptp.config import load_experiment_config
 from ml4ptp.data_modules import DataModule
@@ -35,6 +34,7 @@ from ml4ptp.exporting import export_encoder_with_onnx, export_decoder_with_onnx
 from ml4ptp.git_utils import document_git_status
 from ml4ptp.models import Model
 from ml4ptp.paths import expandvars
+from ml4ptp.tensorboard import CustomTensorBoardLogger
 from ml4ptp.utils import get_run_dir
 
 
@@ -184,10 +184,16 @@ if __name__ == "__main__":
     random_seed = args.random_seed
     seed_everything(seed=random_seed, workers=True)
 
-    # Manually create a logger to get control over the run directory
-    logger = TensorBoardLogger(
-        save_dir=run_dir.parent.as_posix(), name="", version=run_dir.name
-    )
+    # Check if TensorBoard logging is enabled, and if so, set up the logger.
+    # We use a custom logger that does not log the current `epoch`.
+    if 'tensorboard' in config.keys() and not config['tensorboard']:
+        logger: Union[bool, CustomTensorBoardLogger] = False
+    else:
+        logger = CustomTensorBoardLogger(
+            save_dir=run_dir.parent.as_posix(),
+            name="",
+            version=run_dir.name,
+        )
 
     # Create the trainer
     print('\nPreparing Trainer:', flush=True)
