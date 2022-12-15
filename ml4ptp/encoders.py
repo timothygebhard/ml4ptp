@@ -33,6 +33,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        activation: str = 'leaky_relu',
         batch_norm: bool = False,
     ) -> None:
 
@@ -44,6 +45,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.activation = activation
         self.batch_norm = batch_norm
 
         # Define encoder architecture
@@ -52,7 +54,7 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             layer_size=self.layer_size,
             n_layers=self.n_layers,
             output_size=self.latent_size,
-            activation='leaky_relu',
+            activation=activation,
             final_tanh=True,
             batch_norm=batch_norm,
         )
@@ -104,6 +106,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        activation: str = 'leaky_relu',
         batch_norm: bool = False,
     ) -> None:
 
@@ -115,6 +118,7 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.activation = activation
         self.batch_norm = batch_norm
 
         # Define encoder architecture
@@ -123,18 +127,18 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             layer_size=64,
             n_layers=2,
             output_size=1,
-            activation='leaky_relu',
+            activation=self.activation,
             final_tanh=False,
-            batch_norm=batch_norm,
+            batch_norm=self.batch_norm,
         )
         self.layers_2: torch.nn.Sequential = get_mlp_layers(
             input_size=self.input_size,
             layer_size=self.layer_size,
             n_layers=self.n_layers,
             output_size=self.latent_size,
-            activation='leaky_relu',
+            activation=self.activation,
             final_tanh=True,
-            batch_norm=batch_norm,
+            batch_norm=self.batch_norm,
         )
 
         # Initialize weights
@@ -202,6 +206,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         mlp_n_layers: int,
         mlp_layer_size: int,
         normalization: Dict[str, Any],
+        activation: str = 'leaky_relu',
         batch_norm: bool = False,
     ) -> None:
 
@@ -216,6 +221,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
         self.mlp_n_layers = mlp_n_layers
         self.mlp_layer_size = mlp_layer_size
         self.normalization = normalization
+        self.activation = activation
         self.batch_norm = batch_norm
 
         # Compute CNN output size (note: we are not using padding)
@@ -228,7 +234,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
             n_layers=self.cnn_n_layers,
             n_channels=self.cnn_n_channels,
             kernel_size=self.cnn_kernel_size,
-            activation='leaky_relu',
+            activation=self.activation,
             batch_norm=self.batch_norm,
         )
         self.mlp: torch.nn.Sequential = get_mlp_layers(
@@ -236,7 +242,7 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
             layer_size=self.mlp_layer_size,
             n_layers=self.mlp_n_layers,
             output_size=self.latent_size,
-            activation='leaky_relu',
+            activation=self.activation,
             final_tanh=True,
             batch_norm=batch_norm,
         )
@@ -289,6 +295,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        activation: str = 'leaky_relu',
         batch_norm: bool = False,
     ) -> None:
 
@@ -299,6 +306,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
+        self.activation = activation
         self.batch_norm = batch_norm
 
         # Define encoder architecture
@@ -307,7 +315,7 @@ class CNPEncoder(nn.Module, NormalizerMixin):
             layer_size=self.layer_size,
             n_layers=self.n_layers,
             output_size=self.latent_size,
-            activation='leaky_relu',
+            activation=self.activation,
             final_tanh=True,
             batch_norm=batch_norm,
         )
