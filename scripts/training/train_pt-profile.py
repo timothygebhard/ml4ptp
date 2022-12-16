@@ -141,35 +141,35 @@ if __name__ == "__main__":
     callbacks: List[Callback] = []
 
     # Create a callback for creating (best) checkpoints
-    callback: Callback = ModelCheckpoint(
+    model_checkpoint_callback = ModelCheckpoint(
         filename='best',
         save_top_k=1,
         save_last=True,
         monitor="val/total_loss",
     )
-    callbacks.append(callback)
+    callbacks.append(model_checkpoint_callback)
 
     # Create a callback for early stopping
-    callback = EarlyStopping(
+    early_stopping_callback = EarlyStopping(
         monitor="val/total_loss",
         **config['callbacks']['early_stopping'],
     )
-    callbacks.append(callback)
+    callbacks.append(early_stopping_callback)
 
     # Create a callback for logging the learning rate
-    callback = LearningRateMonitor(logging_interval='step')
-    callbacks.append(callback)
+    lr_monitor_callback = LearningRateMonitor(logging_interval='step')
+    callbacks.append(lr_monitor_callback)
 
     # Create a callback for the rich progress bar
-    callback = RichProgressBar(leave=True)
-    callbacks.append(callback)
+    rich_progress_bar_callback = RichProgressBar(leave=True)
+    callbacks.append(rich_progress_bar_callback)
 
     # If desired, create a callback for stochastic weight averaging
     if 'stochastic_weight_averaging' in config['callbacks'].keys():
-        callback = StochasticWeightAveraging(
+        swa_callback = StochasticWeightAveraging(
             **config['callbacks']['stochastic_weight_averaging'],
         )
-        callbacks.append(callback)
+        callbacks.append(swa_callback)
 
     print('Done!', flush=True)
     if 'stochastic_weight_averaging' in config['callbacks'].keys():
@@ -240,18 +240,26 @@ if __name__ == "__main__":
     print(model.decoder)
 
     # -------------------------------------------------------------------------
-    # Train the model
+    # Train the model; restore best checkpoint
     # -------------------------------------------------------------------------
 
+    # Run the training
     print('\n\nStarting training:\n\n', flush=True)
     trainer.fit(model=model, datamodule=datamodule)
     print()
+
+    # Restore the model with the lowest validation loss
+    print('Restoring best model from checkpoint...', end=' ', flush=True)
+    model = model.load_from_checkpoint(
+        model_checkpoint_callback.best_model_path
+    )
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Export models using ONNX
     # -------------------------------------------------------------------------
 
-    print('Exporting trained models...', end=' ', flush=True)
+    print('Exporting (best) trained models...', end=' ', flush=True)
 
     # Create example input for the export
     batch_size = 32
