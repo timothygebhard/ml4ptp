@@ -21,7 +21,6 @@ from lightning_lite.utilities.seed import seed_everything
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     Callback,
-    DeviceStatsMonitor,
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
@@ -163,10 +162,6 @@ if __name__ == "__main__":
 
     # Create a callback for the rich progress bar
     callback = RichProgressBar(leave=True)
-    callbacks.append(callback)
-
-    # Create a callback for logging device stats
-    callback = DeviceStatsMonitor(cpu_stats=True)
     callbacks.append(callback)
 
     # If desired, create a callback for stochastic weight averaging
