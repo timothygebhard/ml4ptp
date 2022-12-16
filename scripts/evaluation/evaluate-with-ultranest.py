@@ -173,9 +173,6 @@ def find_optimal_z(
 
         try:
 
-            if n_tries == 0:
-                raise RuntimeError('This is a test')
-
             # Set random seed
             np.random.seed(random_seed + n_tries)
 
