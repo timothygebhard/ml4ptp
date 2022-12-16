@@ -145,15 +145,14 @@ class Model(pl.LightningModule, NormalizerMixin):
         # norm of our generated latents is too small or too big) and we need
         # to re-initialize the encoder to prevent the model from collapsing.
         # This is a hack, but it seems to work?
-        if self.current_epoch < 3:
-            while True:
-                mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
-                if 0.1 < mean_norm < 2.5:
-                    break
-                print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
-                print('Re-initializing encoder network!\n', flush=True)
-                self.encoder.initialize_weights()
-                z = self.encoder.forward(log_P=log_P, T=T)
+        while True:
+            mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
+            if 0.1 < mean_norm < 2.5:
+                break
+            print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
+            print('Re-initializing encoder network!\n', flush=True)
+            self.encoder.initialize_weights()
+            z = self.encoder.forward(log_P=log_P, T=T)
 
         # Run through decoder to get predicted temperatures
         T_pred = self.decoder.forward(z=z, log_P=log_P)
