@@ -25,7 +25,6 @@ from pytorch_lightning.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
     RichProgressBar,
-    StochasticWeightAveraging,
 )
 
 from ml4ptp.config import load_experiment_config
@@ -163,18 +162,6 @@ if __name__ == "__main__":
     # Create a callback for the rich progress bar
     rich_progress_bar_callback = RichProgressBar(leave=True)
     callbacks.append(rich_progress_bar_callback)
-
-    # If desired, create a callback for stochastic weight averaging
-    if 'stochastic_weight_averaging' in config['callbacks'].keys():
-        swa_callback = StochasticWeightAveraging(
-            **config['callbacks']['stochastic_weight_averaging'],
-        )
-        callbacks.append(swa_callback)
-
-    print('Done!', flush=True)
-    if 'stochastic_weight_averaging' in config['callbacks'].keys():
-        print('Note: Stochastic weight averaging (SWA) is enabled!')
-    print()
 
     # -------------------------------------------------------------------------
     # Setup the Trainer
