@@ -10,7 +10,7 @@ import argparse
 import time
 
 import h5py
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         P_key = 'P'
         T_key = 'T'
 
-        log_P_bins = np.linspace(-5.25, 0.25, 101)
+        log_P_bins = np.linspace(-5, 0, 101)
         T_bins = np.linspace(0, 350, 101)
         vmax = 9e4
 
@@ -102,11 +102,22 @@ if __name__ == '__main__':
 
     print('Creating histogram plot...', end=' ', flush=True)
 
+    # Set default font
+    mpl.rcParams['font.sans-serif'] = "Arial"
+    mpl.rcParams['font.family'] = "sans-serif"
+
     # Create the figure
     pad_inches = 0.01
     fig, ax = plt.subplots(
         figsize=(8 / 2.54 - 2 * pad_inches, 4.5 / 2.54 - 2 * pad_inches),
     )
+
+    # Set general plot options
+    for axis in ['top', 'bottom', 'left', 'right']:
+        ax.spines[axis].set_linewidth(0.25)
+        ax.xaxis.set_tick_params(width=0.25)
+        ax.yaxis.set_tick_params(width=0.25)
+    ax.tick_params('both', length=2, width=0.25, which='major')
 
     # Plot the histogram
     hist, xegdes, yedges, img = ax.hist2d(
@@ -114,11 +125,8 @@ if __name__ == '__main__':
         y=log_P.flatten(),
         bins=(T_bins, log_P_bins),
         cmap='magma',
-        norm=matplotlib.colors.LogNorm(vmin=1, vmax=vmax),
+        norm=mpl.colors.LogNorm(vmin=1, vmax=vmax),
     )
-
-    print(np.min(hist))
-    print(np.max(hist))
 
     # Set the axis labels
     ax.set_xlabel('T (K)')
@@ -129,22 +137,34 @@ if __name__ == '__main__':
     ax.set_ylim(log_P_bins[-1], log_P_bins[0])
 
     # Set the colorbar
-    add_colorbar_to_ax(img=img, ax=ax, fig=fig)
+    cbar = add_colorbar_to_ax(img=img, ax=ax, fig=fig)
+    cbar.outline.set_linewidth(0.25)
+    cbar.ax.tick_params(width=0.25, length=2)
+    cbar.ax.tick_params('both', length=2, width=0.25, which='major')
+    cbar.ax.tick_params('both', length=1, width=0.25, which='minor')
 
     # Set the font size
-    set_fontsize(ax, 8)
+    set_fontsize(ax, 5.5)
+    ax.xaxis.label.set_fontsize(6.5)
+    ax.yaxis.label.set_fontsize(6.5)
+    cbar.ax.tick_params(labelsize=5.5)
 
     print('Done!', flush=True)
 
+    # -------------------------------------------------------------------------
     # Save the figure
+    # -------------------------------------------------------------------------
+
     print('Saving plot...', end=' ', flush=True)
+
     fig.tight_layout(pad=0)
     fig.savefig(
-        f'{dataset}_histogram.pdf',
-        dpi=300,
+        f'{dataset}-histogram.pdf',
+        dpi=600,
         bbox_inches='tight',
         pad_inches=pad_inches,
     )
+
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
