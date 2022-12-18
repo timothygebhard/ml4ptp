@@ -6,19 +6,53 @@ Unit tests for plotting.py
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from matplotlib.colorbar import Colorbar
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pytest
 import torch
 
 from ml4ptp.plotting import (
-    set_fontsize,
+    add_colorbar_to_ax,
     plot_profile_to_tensorboard,
     plot_z_to_tensorboard,
+    set_fontsize,
 )
 
 
 # -----------------------------------------------------------------------------
 # TESTS
 # -----------------------------------------------------------------------------
+
+def test__add_colorbar_to_ax() -> None:
+
+    fig, ax = plt.subplots()
+    img = ax.imshow(np.random.normal(0, 1, (10, 10)))
+
+    # Case 1
+    cbar = add_colorbar_to_ax(img=img, fig=fig, ax=ax, where='right')
+    assert isinstance(cbar, Colorbar)
+
+    # Case 2
+    cbar = add_colorbar_to_ax(img=img, fig=fig, ax=ax, where='left')
+    assert isinstance(cbar, Colorbar)
+
+    # Case 3
+    cbar = add_colorbar_to_ax(img=img, fig=fig, ax=ax, where='top')
+    assert isinstance(cbar, Colorbar)
+
+    # Case 4
+    cbar = add_colorbar_to_ax(img=img, fig=fig, ax=ax, where='bottom')
+    assert isinstance(cbar, Colorbar)
+
+    # Case 5
+    with pytest.raises(ValueError) as error:
+        add_colorbar_to_ax(img=img, fig=fig, ax=ax, where='illegal')
+    assert 'Illegal value for `where`' in str(error)
+
+    plt.close()
+
 
 def test__set_fontsize() -> None:
 

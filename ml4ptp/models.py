@@ -139,7 +139,7 @@ class Model(pl.LightningModule, NormalizerMixin):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         # Run through encoder to get latent code
-        z = self.encoder.forward(log_P=log_P, T=T)
+        z = self.encoder(log_P=log_P, T=T)
 
         # Check if we got unlucky with the weight initialization (i.e., the
         # norm of our generated latents is too small or too big) and we need
@@ -148,14 +148,14 @@ class Model(pl.LightningModule, NormalizerMixin):
         while True:
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
             if 0.1 < mean_norm < 2.5:
-                break
+                break  # pragma: no cover
             print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
             print('Re-initializing encoder network!\n', flush=True)
             self.encoder.initialize_weights()
-            z = self.encoder.forward(log_P=log_P, T=T)
+            z = self.encoder(log_P=log_P, T=T)
 
         # Run through decoder to get predicted temperatures
-        T_pred = self.decoder.forward(z=z, log_P=log_P)
+        T_pred = self.decoder(z=z, log_P=log_P)
 
         return z, T_pred
 
