@@ -149,8 +149,12 @@ class Model(pl.LightningModule, NormalizerMixin):
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
             if 0.1 < mean_norm < 2.5:
                 break  # pragma: no cover
-            print(f'\nWARNING: mean(norm(z)) = {mean_norm}!', flush=True)
-            print('Re-initializing encoder network!\n', flush=True)
+            print(
+                f'\nWARNING: mean(norm(z)) = {mean_norm}! '
+                f'(Epoch {self.current_epoch})\n'
+                f'Re-initializing encoder network!\n',
+                flush=True
+            )
             self.encoder.initialize_weights()
             z = self.encoder(log_P=log_P, T=T)
 
