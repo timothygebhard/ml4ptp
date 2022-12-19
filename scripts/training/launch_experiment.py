@@ -67,12 +67,6 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
-        '--evaluate-with',
-        default='scipy',
-        choices=['scipy', 'ultranest'],
-        help='Which evaluation method to use.',
-    )
-    parser.add_argument(
         '--memory',
         type=int,
         default=16_384,
@@ -130,10 +124,6 @@ if __name__ == "__main__":
 
     # Define shortcuts
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
-    if args.evaluate_with == 'ultranest':
-        evaluation_script = 'evaluate-with-ultranest.py'
-    else:
-        evaluation_script = 'evaluate-with-scipy.py'
 
     print('Received the following arguments:\n')
     for key, value in vars(args).items():
@@ -212,7 +202,7 @@ if __name__ == "__main__":
             job_script=(
                 get_scripts_dir()
                 / 'evaluation'
-                / evaluation_script
+                / 'evaluate-with-ultranest.py'
             ),
             arguments={
                 'experiment-dir': experiment_dir.as_posix(),
