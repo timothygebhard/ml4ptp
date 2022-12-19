@@ -115,16 +115,22 @@ def find_optimal_z(
     # Get initial guess for z from encoder and compute error
     # -------------------------------------------------------------------------
 
+    # Get initial guess for z from encoder
     z_initial = encoder(log_P=log_P, T=T_true)
     T_pred_initial = decoder(log_P=log_P, z=z_initial)
-    mse_initial = float(np.mean((T_pred_initial - T_true) ** 2))
 
+    # Compute mean squared error (MSE) and mean relative error (MRE)
+    mse_initial = float(np.mean((T_pred_initial - T_true) ** 2))
+    mre_initial = float(np.mean(np.abs(T_pred_initial - T_true) / T_true))
+
+    # Save results
     results['z_initial'] = z_initial
     results['T_pred_initial'] = T_pred_initial
     results['mse_initial'] = mse_initial
+    results['mre_initial'] = mre_initial
 
     # -------------------------------------------------------------------------
-    # Define (Gaussian) prior and likelihood
+    # Define prior and likelihood
     # -------------------------------------------------------------------------
 
     def prior(cube: np.ndarray) -> np.ndarray:
@@ -132,18 +138,17 @@ def find_optimal_z(
         Prior for z. (Currently uniform in [-5, 5].)
         """
 
-        params = cube.copy()
-        for i in range(params.shape[1]):
-            params[:, i] = 10 * (params[:, i] - 0.5)
+        z = cube.copy()
+        for i in range(z.shape[1]):
+            z[:, i] = 10 * (z[:, i] - 0.5)
 
-        return params
+        return z
 
-    def likelihood(params: np.ndarray) -> np.ndarray:
+    def likelihood(z: np.ndarray) -> np.ndarray:
         """
         Likelihood for comparing PT profiles (= negative MSE).
         """
 
-        z = params.copy()
         log_P_ = np.tile(log_P, (z.shape[0], 1))
         T_true_ = np.tile(T_true, (z.shape[0], 1))
 
@@ -234,10 +239,17 @@ def find_optimal_z(
     # Decode refined z and compute error
     # -------------------------------------------------------------------------
 
+    # Decode refined z
     T_pred_refined = decoder(log_P=log_P, z=np.atleast_2d(z_refined))
+
+    # Compute mean squared error (MSE) and mean relative error (MRE)
     mse_refined = float(np.mean((T_pred_refined - T_true) ** 2))
+    mre_refined = float(np.mean(np.abs(T_pred_refined - T_true) / T_true))
+
+    # Save results
     results['T_pred_refined'] = T_pred_refined
     results['mse_refined'] = mse_refined
+    results['mre_refined'] = mre_refined
 
     return results
 
@@ -360,6 +372,8 @@ if __name__ == "__main__":
         'z_refined',
         'T_pred_initial',
         'T_pred_refined',
+        'mre_initial',
+        'mre_refined',
         'mse_initial',
         'mse_refined',
         'ncall',

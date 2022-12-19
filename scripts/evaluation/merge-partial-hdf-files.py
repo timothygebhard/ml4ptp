@@ -1,6 +1,5 @@
 """
-Merge partial HDF files from running `evaluate-with-nested-sampling.py`
-in parallel.
+Merge partial HDF files from running evaluation in parallel.
 """
 
 # -----------------------------------------------------------------------------
@@ -107,6 +106,8 @@ if __name__ == "__main__":
         z_refined=[],
         T_pred_initial=[],
         T_pred_refined=[],
+        mre_initial=[],
+        mre_refined=[],
         mse_initial=[],
         mse_refined=[],
         niter=[],
