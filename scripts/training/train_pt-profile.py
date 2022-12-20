@@ -240,6 +240,7 @@ if __name__ == "__main__":
     model = model.load_from_checkpoint(
         model_checkpoint_callback.best_model_path
     )
+    model.eval()
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
