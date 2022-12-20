@@ -130,11 +130,13 @@ def test__mean() -> None:
     # Case 1
     mean = Mean(dim=0)
     x_out = mean(x_in)
+    assert repr(mean) == 'Mean(dim=0)'
     assert torch.equal(x_out, torch.arange(65, 78).float())
 
     # Case 2
     mean = Mean(dim=1)
     x_out = mean(x_in)
+    assert repr(mean) == 'Mean(dim=1)'
     assert torch.equal(x_out, torch.arange(6, 137, 13).float())
 
 
@@ -169,6 +171,10 @@ def test_print_value(capfd: pytest.CaptureFixture) -> None:
 def test_scaled_tanh() -> None:
 
     # Case 1
+    scaled_tanh = ScaledTanh(a=1.2, b=3.4)
+    assert repr(scaled_tanh) == 'ScaledTanh(a=1.2, b=3.4)'
+
+    # Case 2
     scaled_tanh = ScaledTanh(a=5.0, b=5.0)
     assert torch.isclose(
         scaled_tanh(torch.Tensor([0.0])), torch.Tensor([0.0])
@@ -180,7 +186,7 @@ def test_scaled_tanh() -> None:
         scaled_tanh(torch.Tensor([100.0])), torch.Tensor([5.0])
     )
 
-    # Case 2
+    # Case 3
     scaled_tanh = ScaledTanh(a=3.0, b=1.0)
     assert torch.isclose(
         scaled_tanh(torch.Tensor([0.0])), torch.Tensor([0.0])
@@ -195,9 +201,14 @@ def test_scaled_tanh() -> None:
 
 def test_sine() -> None:
 
-    sine = Sine()
-
     # Case 1
+    sine = Sine(w0=3.141)
+    assert repr(sine) == 'Sine(w0=3.141)'
+
+    sine = Sine()
+    assert repr(sine) == 'Sine(w0=1.0)'
+
+    # Case 2
     x_in = torch.linspace(0, 2 * 3.1415926, 100)
     x_out = sine(x_in)
     assert torch.equal(x_out, torch.sin(x_in))
@@ -215,9 +226,11 @@ def test_squeeze() -> None:
 
 def test_view() -> None:
 
-    view = View(size=(4, 3))
-
     # Case 1
+    view = View(size=(4, 3))
+    assert repr(view) == 'View(size=(4, 3))'
+
+    # Case 2
     x_in = torch.arange(12).reshape(2, 6).float()
     x_out = view(x_in)
     assert torch.equal(x_out, torch.arange(12).reshape(4, 3).float())

@@ -200,6 +200,9 @@ class Mean(nn.Module):
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor.mean(dim=self.dim)
 
+    def __repr__(self) -> str:
+        return f'Mean(dim={self.dim})'
+
 
 class PrintShape(torch.nn.Module):
     """
@@ -237,12 +240,15 @@ class Sine(torch.nn.Module):
     Optionally with a frequency parameter `w0`.
     """
 
-    def __init__(self, w0: float = 1) -> None:
+    def __init__(self, w0: float = 1.0) -> None:
         super().__init__()
         self.w0 = w0
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return torch.sin(self.w0 * tensor)
+
+    def __repr__(self) -> str:
+        return f'Sine(w0={self.w0})'
 
 
 class Identity(torch.nn.Module):
@@ -273,6 +279,9 @@ class ScaledTanh(nn.Module):
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return self.a * torch.tanh(tensor / self.b)
 
+    def __repr__(self) -> str:
+        return f'ScaledTanh(a={self.a}, b={self.b})'
+
 
 class Squeeze(nn.Module):
     """
@@ -298,3 +307,6 @@ class View(nn.Module):
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor.view(self.size)
+
+    def __repr__(self) -> str:
+        return f'View(size={self.size})'
