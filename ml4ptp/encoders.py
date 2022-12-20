@@ -12,7 +12,7 @@ from typing import Any, Dict
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import get_mlp_layers, get_cnn_layers
+from ml4ptp.layers import get_mlp_layers, get_cnn_layers, View, ScaledTanh
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -344,5 +344,79 @@ class CNPEncoder(nn.Module, NormalizerMixin):
 
         # Aggregate along grid dimension to get final z
         z: torch.Tensor = torch.mean(z_values, dim=1)
+
+        return z
+
+
+class TransformerEncoder(nn.Module, NormalizerMixin):
+    """
+    Encoder model that takes a two-channel input, sends it through a
+    transformer encoder, and then passes the output through an MLP.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        latent_size: int,
+        n_layers: int,
+        n_heads: int,
+        layer_size: int,
+        normalization: Dict[str, Any],
+    ) -> None:
+
+        super().__init__()
+
+        # Store constructor arguments
+        self.input_size = input_size
+        self.latent_size = latent_size
+        self.layer_size = layer_size
+        self.n_layers = n_layers
+        self.normalization = normalization
+
+        # Define encoder architecture
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=self.layer_size,
+            nhead=n_heads,
+        )
+        self.layers = nn.Sequential(
+            nn.ConstantPad1d((0, self.layer_size - self.input_size), 0),
+            nn.TransformerEncoder(  # type: ignore
+                encoder_layer=self.encoder_layer,
+                num_layers=self.n_layers,
+            ),
+            nn.LeakyReLU(),
+            View((-1, 2 * self.layer_size)),
+            nn.Linear(2 * self.layer_size, self.latent_size),
+            ScaledTanh(3.0, 3.0),
+        )
+
+        # Initialize weights
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+
+        for layer in self.layers:
+            if isinstance(layer, nn.Linear):
+                nn.init.kaiming_normal_(layer.weight)
+                nn.init.constant_(layer.bias, 0.01)
+            elif isinstance(layer, nn.TransformerEncoder):
+                for p in layer.parameters():
+                    if p.dim() > 1:
+                        nn.init.xavier_uniform_(p)
+
+    def forward(self, log_P: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
+
+        # Stack log_P and T together into a tensor with 2 channels, that is,
+        # the shape is `(batch_size, 2, grid_size)`
+        encoder_input = torch.stack(
+            tensors=(
+                self.normalize_log_P(log_P),
+                self.normalize_T(T),
+            ),
+            dim=1,
+        )
+
+        # Compute forward pass through encoder to get latent variable z
+        z: torch.Tensor = self.layers(encoder_input)
 
         return z
