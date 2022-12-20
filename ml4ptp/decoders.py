@@ -9,10 +9,17 @@ Define decoder architectures.
 from math import prod
 from typing import Any, Callable, Dict
 
+import numpy as np
 import torch
 import torch.nn as nn
 
-from ml4ptp.layers import get_mlp_layers, get_activation, Identity
+from ml4ptp.layers import (
+    get_mlp_layers,
+    get_activation,
+    Identity,
+    ConcatenateWithZ,
+    Sine,
+)
 from ml4ptp.mixins import NormalizerMixin
 
 
@@ -150,35 +157,76 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.layer_size = layer_size
         self.n_layers = n_layers
         self.normalization = normalization
-        self.activation_function = get_activation(activation)
+        self.activation = activation
         self.batch_norm = batch_norm
 
-        # Collect list of layers without activation functions, and excluding
-        # the final layer (see below)
-        self.layers = nn.ModuleList(
-            [nn.Linear(latent_size + 1, layer_size - latent_size)]
+        # Initialize layer to concatenate latent variable to each layer output
+        self.concatenate_with_z = ConcatenateWithZ(z=torch.empty(0))
+
+        # ---------------------------------------------------------------------
+        # Collect list of all layers
+        # ---------------------------------------------------------------------
+
+        # Start with the first layer (special case for SIRENs)
+        layers = nn.ModuleList(
+            [
+                self.concatenate_with_z,
+                nn.Linear(latent_size + 1, layer_size - latent_size),
+                (
+                    Sine(w0=10)
+                    if activation == 'siren'
+                    else get_activation(self.activation)
+                ),
+                (
+                    nn.BatchNorm1d(layer_size - latent_size)
+                    if batch_norm
+                    else Identity()
+                ),
+            ]
         )
+
+        # Add hidden layers
         for i in range(n_layers):
-            self.layers.append(nn.Linear(layer_size, layer_size - latent_size))
+            layers += [
+                self.concatenate_with_z,
+                nn.Linear(layer_size, layer_size - latent_size),
+                get_activation(self.activation),
+                (
+                    nn.BatchNorm1d(layer_size - latent_size)
+                    if batch_norm
+                    else Identity()
+                ),
+            ]
 
-        # Collect batch normalization layers
-        if batch_norm:
-            self.batch_norms = nn.ModuleList(
-                [
-                    nn.BatchNorm1d(
-                        num_features=layer_size - latent_size,
-                        track_running_stats=False,
+        # Add final layer (no activation function)
+        layers += [
+            self.concatenate_with_z,
+            nn.Linear(layer_size, 1),
+        ]
+
+        # Drop Identity layers (which were only a stand-in for "no batch norm")
+        layers = nn.ModuleList(
+            [_ for _ in layers if not isinstance(_, Identity)]
+        )
+
+        # Combine all layers into a single sequential module
+        self.layers = torch.nn.Sequential(*layers)
+
+        # Initialize weights
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+        """
+        Initialize the weights of the decoder. Only needed for SIRENs.
+        """
+
+        if self.activation == 'siren':
+            for layer in self.layers:
+                if isinstance(layer, nn.Linear):
+                    n = layer.weight.shape[-1]
+                    nn.init.uniform_(
+                        layer.weight, -np.sqrt(6 / n), np.sqrt(6 / n)
                     )
-                    for _ in range(n_layers)
-                ]
-            )
-        else:
-            self.batch_norms = nn.ModuleList(
-                [Identity() for _ in range(n_layers)]
-            )
-
-        # Define final layer
-        self.final_layer = nn.Linear(layer_size, 1)
 
     def forward(self, z: torch.Tensor, log_P: torch.Tensor) -> torch.Tensor:
 
@@ -200,32 +248,16 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
-        # Normalize log_P to create the first input to the decoder
-        x = self.normalize_log_P(log_P_flat)
+        # Update layer to concatenate latent variable to each layer output.
+        # NOTE: This is the "condition D on z" step!
+        self.concatenate_with_z.update_z(z=z_flat)
 
-        # Send through decoder (manually, so that we can take care of the skip
-        # connections and concatenate z to the output of each layer)
-        for i in range(self.n_layers):
-
-            # Before sending through the layer, concatenate the latent
-            # variable to the output of the previous layer
-            x = torch.cat(tensors=(x, z_flat), dim=1)
-
-            # Send through layer and apply activation function
-            # Note: If we do not use batch normalization, the `batch_norm`
-            # layer is an identity function. This is because using control
-            # flow here (i.e., `if batch_norm: ... else: ...`) often breaks
-            # during export with ONNX or TorchScript.
-            x = self.layers[i](x)
-            x = self.activation_function(x)
-            x = self.batch_norms[i](x)
-
-        # Send through final layer (no activation function)
-        x = torch.cat((x, z_flat), dim=1)
-        x = self.final_layer(x)
+        # Normalize pressure and send through decoder.
+        # The decoder output will have shape: (batch_size * grid_size, 1)
+        decoded: torch.Tensor = self.layers(self.normalize_log_P(log_P_flat))
 
         # Reshape the decoder output back to to the original shape of log_P
-        T_pred = x.reshape(batch_size, grid_size)
+        T_pred = decoded.reshape(batch_size, grid_size)
 
         # Undo normalization (i.e., transform back to Kelvin)
         T_pred = self.normalize_T(T_pred, undo=True)

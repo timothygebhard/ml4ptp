@@ -107,7 +107,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), -0.24514341354370117)
+    assert np.isclose(T_pred.mean().item(), -0.27519676089286804)
 
     # Case 2: batch_norm = True
     decoder = SkipConnectionsDecoder(
@@ -124,6 +124,22 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
 
     assert T_pred.shape == log_P.shape
     assert np.isclose(T_pred.mean().item(), 0.06192253530025482)
+
+    # Case 3: SIREN activation
+    decoder = SkipConnectionsDecoder(
+        latent_size=5,
+        layer_size=16,
+        n_layers=2,
+        normalization=normalization,
+        activation='siren',
+        batch_norm=False,
+    )
+    z = torch.randn(17, 5)
+    log_P = torch.randn(17, 19)
+    T_pred = decoder(z=z, log_P=log_P)
+
+    assert T_pred.shape == log_P.shape
+    assert np.isclose(T_pred.mean().item(), 0.3681025207042694)
 
 
 def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:
