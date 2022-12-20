@@ -19,7 +19,6 @@ from ml4ptp.encoders import (
     ConvolutionalEncoder,
     MLPEncoder,
     ModifiedMLPEncoder,
-    TransformerEncoder,
 )
 from ml4ptp.decoders import (
     Decoder,
@@ -90,20 +89,6 @@ def convolutional_encoder(
 
 
 @pytest.fixture()
-def transformer_encoder(
-    normalization: Dict[str, Any],
-) -> TransformerEncoder:
-    return TransformerEncoder(
-        input_size=101,
-        latent_size=2,
-        n_layers=3,
-        n_heads=2,
-        layer_size=32,
-        normalization=normalization,
-    )
-
-
-@pytest.fixture()
 def cnp_encoder(normalization: Dict[str, Any]) -> CNPEncoder:
     return CNPEncoder(
         latent_size=2,
@@ -161,7 +146,6 @@ def test__export_encoder_with_onnx(
     modified_mlp_encoder: ModifiedMLPEncoder,
     cnp_encoder: CNPEncoder,
     convolutional_encoder: ConvolutionalEncoder,
-    transformer_encoder: TransformerEncoder,
 ) -> None:
 
     # Define inputs for all test cases
@@ -177,7 +161,6 @@ def test__export_encoder_with_onnx(
         convolutional_encoder,
         mlp_encoder,
         modified_mlp_encoder,
-        transformer_encoder,
     ]:
 
         # Ensure that the encoder is in eval mode
@@ -280,7 +263,6 @@ def test__export_encoder_with_torchscript(
     modified_mlp_encoder: ModifiedMLPEncoder,
     cnp_encoder: CNPEncoder,
     convolutional_encoder: ConvolutionalEncoder,
-    transformer_encoder: TransformerEncoder,
 ) -> None:
 
     # Define inputs for all test cases
@@ -296,7 +278,6 @@ def test__export_encoder_with_torchscript(
         convolutional_encoder,
         mlp_encoder,
         modified_mlp_encoder,
-        transformer_encoder,
     ]:
 
         # Ensure that the encoder is in eval mode
