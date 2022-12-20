@@ -11,6 +11,7 @@ import pytest
 import torch
 
 from ml4ptp.layers import (
+    ConcatenateWithZ,
     get_activation,
     get_cnn_layers,
     get_mlp_layers,
@@ -111,6 +112,26 @@ def test__get_cnn_layers() -> None:
     y = layers(x)
     assert y.shape == (17, 101 - (2 + 0) * (5 - 1))
     assert np.isclose(y.mean().item(), 0.04575807601213455)
+
+
+def test__concatenate_with_z() -> None:
+
+    # Case 1
+    z = torch.randn(5 * 2).reshape(5, 2).float()
+    x_in = torch.randn(5 * 7).reshape(5, 7).float()
+    concatenate_with_z = ConcatenateWithZ(z=z)
+    x_out = concatenate_with_z(x_in)
+    assert torch.equal(concatenate_with_z.z, z)
+    assert x_out.shape == (5, 9)
+    assert torch.equal(x_out, torch.cat((x_in, z), dim=1))
+
+    # Case 2
+    z_new = torch.randn(5 * 3).reshape(5, 3).float()
+    concatenate_with_z.update_z(z_new)
+    x_out = concatenate_with_z(x_in)
+    assert torch.equal(concatenate_with_z.z, z_new)
+    assert x_out.shape == (5, 10)
+    assert torch.equal(x_out, torch.cat((x_in, z_new), dim=1))
 
 
 def test__identity() -> None:

@@ -188,6 +188,25 @@ def get_cnn_layers(
 # CLASS DEFINITIONS
 # -----------------------------------------------------------------------------
 
+class ConcatenateWithZ(nn.Module):
+    """
+    Concatenate the input with a given `z`.
+
+    Note: This always needs to be updated in the `forward()` method of
+        a decoder network to achieve the "condition D on z" behavior.
+    """
+
+    def __init__(self, z: torch.Tensor) -> None:
+        super().__init__()
+        self.z = z
+
+    def update_z(self, z: torch.Tensor) -> None:
+        self.z = z
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        return torch.cat(tensors=(tensor, self.z), dim=1)
+
+
 class Mean(nn.Module):
     """
     Wrap the `.mean()` method into a `nn.Module`.
