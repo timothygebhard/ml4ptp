@@ -74,25 +74,32 @@ def get_mlp_layers(
         A `nn.Sequential` container with the desired MLP.
     """
 
-    # Set up "normal" activation function
-    nonlinearity = get_activation(name=activation)
-
-    # Define layers: Start with input layer
-    layers = [nn.Linear(input_size, layer_size), nonlinearity]
-    if batch_norm:
-        layers.append(
-            nn.BatchNorm1d(num_features=layer_size, track_running_stats=False)
-        )
+    # Define layers: Start with input layer + activation + batch norm
+    layers = [
+        nn.Linear(input_size, layer_size),
+        (
+            Sine(w0=3.0)
+            if activation == 'siren'
+            else get_activation(activation)
+        ),
+        (
+            nn.BatchNorm1d(layer_size)
+            if batch_norm
+            else Identity()
+        ),
+    ]
 
     # Add hidden layers
     for i in range(n_layers):
-        layers += [nn.Linear(layer_size, layer_size), nonlinearity]
-        if batch_norm:
-            layers.append(
-                nn.BatchNorm1d(
-                    num_features=layer_size, track_running_stats=False
-                )
-            )
+        layers += [
+            nn.Linear(layer_size, layer_size),
+            get_activation(name=activation),
+            (
+                nn.BatchNorm1d(layer_size)
+                if batch_norm
+                else Identity()
+            ),
+        ]
 
     # Add output layer
     layers += [nn.Linear(layer_size, output_size)]
@@ -102,6 +109,9 @@ def get_mlp_layers(
     # all values are inside [-3, 3], which is want we want for sampling z.
     if final_tanh:
         layers += [ScaledTanh(3.0, 3.0)]
+
+    # Drop any `Identity` layers (which were stand-ins for batch norm)
+    layers = [_ for _ in layers if not isinstance(_, Identity)]
 
     # Apply special initialization scheme for SIREN networks
     if activation == 'siren':
@@ -137,9 +147,6 @@ def get_cnn_layers(
         A `nn.Sequential` container with the desired CNN.
     """
 
-    # Set up "normal" activation function
-    nonlinearity = get_activation(name=activation)
-
     # Define layers: Start with input layer
     layers = [
         nn.Conv1d(
@@ -147,12 +154,13 @@ def get_cnn_layers(
             out_channels=n_channels,
             kernel_size=kernel_size,
         ),
-        nonlinearity,
+        get_activation(name=activation),
+        (
+            nn.BatchNorm1d(num_features=n_channels)
+            if batch_norm
+            else Identity()
+        ),
     ]
-    if batch_norm:
-        layers.append(
-            nn.BatchNorm1d(num_features=n_channels, track_running_stats=False)
-        )
 
     # Add hidden layers
     for i in range(n_layers):
@@ -162,14 +170,13 @@ def get_cnn_layers(
                 out_channels=n_channels,
                 kernel_size=kernel_size,
             ),
-            nonlinearity,
+            get_activation(name=activation),
+            (
+                nn.BatchNorm1d(num_features=n_channels)
+                if batch_norm
+                else Identity()
+            ),
         ]
-        if batch_norm:
-            layers.append(
-                nn.BatchNorm1d(
-                    num_features=n_channels, track_running_stats=False
-                )
-            )
 
     # Add output layer (and squeeze out the channel dimension)
     layers += [
@@ -180,6 +187,9 @@ def get_cnn_layers(
         ),
         Squeeze(),
     ]
+
+    # Drop any `Identity` layers (which were stand-ins for batch norm)
+    layers = [_ for _ in layers if not isinstance(_, Identity)]
 
     return nn.Sequential(*layers)
 

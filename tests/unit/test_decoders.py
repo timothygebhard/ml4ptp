@@ -69,7 +69,7 @@ def test__decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == (17, 19)
-    assert np.isclose(T_pred.mean().item(), -0.3511980473995209)
+    assert np.isclose(T_pred.mean().item(), -0.17079967260360718)
 
     # Case 3: batch_norm = True
     decoder = Decoder(
@@ -139,7 +139,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.3681025207042694)
+    assert np.isclose(T_pred.mean().item(), 0.30326133966445923)
 
 
 def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:
