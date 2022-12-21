@@ -173,7 +173,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
                 self.concatenate_with_z,
                 nn.Linear(latent_size + 1, layer_size - latent_size),
                 (
-                    Sine(w0=10)
+                    Sine(w0=3.0)
                     if activation == 'siren'
                     else get_activation(self.activation)
                 ),
