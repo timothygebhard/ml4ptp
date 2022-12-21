@@ -124,6 +124,8 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Set up the learning rate scheduler (if desired)
         if (config := self.lr_scheduler_config) is not None:
+
+            # Create the scheduler
             lr_scheduler = get_member_by_name(
                 module_name=config.get('module', 'torch.optim.lr_scheduler'),
                 member_name=config.get('name', None)
@@ -131,6 +133,18 @@ class Model(pl.LightningModule, NormalizerMixin):
                 optimizer=optimizer,
                 **config['parameters'],
             )
+
+            # For cyclic LR schedulers, we need the following hack to get rid
+            # of a weak reference that would otherwise prevent the scheduler
+            # from being pickled (which is required for checkpointing).
+            # See: https://github.com/pytorch/pytorch/issues/88684
+            if isinstance(lr_scheduler, torch.optim.lr_scheduler.CyclicLR):
+                lr_scheduler._scale_fn_custom = (  # type: ignore
+                    lr_scheduler._scale_fn_ref()  # type: ignore
+                )
+                lr_scheduler._scale_fn_ref = None  # type: ignore
+
+            # Add the scheduler to the result
             result['lr_scheduler'] = {
                 'scheduler': lr_scheduler,
                 'interval': config.get('interval', 'epoch'),
