@@ -76,11 +76,19 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
-            module_name='ml4ptp.encoders', member_name=encoder_config['name']
-        )(**encoder_config['parameters'], normalization=normalization)
+            module_name='ml4ptp.encoders',
+            member_name=encoder_config['name']
+        )(
+            **encoder_config['parameters'],
+            normalization=normalization,
+        )
         self.decoder = get_member_by_name(
-            module_name='ml4ptp.decoders', member_name=decoder_config['name']
-        )(**decoder_config['parameters'], normalization=normalization)
+            module_name='ml4ptp.decoders',
+            member_name=decoder_config['name'],
+        )(
+            **decoder_config['parameters'],
+            normalization=normalization,
+        )
 
     def get_loss_weights_like(self, x: torch.Tensor) -> torch.Tensor:
 
@@ -115,17 +123,17 @@ class Model(pl.LightningModule, NormalizerMixin):
         result = {'optimizer': optimizer}
 
         # Set up the learning rate scheduler (if desired)
-        if self.lr_scheduler_config is not None:
+        if (config := self.lr_scheduler_config) is not None:
             lr_scheduler = get_member_by_name(
-                module_name='torch.optim.lr_scheduler',
-                member_name=self.lr_scheduler_config['name'],
+                module_name=config.get('module', 'torch.optim.lr_scheduler'),
+                member_name=config.get('name', None)
             )(
                 optimizer=optimizer,
-                **self.lr_scheduler_config['parameters'],
+                **config['parameters'],
             )
             result['lr_scheduler'] = {
                 'scheduler': lr_scheduler,
-                'interval': self.lr_scheduler_config.get('interval', 'epoch'),
+                'interval': config.get('interval', 'epoch'),
                 'monitor': 'val/total_loss',
                 'frequency': 1,
             }
