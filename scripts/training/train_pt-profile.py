@@ -188,6 +188,7 @@ if __name__ == "__main__":
         callbacks=callbacks,
         default_root_dir=expandvars(experiment_dir).as_posix(),
         logger=logger,
+        track_grad_norm=2,
         **config['trainer'],
     )
     print()
