@@ -119,7 +119,7 @@ def test__concatenate_with_z() -> None:
     # Case 1
     z = torch.randn(5 * 2).reshape(5, 2).float()
     x_in = torch.randn(5 * 7).reshape(5, 7).float()
-    concatenate_with_z = ConcatenateWithZ(z=z)
+    concatenate_with_z = ConcatenateWithZ(z=z, layer_size=0)
     x_out = concatenate_with_z(x_in)
     assert torch.equal(concatenate_with_z.z, z)
     assert x_out.shape == (5, 9)
@@ -132,6 +132,15 @@ def test__concatenate_with_z() -> None:
     assert torch.equal(concatenate_with_z.z, z_new)
     assert x_out.shape == (5, 10)
     assert torch.equal(x_out, torch.cat((x_in, z_new), dim=1))
+
+    # Case 3
+    z = torch.randn(5 * 2).reshape(5, 2).float()
+    x_in = torch.randn(5 * 7).reshape(5, 7).float()
+    concatenate_with_z = ConcatenateWithZ(z=z, layer_size=0)
+    x_out = concatenate_with_z(x_in)
+    assert torch.equal(concatenate_with_z.z, z)
+    assert x_out.shape == (5, 9)
+    assert torch.equal(x_out[:, :7], x_in)
 
 
 def test__identity() -> None:

@@ -204,17 +204,40 @@ class ConcatenateWithZ(nn.Module):
 
     Note: This always needs to be updated in the `forward()` method of
         a decoder network to achieve the "condition D on z" behavior.
+
+    Args:
+        z: The latent code `z` to concatenate with the input.
+        layer_size: The size of the extra layer through which `z` is
+            sent before concatenation. (This seems to be useful for
+            SIREN-style `SkipConnectionDecoder`s, which otherwise often
+            struggle to learn a good latent space.) If this is set to
+            0, `z` is concatenated directly.
     """
 
-    def __init__(self, z: torch.Tensor) -> None:
+    def __init__(self, z: torch.Tensor, layer_size: int = 64) -> None:
+
         super().__init__()
+
         self.z = z
+        self.layer_size = layer_size
+
+        # If `layer_size` is set to 0, we don't need an extra layer
+        if self.layer_size > 0:
+            self.layers = nn.Sequential(
+                nn.Linear(z.shape[1], 64),
+                nn.LeakyReLU(),
+                nn.Linear(64, z.shape[1]),
+            )
 
     def update_z(self, z: torch.Tensor) -> None:
         self.z = z
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-        return torch.cat(tensors=(tensor, self.z), dim=1)
+
+        # If we have a layer, use it to transform z
+        z = self.layers(self.z) if self.layer_size > 0 else self.z
+
+        return torch.cat(tensors=(tensor, z), dim=1)
 
 
 class Mean(nn.Module):
