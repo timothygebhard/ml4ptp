@@ -99,6 +99,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
         layer_size=16,
         n_layers=2,
         normalization=normalization,
+        cat_layer_size=0,
         activation='leaky_relu',
         batch_norm=False,
     )
@@ -115,6 +116,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
         layer_size=16,
         n_layers=2,
         normalization=normalization,
+        cat_layer_size=0,
         activation='leaky_relu',
         batch_norm=True,
     )
@@ -131,6 +133,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
         layer_size=16,
         n_layers=2,
         normalization=normalization,
+        cat_layer_size=64,
         activation='siren',
         batch_norm=False,
     )
@@ -139,7 +142,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.30326133966445923)
+    assert np.isclose(T_pred.mean().item(), 0.3803960978984833)
 
 
 def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:

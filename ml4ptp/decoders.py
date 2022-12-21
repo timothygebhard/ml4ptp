@@ -136,6 +136,8 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         n_layers: The number of hidden layers of the decoder.
         normalization: A dictionary containing the normalization
             parameters for the pressure and temperature.
+        cat_layer_size: The size of the optional hidden layer of the
+            `ConcatenateWithZ` layer. (Set to `0` to disable.)
         activation: The activation function to use in the decoder.
         batch_norm: Whether to use batch normalization in the decoder.
     """
@@ -146,6 +148,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         layer_size: int,
         n_layers: int,
         normalization: Dict[str, Any],
+        cat_layer_size: int = 64,
         activation: str = 'leaky_relu',
         batch_norm: bool = False,
     ) -> None:
@@ -160,17 +163,17 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.activation = activation
         self.batch_norm = batch_norm
 
-        # Initialize layer to concatenate latent variable to each layer output
-        self.concatenate_with_z = ConcatenateWithZ(z=torch.empty(0))
-
         # ---------------------------------------------------------------------
         # Collect list of all layers
         # ---------------------------------------------------------------------
 
+        # Dummy `z` tensor to initialize the layers
+        dummy_z = torch.empty((1, latent_size))
+
         # Start with the first layer (special case for SIRENs)
         layers = nn.ModuleList(
             [
-                self.concatenate_with_z,
+                ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
                 nn.Linear(latent_size + 1, layer_size - latent_size),
                 (
                     Sine(w0=3.0)
@@ -188,7 +191,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         # Add hidden layers
         for i in range(n_layers):
             layers += [
-                self.concatenate_with_z,
+                ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
                 nn.Linear(layer_size, layer_size - latent_size),
                 get_activation(self.activation),
                 (
@@ -200,7 +203,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
 
         # Add final layer (no activation function)
         layers += [
-            self.concatenate_with_z,
+            ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
             nn.Linear(layer_size, 1),
         ]
 
@@ -248,9 +251,11 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         log_P_flat = log_P.reshape(batch_size * grid_size, 1)
         z_flat = z.reshape(batch_size * grid_size, self.latent_size)
 
-        # Update layer to concatenate latent variable to each layer output.
+        # Update layers to concatenate latent variable to each layer output.
         # NOTE: This is the "condition D on z" step!
-        self.concatenate_with_z.update_z(z=z_flat)
+        for layer in self.layers:
+            if isinstance(layer, ConcatenateWithZ):
+                layer.update_z(z=z_flat)
 
         # Normalize pressure and send through decoder.
         # The decoder output will have shape: (batch_size * grid_size, 1)
