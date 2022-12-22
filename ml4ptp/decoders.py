@@ -151,6 +151,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         cat_layer_size: int = 64,
         activation: str = 'leaky_relu',
         batch_norm: bool = False,
+        dropout: float = 0.0,
     ) -> None:
 
         super().__init__()
@@ -162,6 +163,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         self.normalization = normalization
         self.activation = activation
         self.batch_norm = batch_norm
+        self.dropout = dropout
 
         # ---------------------------------------------------------------------
         # Collect list of all layers
@@ -185,6 +187,11 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
                     if batch_norm
                     else Identity()
                 ),
+                (
+                    nn.Dropout(self.dropout)
+                    if self.dropout > 0.0
+                    else Identity()
+                )
             ]
         )
 
@@ -199,6 +206,11 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
                     if batch_norm
                     else Identity()
                 ),
+                (
+                    nn.Dropout(self.dropout)
+                    if self.dropout > 0.0
+                    else Identity()
+                )
             ]
 
         # Add final layer (no activation function)
