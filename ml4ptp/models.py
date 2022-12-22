@@ -107,12 +107,16 @@ class Model(pl.LightningModule, NormalizerMixin):
 
     def configure_optimizers(self) -> dict:
         """
-        Set up the optimizer (and, optionally, the LR scheduler).
+        Set up the optimizer and, optionally, the LR scheduler.
         """
 
+        # ---------------------------------------------------------------------
         # Set up the optimizer
+        # ---------------------------------------------------------------------
+
         # Note: Something like `getattr(torch.optim, 'AdamW')` works, but is
         # actually not allowed by Python, and mypy will complain about it.
+
         optimizer = get_member_by_name(
             module_name='torch.optim',
             member_name=self.optimizer_config['name'],
@@ -122,7 +126,10 @@ class Model(pl.LightningModule, NormalizerMixin):
         )
         result = {'optimizer': optimizer}
 
+        # ---------------------------------------------------------------------
         # Set up the learning rate scheduler (if desired)
+        # ---------------------------------------------------------------------
+
         if (config := self.lr_scheduler_config) is not None:
 
             # Create the scheduler
@@ -226,9 +233,6 @@ class Model(pl.LightningModule, NormalizerMixin):
         mmd_loss = mmd_loss / 10.0
 
         # Compute the total loss
-        # Note: the `rl_weight` parameter is slowly increased from 0 to 1 over
-        # the course of the first few epochs (for encoder pre-training). This
-        # is a hack to prevent the encoder from collapsing to a single point.
         total_loss = reconstruction_loss__normalized + self.beta * mmd_loss
 
         return (
