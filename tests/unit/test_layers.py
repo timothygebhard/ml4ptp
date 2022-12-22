@@ -50,6 +50,8 @@ def test__get_activation() -> None:
 
 def test__get_mlp_layers() -> None:
 
+    torch.manual_seed(42)
+
     # Case 1
     layers = get_mlp_layers(
         input_size=2,
@@ -58,6 +60,8 @@ def test__get_mlp_layers() -> None:
         output_size=1,
         activation='leaky_relu',
         final_tanh=False,
+        batch_norm=False,
+        dropout=0.0,
     )
     assert len(layers) == 3
     assert isinstance(layers[0], torch.nn.Linear)
@@ -71,10 +75,25 @@ def test__get_mlp_layers() -> None:
         output_size=1,
         activation='relu',
         final_tanh=False,
+        batch_norm=False,
+        dropout=0.0,
     )
     assert len(layers) == 5
     assert isinstance(layers[0], torch.nn.Linear)
     assert isinstance(layers[1], torch.nn.ReLU)
+
+    # Case 3
+    layers = get_mlp_layers(
+        input_size=2,
+        n_layers=1,
+        layer_size=2,
+        output_size=1,
+        activation='relu',
+        final_tanh=False,
+        batch_norm=False,
+        dropout=0.5,
+    )
+    assert len(layers) == 7
 
 
 def test__get_cnn_layers() -> None:

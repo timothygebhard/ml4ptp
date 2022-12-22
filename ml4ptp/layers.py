@@ -52,6 +52,7 @@ def get_mlp_layers(
     activation: str = 'leaky_relu',
     final_tanh: bool = True,
     batch_norm: bool = False,
+    dropout: float = 0.0,
 ) -> nn.Sequential:
     """
     Create a multi-layer perceptron with the layer sizes.
@@ -69,6 +70,7 @@ def get_mlp_layers(
         final_tanh: If True, add a scaled Tanh() activation after the
             last layer to limit outputs to [-5, 5]. (For encoders.)
         batch_norm: Whether to use batch normalization.
+        dropout: Dropout probability. If 0, no dropout is used.
 
     Returns:
         A `nn.Sequential` container with the desired MLP.
@@ -87,6 +89,11 @@ def get_mlp_layers(
             if batch_norm
             else Identity()
         ),
+        (
+            nn.Dropout(dropout)
+            if dropout > 0.0
+            else Identity()
+        )
     ]
 
     # Add hidden layers
@@ -99,9 +106,14 @@ def get_mlp_layers(
                 if batch_norm
                 else Identity()
             ),
+            (
+                nn.Dropout(dropout)
+                if dropout > 0.0
+                else Identity()
+            )
         ]
 
-    # Add output layer
+    # Add output layer (no activation, no batch norm, no dropout)
     layers += [nn.Linear(layer_size, output_size)]
 
     # Add final tanh activation, if desired
@@ -110,7 +122,7 @@ def get_mlp_layers(
     if final_tanh:
         layers += [ScaledTanh(3.0, 3.0)]
 
-    # Drop any `Identity` layers (which were stand-ins for batch norm)
+    # Drop any `Identity` layers
     layers = [_ for _ in layers if not isinstance(_, Identity)]
 
     # Apply special initialization scheme for SIREN networks
