@@ -58,9 +58,6 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         super().__init__()
 
-        # Store hyperparameters used to instantiate this network
-        self.save_hyperparameters()
-
         # Store the constructor arguments
         self.encoder_config = encoder_config
         self.decoder_config = decoder_config
@@ -73,6 +70,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Define some shortcuts
         self.beta = self.loss_config['beta']
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
+
+        # Keep track of the number of times we had to re-initialize the encoder
+        self.n_failures = 0
 
         # Set up the encoder and decoder networks
         self.encoder = get_member_by_name(
@@ -173,19 +173,28 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Check if we got unlucky with the weight initialization (i.e., the
         # norm of our generated latents is too small or too big) and we need
         # to re-initialize the encoder to prevent the model from collapsing.
-        # This is a hack, but it seems to work?
+        # This is obviously a hack, but it kinda seems to work?
         while True:
+
+            # Compute the norm of the latent codes
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
             if 0.1 < mean_norm < 2.5:
                 break  # pragma: no cover
+
+            # If we got unlucky, re-initialize the encoder weights
+            self.n_failures += 1
             print(
                 f'\nWARNING: mean(norm(z)) = {mean_norm}! '
-                f'(Epoch {self.current_epoch})\n'
+                f'[epoch={self.current_epoch}, n_failures={self.n_failures}]\n'
                 f'Re-initializing encoder network!\n',
                 flush=True
             )
             self.encoder.initialize_weights()
             z = self.encoder(log_P=log_P, T=T)
+
+            # Abort training if we have already failed too many times
+            if self.n_failures > 100:
+                raise RuntimeError('Too many initialization failures!')
 
         # Run through decoder to get predicted temperatures
         T_pred = self.decoder(z=z, log_P=log_P)
