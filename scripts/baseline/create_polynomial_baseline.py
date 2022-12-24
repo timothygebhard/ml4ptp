@@ -118,8 +118,9 @@ if __name__ == "__main__":
             coefs[i] = p
             T_pred[i] = t
 
-        # Compute the mean squared error
+        # Compute the mean squared error and the mean relative error
         mse = np.mean((T_true - T_pred) ** 2, axis=1)
+        mre = np.mean(np.abs(T_pred - T_true) / T_true, axis=1)
 
         # Store fit results in HDF file
         print('Storing fit results in HDF file...', end=' ', flush=True)
@@ -130,6 +131,7 @@ if __name__ == "__main__":
             group.create_dataset('T_true', data=T_true)
             group.create_dataset('T_pred', data=T_pred)
             group.create_dataset('mse', data=mse)
+            group.create_dataset('mre', data=mre)
         print('Done!\n', flush=True)
 
     # -------------------------------------------------------------------------

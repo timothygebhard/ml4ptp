@@ -160,8 +160,12 @@ if __name__ == "__main__":
             # Find best fit with PCA
             T_pred = pca.inverse_transform(pca.transform(T_projected['test']))
 
-            # Compute mean squared error
+            # Compute mean squared error and mean relative error
             mse = np.mean((T_pred - T_projected['test']) ** 2, axis=1)
+            mre = np.mean(
+                np.abs(T_pred - T_projected['test']) / T_projected['test'],
+                axis=1
+            )
 
             print('Done!', flush=True)
 
@@ -174,6 +178,7 @@ if __name__ == "__main__":
                 group.create_dataset('T_true', data=T_projected['test'])
                 group.create_dataset('T_pred', data=T_pred)
                 group.create_dataset('mse', data=mse)
+                group.create_dataset('mre', data=mre)
             print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
