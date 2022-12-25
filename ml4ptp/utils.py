@@ -143,3 +143,34 @@ def tensor_to_str(tensor: torch.Tensor, n_digits: int = 3) -> str:
 
     dummy = ', '.join([str(round(float(_), n_digits)) for _ in tensor])
     return f'({dummy})'
+
+
+def weighted_mse_loss(
+    x_pred: torch.Tensor,
+    x_true: torch.Tensor,
+    weights: torch.Tensor,
+) -> torch.Tensor:
+    """
+    A weighted version of ``torch.nn.functional.mse_loss``.
+
+    Args:
+        x_pred: The 2D tensor with the predicted values.
+        x_true: The 2D tensor with the ground truth values.
+        weights: The 2D weights tensor. Must have the same shape as
+            `x_pred` and `x_true`, and each row (i.e., axis 0) must
+            be normalized to sum to 1.
+
+    Returns:
+        The weighted mean squared error loss.
+    """
+
+    # Sanity checks
+    assert x_pred.ndim == x_true.ndim == weights.ndim == 2, \
+        'All inputs must be 2D tensors.'
+    assert x_pred.shape == x_true.shape == weights.shape, \
+        'All inputs must have the same shape.'
+    assert torch.allclose(weights.sum(dim=1), torch.ones(weights.shape[0])), \
+        'Each row of weights tensor must be normalized to sum to 1.'
+
+    # Compute the loss
+    return torch.sum(weights * (x_true - x_pred) ** 2) / x_pred.shape[0]

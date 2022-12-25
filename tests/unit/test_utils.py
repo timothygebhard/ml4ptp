@@ -19,7 +19,8 @@ from ml4ptp.utils import (
     get_number_of_available_cores,
     get_run_dir,
     setup_rich_progress_bar,
-    tensor_to_str
+    tensor_to_str,
+    weighted_mse_loss,
 )
 
 
@@ -121,3 +122,29 @@ def test__tensor_to_str() -> None:
     tensor = torch.Tensor([3.14159265])
     string = tensor_to_str(tensor, n_digits=1)
     assert string == '(3.1)'
+
+
+def test__weighted_mse_loss() -> None:
+
+    # Case 1
+    y_true = torch.randn(17, 43)
+    y_pred = torch.randn(17, 43)
+    weights = torch.ones(17, 43) / 43
+    assert torch.allclose(
+        weighted_mse_loss(y_true, y_pred, weights),
+        torch.nn.functional.mse_loss(y_true, y_pred),
+    )
+
+    # Case 2
+    y_true = torch.Tensor([[1, 2, 3, 4]])
+    y_pred = torch.Tensor([[1, 2, 3, 4]])
+    weights = torch.Tensor([[0.25, 0.25, 0.25, 0.25]])
+    loss = weighted_mse_loss(y_true, y_pred, weights)
+    assert loss == 0
+
+    # Case 3
+    y_true = torch.Tensor([[0, 0, 0, 0]])
+    y_pred = torch.Tensor([[1, 2, 3, 4]])
+    weights = torch.Tensor([[0.1, 0.2, 0.3, 0.4]])
+    loss = weighted_mse_loss(y_true, y_pred, weights)
+    assert loss == 10
