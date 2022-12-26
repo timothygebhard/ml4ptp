@@ -69,6 +69,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Define some shortcuts
         self.beta = self.loss_config['beta']
+        self.n_mmd_loops = self.loss_config.get('n_mmd_loops', 10)
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Keep track of the number of times we had to re-initialize the encoder
@@ -232,14 +233,14 @@ class Model(pl.LightningModule, NormalizerMixin):
         # just doing several iterations is better? (Or maybe this not useful at
         # all, and we should just use a single sample?)
         mmd_loss = torch.tensor(0.0)
-        for i in range(10):
+        for i in range(self.n_mmd_loops):
             true_samples = torch.randn(  # type: ignore
                 z.shape[0],
                 self.encoder.latent_size,
                 device=self.device,
             )
             mmd_loss = mmd_loss + compute_mmd(true_samples, z)
-        mmd_loss = mmd_loss / 10.0
+        mmd_loss = mmd_loss / self.n_mmd_loops
 
         # Compute the total loss
         total_loss = reconstruction_loss__normalized + self.beta * mmd_loss
