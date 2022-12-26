@@ -26,6 +26,7 @@ setup(
     url='https://github.com/timothygebhard/ml4ptp',
     install_requires=[
         'corner',
+        'dill',
         'gitpython',
         'h5py',
         'joblib',
