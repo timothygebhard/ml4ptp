@@ -56,6 +56,11 @@ def test__data_module(hdf_file: Path) -> None:
         normalization='whiten',
         random_state=42,
     )
+
+    with pytest.raises(RuntimeError) as runtime_error:
+        dm.get_normalization()
+    assert 'Normalization constants have not yet' in str(runtime_error.value)
+
     dm.prepare_data()
 
     assert np.isclose(dm.get_normalization()['T_offset'], 73.625)
