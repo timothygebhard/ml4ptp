@@ -7,7 +7,7 @@ General utility functions.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import List, Sized
+from typing import Any, List, Sized
 
 import os
 
@@ -39,6 +39,32 @@ def find_run_dirs_with_results(experiment_dir: Path) -> List[Path]:
         runs_dir.glob('run_*'),
     )
     return sorted(run_dirs)
+
+
+def fix_weak_reference(lr_scheduler: Any) -> None:
+    """
+    Fixes a weak reference in a learning rate scheduler (in place).
+
+    For cyclic LR schedulers, we need the following hack to get rid of
+    a weak reference that would otherwise prevent the scheduler from
+    being pickled (which is required for checkpointing).
+
+    See: https://github.com/pytorch/pytorch/issues/88684
+
+    Args:
+        lr_scheduler: A learning rate scheduler.
+
+    Returns:
+        The learning rate scheduler, but without the weak reference.
+    """
+
+    if isinstance(lr_scheduler, torch.optim.lr_scheduler.CyclicLR):
+
+        # noinspection PyProtectedMember
+        lr_scheduler._scale_fn_custom = (  # type: ignore
+            lr_scheduler._scale_fn_ref()  # type: ignore
+        )
+        lr_scheduler._scale_fn_ref = None  # type: ignore
 
 
 def get_batch_idx(

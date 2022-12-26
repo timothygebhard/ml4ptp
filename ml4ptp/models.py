@@ -21,6 +21,7 @@ from ml4ptp.importing import get_member_by_name
 from ml4ptp.mixins import NormalizerMixin
 from ml4ptp.mmd import compute_mmd
 from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
+from ml4ptp.utils import fix_weak_reference
 
 
 # -----------------------------------------------------------------------------
@@ -142,15 +143,9 @@ class Model(pl.LightningModule, NormalizerMixin):
                 **config['parameters'],
             )
 
-            # For cyclic LR schedulers, we need the following hack to get rid
-            # of a weak reference that would otherwise prevent the scheduler
-            # from being pickled (which is required for checkpointing).
-            # See: https://github.com/pytorch/pytorch/issues/88684
-            if isinstance(lr_scheduler, torch.optim.lr_scheduler.CyclicLR):
-                lr_scheduler._scale_fn_custom = (  # type: ignore
-                    lr_scheduler._scale_fn_ref()  # type: ignore
-                )
-                lr_scheduler._scale_fn_ref = None  # type: ignore
+            # For some LR schedulers, we need to fix an issue with a weak
+            # reference that prevents them from being checkpointed
+            fix_weak_reference(lr_scheduler)
 
             # Add the scheduler to the result
             result['lr_scheduler'] = {
@@ -194,7 +189,7 @@ class Model(pl.LightningModule, NormalizerMixin):
             z = self.encoder(log_P=log_P, T=T)
 
             # Abort training if we have already failed too many times
-            if self.n_failures > 100:
+            if self.n_failures > 100:  # pragma: no cover
                 raise RuntimeError('Too many initialization failures!')
 
         # Run through decoder to get predicted temperatures

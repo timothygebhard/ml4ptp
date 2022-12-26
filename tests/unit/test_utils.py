@@ -8,12 +8,15 @@ Unit tests for utils.py
 
 from pathlib import Path
 from sys import platform
+from typing import Any
 
+import dill
 import numpy as np
 import torch
 
 from ml4ptp.utils import (
     find_run_dirs_with_results,
+    fix_weak_reference,
     get_batch_idx,
     get_device_from_model,
     get_number_of_available_cores,
@@ -45,6 +48,28 @@ def test__find_run_dirs_with_results(tmp_path: Path) -> None:
     assert run_dirs[0].as_posix().endswith('1')
     assert run_dirs[1].as_posix().endswith('3')
     assert run_dirs[2].as_posix().endswith('7')
+
+
+def test__fix_weak_reference() -> None:
+
+    # Dummy optimizer
+    optimizer = torch.optim.Adam(torch.nn.Linear(1, 1).parameters())
+
+    # Case 1: No weak reference
+    lr_scheduler: Any = torch.optim.lr_scheduler.StepLR(
+        optimizer=optimizer, step_size=1
+    )
+    assert dill.pickles(lr_scheduler)
+    fix_weak_reference(lr_scheduler)
+    assert dill.pickles(lr_scheduler)
+
+    # Case 2: Weak reference
+    lr_scheduler = torch.optim.lr_scheduler.CyclicLR(
+        optimizer=optimizer, base_lr=0.001, max_lr=0.01, cycle_momentum=False,
+    )
+    assert not dill.pickles(lr_scheduler)
+    fix_weak_reference(lr_scheduler)
+    assert dill.pickles(lr_scheduler)
 
 
 def test__get_batch_idx() -> None:
