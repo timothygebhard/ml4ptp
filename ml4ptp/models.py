@@ -231,14 +231,14 @@ class Model(pl.LightningModule, NormalizerMixin):
         # but the MMD scaled quadratically with the number of samples, so maybe
         # just doing several iterations is better? (Or maybe this not useful at
         # all, and we should just use a single sample?)
-        mmd_loss = torch.zeros(z.shape[0], device=self.device)  # type: ignore
+        mmd_loss = torch.tensor(0.0)
         for i in range(10):
             true_samples = torch.randn(  # type: ignore
                 z.shape[0],
                 self.encoder.latent_size,
                 device=self.device,
             )
-            mmd_loss = compute_mmd(true_samples, z)
+            mmd_loss = mmd_loss + compute_mmd(true_samples, z)
         mmd_loss = mmd_loss / 10.0
 
         # Compute the total loss
