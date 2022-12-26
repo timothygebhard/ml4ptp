@@ -66,6 +66,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         val_size=64,
         train_batch_size=16,
     )
+    datamodule.prepare_data()
 
     # -------------------------------------------------------------------------
     # Setup model
@@ -139,15 +140,15 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
         trainer.logged_metrics['val/total_loss_epoch'],  # type: ignore
-        6.5217,
+        120.4569,
     )
     assert np.isclose(
         trainer.logged_metrics['train/total_loss_epoch'],  # type: ignore
-        5.0028,
+        42.1129,
     )
 
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
         trainer.logged_metrics['test/total_loss_epoch'],  # type: ignore
-        5.5052,
+        70.9066,
     )
