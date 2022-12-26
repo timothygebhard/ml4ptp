@@ -53,12 +53,13 @@ def test__data_module(hdf_file: Path) -> None:
         val_size=3,
         train_batch_size=1,
         val_batch_size=3,
-        normalization='whiten'
+        normalization='whiten',
+        random_state=42,
     )
     dm.prepare_data()
 
-    assert np.isclose(dm.get_normalization()['T_offset'], 72)
-    assert np.isclose(dm.get_normalization()['T_factor'], 41.42462921142578)
+    assert np.isclose(dm.get_normalization()['T_offset'], 73.625)
+    assert np.isclose(dm.get_normalization()['T_factor'], 38.512939453125)
     assert len(dm.train_dataloader()) == 8
     assert len(dm.val_dataloader()) == 1
 
@@ -73,7 +74,8 @@ def test__data_module(hdf_file: Path) -> None:
         train_file_path=None,
         test_file_path=hdf_file,
         test_batch_size=2,
-        normalization='whiten'
+        normalization='whiten',
+        random_state=42,
     )
     dm.prepare_data()
 
@@ -99,12 +101,13 @@ def test__data_module(hdf_file: Path) -> None:
         train_size=11,
         val_size=3,
         train_batch_size=1,
-        normalization='minmax'
+        normalization='minmax',
+        random_state=42,
     )
     dm.prepare_data()
 
-    assert np.isclose(dm.get_normalization()['T_offset'], 1)
-    assert np.isclose(dm.get_normalization()['T_factor'], 11 * 13 - 1)
+    assert np.isclose(dm.get_normalization()['T_offset'], 14.0)
+    assert np.isclose(dm.get_normalization()['T_factor'], 129.0)
 
     # Case 4
     with pytest.raises(ValueError) as value_error:
@@ -116,7 +119,8 @@ def test__data_module(hdf_file: Path) -> None:
             train_size=11,
             val_size=3,
             train_batch_size=1,
-            normalization='illegal'
+            normalization='illegal',
+            random_state=42,
         )
         dm.prepare_data()
     assert 'Invalid normalization!' in str(value_error)
@@ -128,7 +132,8 @@ def test__data_module(hdf_file: Path) -> None:
         train_file_path=None,
         test_file_path=hdf_file,
         test_batch_size=2,
-        normalization='whiten'
+        normalization='whiten',
+        random_state=42,
     )
     dm.prepare_data()
 
@@ -145,7 +150,8 @@ def test__data_module(hdf_file: Path) -> None:
         train_file_path=hdf_file,
         test_file_path=None,
         test_batch_size=2,
-        normalization='whiten'
+        normalization='whiten',
+        random_state=42,
     )
     dm.prepare_data()
 

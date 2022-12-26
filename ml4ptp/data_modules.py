@@ -7,7 +7,7 @@ Data module(s) that encapsulate the data handling for PyTorch Lightning.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Dict, Optional, Union, Tuple
 
 from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
@@ -86,8 +86,7 @@ class DataModule(pl.LightningDataModule):
         # for the temperature. The `offset` is either the mean (for whitening)
         # or the minimum (for minmax); the `factor` is either the standard
         # deviation or the maximum minus the minimum.
-        self._normalization: Dict[str, Any] = dict(
-            normalization=self.normalization,
+        self.normalization_dict: Dict[str, float] = dict(
             T_offset=np.nan,
             T_factor=np.nan,
             log_P_offset=np.nan,
@@ -131,23 +130,8 @@ class DataModule(pl.LightningDataModule):
                 random_state=self.random_state,
             )
 
-            # Compute the normalization from training data
-            if self.normalization == 'whiten':
-                self._normalization['T_offset'] = float(torch.mean(T))
-                self._normalization['T_factor'] = float(torch.std(T))
-                self._normalization['log_P_offset'] = float(torch.mean(log_P))
-                self._normalization['log_P_factor'] = float(torch.std(log_P))
-            elif self.normalization == 'minmax':
-                self._normalization['T_offset'] = float(torch.min(T))
-                self._normalization['T_factor'] = float(
-                    torch.max(T) - torch.min(T)
-                )
-                self._normalization['log_P_offset'] = float(torch.min(log_P))
-                self._normalization['log_P_factor'] = float(
-                    torch.max(log_P) - torch.min(log_P)
-                )
-            else:
-                raise ValueError('Invalid normalization!')
+            # Compute normalization constants
+            self.compute_normalization(log_P=train_log_P, T=train_T)
 
             # Create data sets for training and validation
             self.train_dataset = TensorDataset(train_log_P, train_T)
@@ -168,8 +152,48 @@ class DataModule(pl.LightningDataModule):
             # Create data sets for testing
             self.test_dataset = TensorDataset(test_log_P, test_T)
 
-    def get_normalization(self) -> Dict[str, Any]:
-        return self._normalization
+    def compute_normalization(
+        self,
+        log_P: torch.Tensor,
+        T: torch.Tensor,
+    ) -> None:
+        """
+        Compute normalization constants and update `normalization_dict`.
+        """
+
+        # Compute the normalization from the given training data
+        if self.normalization == 'whiten':
+            T_offset = float(torch.mean(T))
+            T_factor = float(torch.std(T))
+            log_P_offset = float(torch.mean(log_P))
+            log_P_factor = float(torch.std(log_P))
+        elif self.normalization == 'minmax':
+            T_offset = float(torch.min(T))
+            T_factor = float(torch.max(T) - torch.min(T))
+            log_P_offset = float(torch.min(log_P))
+            log_P_factor = float(torch.max(log_P) - torch.min(log_P))
+        else:
+            raise ValueError('Invalid normalization!')
+
+        # Store the normalization constants
+        self.normalization_dict['T_offset'] = T_offset
+        self.normalization_dict['T_factor'] = T_factor
+        self.normalization_dict['log_P_offset'] = log_P_offset
+        self.normalization_dict['log_P_factor'] = log_P_factor
+
+    def get_normalization(self) -> Dict[str, float]:
+        """
+        Return the normalization constants (after checking that they
+        have been computed already).
+        """
+
+        # Check if normalization constants have been computed
+        if any(np.isnan(_) for _ in self.normalization_dict.values()):
+            raise RuntimeError(
+                'Normalization constants have not yet been computed!'
+            )
+
+        return self.normalization_dict
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         """
