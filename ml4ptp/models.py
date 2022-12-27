@@ -59,6 +59,12 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         super().__init__()
 
+        # Save hyperparameters.
+        # This is needed so that at the end of training, we can load the best
+        # model checkpoint with `model.load_from_checkpoint()` without having
+        # to pass the constructor arguments again.
+        self.save_hyperparameters()
+
         # Store the constructor arguments
         self.encoder_config = encoder_config
         self.decoder_config = decoder_config
