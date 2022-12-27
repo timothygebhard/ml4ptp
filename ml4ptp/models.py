@@ -71,6 +71,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Define some shortcuts
         self.beta = self.loss_config['beta']
         self.n_mmd_loops = self.loss_config.get('n_mmd_loops', 10)
+        self.plot_interval = self.plotting_config.get('plot_interval', 10)
         self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Keep track of the number of times we had to re-initialize the encoder
@@ -307,8 +308,15 @@ class Model(pl.LightningModule, NormalizerMixin):
             on_epoch=True,
         )
 
-        # At the beginning of every epoch, save some plots to TensorBoard
-        if batch_idx == 0 and self.plotting_config['enable_plotting']:
+        # Every N epochs, create some plots and log them to TensorBoard.
+        # We don't want to do this every epoch because plotting is quite slow
+        # and it can slow down training significantly.
+        if (
+            batch_idx == 0
+            and self.logger is not None
+            and self.plotting_config['enable_plotting']
+            and self.current_epoch % self.plot_interval == 0
+        ):
             self.plot_z_to_tensorboard(z=z, label=stage)
             self.plot_profile_to_tensorboard(
                 z=z, log_P=log_P, T_true=T_true, T_pred=T_pred, label=stage
@@ -319,20 +327,18 @@ class Model(pl.LightningModule, NormalizerMixin):
 
     def plot_z_to_tensorboard(self, z: torch.Tensor, label: str) -> None:
 
-        if self.logger:
+        # Create the figure
+        figure = plot_z_to_tensorboard(z)
 
-            # Create the figure
-            figure = plot_z_to_tensorboard(z)
+        # Log the figure to TensorBoard
+        self.logger.experiment.add_figure(  # type: ignore
+            tag=f'{label}/latent-distribution',
+            figure=figure,
+            global_step=self.current_epoch,
+        )
 
-            # Log the figure to TensorBoard
-            self.logger.experiment.add_figure(  # type: ignore
-                tag=f'{label}/latent-distribution',
-                figure=figure,
-                global_step=self.current_epoch,
-            )
-
-            # Close the figure
-            plt.close(figure)
+        # Close the figure
+        plt.close(figure)
 
     def plot_profile_to_tensorboard(
         self,
@@ -343,26 +349,24 @@ class Model(pl.LightningModule, NormalizerMixin):
         label: str,
     ) -> None:
 
-        if self.logger:
+        # Create the figure
+        figure = plot_profile_to_tensorboard(
+            z,
+            log_P,
+            T_true,
+            T_pred,
+            self.plotting_config['pt_profile'],
+        )
 
-            # Create the figure
-            figure = plot_profile_to_tensorboard(
-                z,
-                log_P,
-                T_true,
-                T_pred,
-                self.plotting_config['pt_profile'],
-            )
+        # Add figure to TensorBoard
+        self.logger.experiment.add_figure(  # type: ignore
+            tag=f'{label}/example-profiles',
+            figure=figure,
+            global_step=self.current_epoch,
+        )
 
-            # Add figure to TensorBoard
-            self.logger.experiment.add_figure(  # type: ignore
-                tag=f'{label}/example-profiles',
-                figure=figure,
-                global_step=self.current_epoch,
-            )
-
-            # Close the figure
-            plt.close(figure)
+        # Close the figure
+        plt.close(figure)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         raise NotImplementedError  # pragma: no cover
