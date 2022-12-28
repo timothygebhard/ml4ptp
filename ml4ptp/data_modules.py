@@ -212,12 +212,6 @@ class DataModule(pl.LightningDataModule):
                 val_log_P, val_T, val_weights
             )
 
-            # Perform some sanity checks
-            assert 0 < self.train_batch_size <= len(self.train_dataset), \
-                "Invalid train_batch_size!"
-            assert 0 < self.val_batch_size <= len(self.val_dataset), \
-                "Invalid val_batch_size!"
-
         # Load the test data
         if self.test_file_path is not None:
 
@@ -248,10 +242,6 @@ class DataModule(pl.LightningDataModule):
 
             # Create data sets for testing
             self.test_dataset = TensorDataset(test_log_P, test_T, test_weights)
-
-            # Perform some sanity checks
-            assert 0 < self.test_batch_size <= len(self.test_dataset), \
-                "Invalid test_batch_size!"
 
     def compute_normalization(
         self,
