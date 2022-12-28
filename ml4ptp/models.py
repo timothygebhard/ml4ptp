@@ -21,7 +21,7 @@ from ml4ptp.importing import get_member_by_name
 from ml4ptp.mixins import NormalizerMixin
 from ml4ptp.mmd import compute_mmd
 from ml4ptp.plotting import plot_profile_to_tensorboard, plot_z_to_tensorboard
-from ml4ptp.utils import fix_weak_reference
+from ml4ptp.utils import fix_weak_reference, weighted_mse_loss
 
 
 # -----------------------------------------------------------------------------
@@ -78,7 +78,6 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.beta = self.loss_config['beta']
         self.n_mmd_loops = self.loss_config.get('n_mmd_loops', 10)
         self.plot_interval = self.plotting_config.get('plot_interval', 10)
-        self.use_weighted_loss = self.loss_config.get('weighted_loss', False)
 
         # Keep track of the number of times we had to re-initialize the encoder
         self.n_failures = 0
@@ -99,21 +98,6 @@ class Model(pl.LightningModule, NormalizerMixin):
             normalization=normalization,
         )
 
-    def get_loss_weights_like(self, x: torch.Tensor) -> torch.Tensor:
-
-        # If we are not using a weighted loss, every sample has the same weight
-        if not self.use_weighted_loss:
-            return torch.ones_like(x, device=x.device) / x.numel()
-
-        # Otherwise, we need to compute the weights
-        # The linear scheme used here is somewhat arbitrary
-        weights = torch.tile(
-            input=torch.linspace(0.001, 1.0, x.shape[1], device=x.device),
-            dims=(x.shape[0], 1),
-        )
-        weights = weights / weights.sum()
-        return weights
-
     def configure_optimizers(self) -> dict:
         """
         Set up the optimizer and, optionally, the LR scheduler.
@@ -123,12 +107,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         # Set up the optimizer
         # ---------------------------------------------------------------------
 
-        # Note: Something like `getattr(torch.optim, 'AdamW')` works, but is
-        # actually not allowed by Python, and mypy will complain about it.
-
         optimizer = get_member_by_name(
-            module_name='torch.optim',
-            member_name=self.optimizer_config['name'],
+            module_name=self.optimizer_config.get('module', 'torch.optim'),
+            member_name=self.optimizer_config.get('name', None),
         )(
             params=self.parameters(),
             **self.optimizer_config['parameters'],
@@ -206,9 +187,10 @@ class Model(pl.LightningModule, NormalizerMixin):
 
     def loss(
         self,
+        z: torch.Tensor,
         T_true: torch.Tensor,
         T_pred: torch.Tensor,
-        z: torch.Tensor,
+        weights: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute the loss.
@@ -216,17 +198,15 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Compute the reconstruction loss on the *normalized* temperatures,
         # so that the scale of the loss is independent of the temperature.
-        # This is a manual version of an MSE loss which can also handle
-        # weighted samples (e.g., give more weight to higher pressure).
-        rl = (self.normalize_T(T_true) - self.normalize_T(T_pred)).pow(2)
-        rl = rl * self.get_loss_weights_like(rl)
-        reconstruction_loss__normalized = rl.sum()
+        rec_loss__normalized = weighted_mse_loss(
+            x_pred=self.normalize_T(T_pred),
+            x_true=self.normalize_T(T_true),
+            weights=weights,
+        )
 
         # For logging purposes, we also compute the unnormalized loss
         with torch.no_grad():
-            rl = (T_true - T_pred).pow(2)
-            rl = rl * self.get_loss_weights_like(rl)
-            reconstruction_loss__unnormalized = rl.sum()
+            rec_loss__unnormalized = weighted_mse_loss(T_pred, T_true, weights)
 
         # Compute the MMD between z and a sample from a standard Gaussian.
         # We do this multiple times to get a better estimate of the MMD.
@@ -236,21 +216,16 @@ class Model(pl.LightningModule, NormalizerMixin):
         # all, and we should just use a single sample?)
         mmd_loss = torch.tensor(0.0)
         for i in range(self.n_mmd_loops):
-            true_samples = torch.randn(  # type: ignore
-                z.shape[0],
-                self.encoder.latent_size,
-                device=self.device,
-            )
-            mmd_loss = mmd_loss + compute_mmd(true_samples, z)
-        mmd_loss = mmd_loss / self.n_mmd_loops
+            sample = torch.randn(*z.shape, device=self.device)  # type: ignore
+            mmd_loss = mmd_loss + compute_mmd(sample, z) / self.n_mmd_loops
 
         # Compute the total loss
-        total_loss = reconstruction_loss__normalized + self.beta * mmd_loss
+        total_loss = rec_loss__normalized + self.beta * mmd_loss
 
         return (
             total_loss,
-            reconstruction_loss__normalized,
-            reconstruction_loss__unnormalized,
+            rec_loss__normalized,
+            rec_loss__unnormalized,
             mmd_loss,
         )
 
@@ -284,14 +259,12 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Set model either to training or evaluation mode
         if stage == 'train':
-            self.encoder.train()
-            self.decoder.train()
+            self.train()
         else:
-            self.encoder.eval()
-            self.decoder.eval()
+            self.eval()
 
         # Unpack the batch and compute pass through encoder and decoder
-        log_P, T_true = batch
+        log_P, T_true, weights = batch
         z, T_pred = self.forward(log_P=log_P, T=T_true)
 
         # Compute the loss terms
@@ -300,7 +273,7 @@ class Model(pl.LightningModule, NormalizerMixin):
             rec_loss__normalized,
             rec_loss__unnormalized,
             latent_loss,
-        ) = self.loss(T_true=T_true, T_pred=T_pred, z=z)
+        ) = self.loss(z=z, T_true=T_true, T_pred=T_pred, weights=weights)
 
         # Log the loss terms to TensorBoard
         self.log_dict(
@@ -316,7 +289,8 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         # Every N epochs, create some plots and log them to TensorBoard.
         # We don't want to do this every epoch because plotting is quite slow
-        # and it can slow down training significantly.
+        # and it can slow down training significantly, plus it produces a lot
+        # of data (hundreds of MB) that we don't really need.
         if (
             batch_idx == 0
             and self.logger is not None

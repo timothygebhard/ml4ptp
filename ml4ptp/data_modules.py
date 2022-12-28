@@ -36,18 +36,60 @@ class DataModule(pl.LightningDataModule):
     them to tensors, splitting into training / validation, and creating
     the required `Dataset` and `DataLoader` instances.
 
-    The DataLoaders return a 2-tuple consisting of:
+    Args:
+        key_P: The key of the pressure data in the HDF file.
+        key_T: The key of the temperature data in the HDF file.
+        key_weights: The key of the weights data in the HDF file.
+            May be `None` if no weights are available (default).
+        weighting_scheme: Which scheme to use for weighting the data.
+            Currently, the following options are supported:
+            - 'equal': All data points have the same weight (default).
+            - 'linear': Arbitrary linear weighting scheme that gives
+                more weight to the higher pressure data points.
+        train_file_path: The path to the HDF file containing the
+            training data.
+        test_file_path: The path to the HDF file containing the
+            test data.
+        train_size: The number of training data points to use. This is
+            the sum of the number of training and validation samples.
+        val_size: The number of validation data points to use. If this
+            is a float, it is interpreted as the fraction of the total
+            number of training data points to use for validation.
+        train_batch_size: The batch size to use for training.
+        val_batch_size: The batch size to use for validation.
+        test_batch_size: The batch size to use for testing.
+        num_workers: The number of workers to use for loading the data.
+        persistent_workers: Whether to use persistent workers for the
+            data loaders.
+        shuffle: Whether to shuffle the data.
+        pin_memory: Whether to pin the data in memory.
+        drop_last: Whether to drop the last batch if it is incomplete.
+        normalization: Which normalization scheme to use for the
+            temperature data. Currently the following options are
+            supported:
+            - 'whiten': Subtract the mean and divide by the standard
+                deviation ("standardization"). This is the default.
+            - 'minmax': Subtract the minimum and divide by the maximum
+                minus the minimum.
+        random_state: The random seed to use for splitting the data.
+
+    Returns:
+        The DataLoaders return a 3-tuple consisting of:
 
         - log_P: A tensor with the log10 of the pressure values in bar.
         - T: A tensor with the temperature values in Kelvin.
+        - weights: A tensor with the weights for each data point (to
+            compute a weighted loss).
     """
 
     def __init__(
         self,
         key_P: str,
         key_T: str,
-        train_file_path: Optional[Path],
-        test_file_path: Optional[Path],
+        key_weights: Optional[str] = None,
+        weighting_scheme: str = 'equal',
+        train_file_path: Optional[Path] = None,
+        test_file_path: Optional[Path] = None,
         train_size: int = 10_000,
         val_size: Union[float, int] = 0.1,
         train_batch_size: int = 1_024,
@@ -69,6 +111,8 @@ class DataModule(pl.LightningDataModule):
         self.test_file_path = test_file_path
         self.key_P = key_P
         self.key_T = key_T
+        self.key_weights = key_weights
+        self.weighting_scheme = weighting_scheme
         self.train_size = train_size
         self.val_size = val_size
         self.train_batch_size = train_batch_size
@@ -116,26 +160,63 @@ class DataModule(pl.LightningDataModule):
             # Read data from HDF file
             file_path = expandvars(Path(self.train_file_path)).resolve()
             with h5py.File(file_path, "r") as hdf_file:
+
+                # Select pressure and compute log10
                 P = torch.from_numpy(np.array(hdf_file[self.key_P]))
                 P = P[:self.train_size].float()
                 log_P = torch.log10(P)
+
+                # Select temperature
                 T = torch.from_numpy(np.array(hdf_file[self.key_T]))
                 T = T[:self.train_size].float()
 
+                # Select (raw) weights.
+                # These are not normalized yet, and depending on the weighting
+                # scheme, they may be replaced (e.g., by equal weights).
+                if self.key_weights is not None:
+                    raw_weights = torch.from_numpy(
+                        np.array(hdf_file[self.key_weights])
+                    )
+                    raw_weights = raw_weights[:self.train_size].float()
+                else:
+                    raw_weights = torch.empty_like(T)
+
             # Split the data into training and validation
-            train_log_P, val_log_P, train_T, val_T = train_test_split(
+            (
+                train_log_P,
+                val_log_P,
+                train_T,
+                val_T,
+                train_raw_weights,
+                val_raw_weights,
+            ) = train_test_split(
                 log_P,
                 T,
+                raw_weights,
                 test_size=self.val_size,
                 random_state=self.random_state,
             )
+
+            # Create weights for the training and validation data
+            train_weights = self.get_weights(train_raw_weights)
+            val_weights = self.get_weights(val_raw_weights)
 
             # Compute normalization constants
             self.compute_normalization(log_P=train_log_P, T=train_T)
 
             # Create data sets for training and validation
-            self.train_dataset = TensorDataset(train_log_P, train_T)
-            self.val_dataset = TensorDataset(val_log_P, val_T)
+            self.train_dataset = TensorDataset(
+                train_log_P, train_T, train_weights
+            )
+            self.val_dataset = TensorDataset(
+                val_log_P, val_T, val_weights
+            )
+
+            # Perform some sanity checks
+            assert 0 < self.train_batch_size <= len(self.train_dataset), \
+                "Invalid train_batch_size!"
+            assert 0 < self.val_batch_size <= len(self.val_dataset), \
+                "Invalid val_batch_size!"
 
         # Load the test data
         if self.test_file_path is not None:
@@ -143,14 +224,34 @@ class DataModule(pl.LightningDataModule):
             # Read data from HDF file
             file_path = expandvars(Path(self.test_file_path)).resolve()
             with h5py.File(file_path, "r") as hdf_file:
+
+                # Select pressure and compute log10
                 test_P = torch.from_numpy(np.array(hdf_file[self.key_P]))
-                test_P = test_P[:self.train_size].float()
+                test_P = test_P.float()
                 test_log_P = torch.log10(test_P)
+
+                # Select temperature
                 test_T = torch.from_numpy(np.array(hdf_file[self.key_T]))
-                test_T = test_T[:self.train_size].float()
+                test_T = test_T.float()
+
+                # Select (raw) weights
+                if self.key_weights is not None:
+                    test_raw_weights = torch.from_numpy(
+                        np.array(hdf_file[self.key_weights])
+                    )
+                    test_raw_weights = test_raw_weights.float()
+                else:
+                    test_raw_weights = torch.empty_like(test_T)
+
+            # Create weights for the test data
+            test_weights = self.get_weights(test_raw_weights)
 
             # Create data sets for testing
-            self.test_dataset = TensorDataset(test_log_P, test_T)
+            self.test_dataset = TensorDataset(test_log_P, test_T, test_weights)
+
+            # Perform some sanity checks
+            assert 0 < self.test_batch_size <= len(self.test_dataset), \
+                "Invalid test_batch_size!"
 
     def compute_normalization(
         self,
@@ -194,6 +295,42 @@ class DataModule(pl.LightningDataModule):
             )
 
         return self.normalization_dict
+
+    def get_weights(self, raw_weights: torch.Tensor) -> torch.Tensor:
+        """
+        Return the weights for the given raw weights.
+
+        Depending on the weighting scheme, the raw weights may be
+        replaced by equal weights, or an arbitrary linear scheme.
+        In any case, the weights are normalized to sum up to one.
+        """
+
+        # Option 1 (default): All data points have the same weight
+        if self.weighting_scheme == 'equal':
+            weights = torch.ones_like(raw_weights, device=raw_weights.device)
+
+        # Option 2: Arbitrary linear weighting
+        elif self.weighting_scheme == 'linear':
+            weights = torch.tile(
+                input=torch.linspace(
+                    0.001, 1.0, raw_weights.shape[1], device=raw_weights.device
+                ),
+                dims=(raw_weights.shape[0], 1),
+            )
+
+        # Option 3: Weighting based on contribution function (i.e., the raw
+        # weights that we loaded from the HDF file)
+        elif self.weighting_scheme == 'contribution_function':
+            weights = raw_weights
+
+        # Invalid weighting scheme
+        else:
+            raise ValueError('Invalid weighting scheme!')
+
+        # Make sure weights are normalized to sum up to 1 for each profile
+        weights = weights / torch.sum(weights, dim=1, keepdim=True)
+
+        return weights
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         """
@@ -252,7 +389,7 @@ class DataModule(pl.LightningDataModule):
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         raise NotImplementedError()
 
-    def get_test_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_test_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Auxiliary function to get the test data as numpy arrays.
         """
@@ -260,6 +397,6 @@ class DataModule(pl.LightningDataModule):
         if self.test_dataset is None:
             raise RuntimeError("No test_dataset defined!")
 
-        log_P, T_true = self.test_dataset.tensors
+        log_P, T_true, weights = self.test_dataset.tensors
 
-        return log_P.numpy(), T_true.numpy()
+        return log_P.numpy(), T_true.numpy(), weights.numpy()

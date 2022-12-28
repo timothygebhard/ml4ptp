@@ -14,7 +14,6 @@ from pytorch_lightning.utilities.seed import seed_everything
 import h5py
 import numpy as np
 import pytest
-import torch
 
 from ml4ptp.data_modules import DataModule
 from ml4ptp.models import Model
@@ -65,6 +64,8 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         train_size=128,
         val_size=64,
         train_batch_size=16,
+        val_batch_size=16,
+        test_batch_size=16,
     )
     datamodule.prepare_data()
 
@@ -116,15 +117,6 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         plotting_config=plotting_config,
     )
 
-    # Test `get_loss_weights_like()`
-    model.use_weighted_loss = True
-    weights = model.get_loss_weights_like(x=torch.ones(32, 17))
-    assert weights.sum() == 1
-
-    model.use_weighted_loss = False
-    weights = model.get_loss_weights_like(x=torch.ones(32, 17))
-    assert weights.sum() == 1
-
     # -------------------------------------------------------------------------
     # Setup Trainer and run tests
     # -------------------------------------------------------------------------
@@ -140,7 +132,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
         trainer.logged_metrics['val/total_loss_epoch'],  # type: ignore
-        120.4569,
+        398.9928,
     )
     assert np.isclose(
         trainer.logged_metrics['train/total_loss_epoch'],  # type: ignore
@@ -150,5 +142,5 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
         trainer.logged_metrics['test/total_loss_epoch'],  # type: ignore
-        70.9066,
+        18.5563,
     )
