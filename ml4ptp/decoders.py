@@ -172,18 +172,24 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         # Dummy `z` tensor to initialize the layers
         dummy_z = torch.empty((1, latent_size))
 
+        # Output size of the concatenation layer
+        out_size = latent_size if cat_layer_size == 0 else cat_layer_size
+
         # Start with the first layer (special case for SIRENs)
         layers = nn.ModuleList(
             [
                 ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
-                nn.Linear(latent_size + 1, layer_size - latent_size),
+                nn.Linear(
+                    in_features=out_size + 1,  # + 1 for log_P
+                    out_features=layer_size,
+                ),
                 (
                     Sine(w0=3.0)
                     if activation == 'siren'
                     else get_activation(self.activation)
                 ),
                 (
-                    nn.BatchNorm1d(layer_size - latent_size)
+                    nn.BatchNorm1d(layer_size)
                     if batch_norm
                     else Identity()
                 ),
@@ -199,10 +205,13 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         for i in range(n_layers):
             layers += [
                 ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
-                nn.Linear(layer_size, layer_size - latent_size),
+                nn.Linear(
+                    in_features=layer_size + out_size,
+                    out_features=layer_size,
+                ),
                 get_activation(self.activation),
                 (
-                    nn.BatchNorm1d(layer_size - latent_size)
+                    nn.BatchNorm1d(layer_size)
                     if batch_norm
                     else Identity()
                 ),
@@ -216,7 +225,10 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         # Add final layer (no activation function)
         layers += [
             ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
-            nn.Linear(layer_size, 1),
+            nn.Linear(
+                in_features=layer_size + out_size,
+                out_features=1,
+            ),
         ]
 
         # Drop Identity layers (which were only a stand-in for "no batch norm")

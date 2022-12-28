@@ -236,9 +236,9 @@ class ConcatenateWithZ(nn.Module):
         # If `layer_size` is set to 0, we don't need an extra layer
         if self.layer_size > 0:
             self.layers = nn.Sequential(
-                nn.Linear(z.shape[1], 64),
+                nn.Linear(z.shape[1], self.layer_size),
                 nn.LeakyReLU(),
-                nn.Linear(64, z.shape[1]),
+                nn.Linear(self.layer_size, self.layer_size),
             )
 
     def update_z(self, z: torch.Tensor) -> None:
@@ -250,6 +250,19 @@ class ConcatenateWithZ(nn.Module):
         z = self.layers(self.z) if self.layer_size > 0 else self.z
 
         return torch.cat(tensors=(tensor, z), dim=1)
+
+    def __repr__(self) -> str:
+
+        # Shortcut for output dimensionality
+        out_size = self.z.shape[1] if self.layer_size == 0 else self.layer_size
+
+        return (
+            f'ConcatenateWithZ('
+            f'latent_size={self.z.shape[1]}, '
+            f'layer_size={self.layer_size}, '
+            f'out_size={out_size}+in_size'
+            f')'
+        )
 
 
 class Mean(nn.Module):

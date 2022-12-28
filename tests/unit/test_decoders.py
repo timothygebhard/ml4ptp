@@ -103,12 +103,13 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
         activation='leaky_relu',
         batch_norm=False,
     )
+
     z = torch.randn(17, 5)
     log_P = torch.randn(17, 19)
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), -0.27519676089286804)
+    assert np.isclose(T_pred.mean().item(), -0.008537521585822105)
 
     # Case 2: batch_norm = True
     decoder = SkipConnectionsDecoder(
@@ -125,7 +126,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.06192253530025482)
+    assert np.isclose(T_pred.mean().item(), 0.06844943016767502)
 
     # Case 3: SIREN activation
     decoder = SkipConnectionsDecoder(
@@ -142,7 +143,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.3803960978984833)
+    assert np.isclose(T_pred.mean().item(), 0.29369789361953735)
 
 
 def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:

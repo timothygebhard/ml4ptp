@@ -161,6 +161,20 @@ def test__concatenate_with_z() -> None:
     assert x_out.shape == (5, 9)
     assert torch.equal(x_out[:, :7], x_in)
 
+    # Case 4
+    z = torch.randn(5 * 2).reshape(5, 2).float()
+    x_in = torch.randn(5 * 7).reshape(5, 7).float()
+    concatenate_with_z = ConcatenateWithZ(z=z, layer_size=16)
+    x_out = concatenate_with_z(x_in)
+    assert torch.equal(concatenate_with_z.z, z)
+    assert x_out.shape == (5, 7 + 16)
+
+    # Case 5
+    assert (
+        repr(concatenate_with_z) ==
+        'ConcatenateWithZ(latent_size=2, layer_size=16, out_size=16+in_size)'
+    )
+
 
 def test__identity() -> None:
 
