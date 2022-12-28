@@ -195,8 +195,9 @@ def weighted_mse_loss(
         'All inputs must be 2D tensors.'
     assert x_pred.shape == x_true.shape == weights.shape, \
         'All inputs must have the same shape.'
-    assert torch.allclose(weights.sum(dim=1), torch.ones(weights.shape[0])), \
-        'Each row of weights tensor must be normalized to sum to 1.'
+    assert torch.allclose(
+        weights.sum(dim=1), torch.ones(weights.shape[0]).to(weights.device)
+    ), 'Each row of weights tensor must be normalized to sum to 1.'
 
     # Compute the loss
     return torch.sum(weights * (x_true - x_pred) ** 2) / x_pred.shape[0]
