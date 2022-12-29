@@ -6,6 +6,7 @@ Methods for dealing with ONNX models.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -20,13 +21,17 @@ class ONNXEncoder:
 
     def __init__(
         self,
-        path_or_bytes: Union[str, bytes],
+        path_or_bytes: Union[str, Path, bytes],
         n_threads: int = 1,
     ) -> None:
 
         # Define the session options
         sess_options = onnxruntime.SessionOptions()
         sess_options.intra_op_num_threads = n_threads
+
+        # Cast the path to string if necessary
+        if isinstance(path_or_bytes, Path):
+            path_or_bytes = path_or_bytes.as_posix()
 
         # Create a session for the ONNX model
         self.session = onnxruntime.InferenceSession(
@@ -55,13 +60,17 @@ class ONNXDecoder:
 
     def __init__(
         self,
-        path_or_bytes: Union[str, bytes],
+        path_or_bytes: Union[str, Path, bytes],
         n_threads: int = 1,
     ) -> None:
 
         # Define the session options
         sess_options = onnxruntime.SessionOptions()
         sess_options.intra_op_num_threads = n_threads
+
+        # Cast the path to string if necessary
+        if isinstance(path_or_bytes, Path):
+            path_or_bytes = path_or_bytes.as_posix()
 
         # Create a session for the ONNX model
         self.session = onnxruntime.InferenceSession(

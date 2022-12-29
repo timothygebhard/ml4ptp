@@ -180,7 +180,7 @@ def test__export_encoder_with_onnx(
         onnx.checker.check_model(encoder_loaded)
 
         # Load model into a ONNX runtime wrapper (for inference)
-        encoder_loaded = ONNXEncoder(file_path.as_posix())
+        encoder_loaded = ONNXEncoder(path_or_bytes=file_path)
 
         # Case 0 (check that we can also load from a bytes string)
         # Note: It's not clear if we can also check that the two different ways
@@ -237,7 +237,7 @@ def test__export_decoder_with_onnx(
         onnx.checker.check_model(decoder_loaded)
 
         # Load model into a ONNX runtime wrapper (for inference)
-        decoder_loaded = ONNXDecoder(file_path.as_posix())
+        decoder_loaded = ONNXDecoder(path_or_bytes=file_path)
 
         # Case 0 (check that we can also load from a bytes string)
         # Note: It's not clear if we can also check that the two different ways
