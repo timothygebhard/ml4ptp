@@ -265,6 +265,101 @@ class ConcatenateWithZ(nn.Module):
         )
 
 
+class FourierEncoding(torch.nn.Module):
+    """
+    Fourier encoding layer.
+
+    Args:
+        in_features: Number of input features.
+        out_features: Number of output features.
+        kind: How to generate the frequencies. Options are:
+            - 'gaussian': Sample frequencies from a Gaussian with
+                the given `sigma`. All channels are independent.
+            - 'linear': Sample frequencies linearly from `min_freq` to
+                `max_freq`. All channels use the same frequencies.
+            - 'log': Sample frequencies log-spaced from `min_freq` to
+                `max_freq`. All channels use the same frequencies.
+        sigma: Standard deviation of the Gaussian from which the
+            frequencies are sampled. Only used if `kind` is set to
+            'gaussian'.
+        min_freq: Minimum frequency. Only used if `kind` is set to
+            'linear' or 'log'.
+        max_freq: Maximum frequency. Only used if `kind` is set to
+            'linear' or 'log'.
+    """
+
+    def __init__(
+        self,
+        in_features: int = 2,
+        out_features: int = 256,
+        kind: str = 'gaussian',
+        sigma: float = 10.0,
+        min_freq: float = 1.0,
+        max_freq: float = 10.0,
+    ):
+
+        super().__init__()
+
+        # Ensure that `out_features` is even
+        assert out_features % 2 == 0, 'Number of output features must be even.'
+
+        # Store constructor arguments
+        self.in_features = int(in_features)
+        self.out_features = int(out_features)
+        self.kind = kind
+        self.sigma = float(sigma)
+        self.min_freq = float(min_freq)
+        self.max_freq = float(max_freq)
+
+        # Create frequency matrix
+        if kind == 'gaussian':
+            self.frequencies = (
+                sigma * torch.randn(out_features // 2, in_features)
+            )
+        elif kind == 'linear':
+            self.frequencies = torch.linspace(
+                start=min_freq,
+                end=max_freq,
+                steps=out_features // 2,
+            ).tile((in_features, 1)).T
+        elif kind == 'log':
+            self.frequencies = torch.logspace(
+                start=np.log10(min_freq),
+                end=np.log10(max_freq),
+                steps=out_features // 2,
+                base=10.0,
+            ).tile((in_features, 1)).T
+        else:
+            raise ValueError(f'Unknown encoding kind: {kind}.')
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+
+        # Shapes (reminder):
+        #   frequencies: (out_features // 2, in_features)
+        #   x: (batch_size, in_features, grid_size)
+        # The multiplication below broadcasts over the batch dimension.
+        # The result is of shape (batch_size, out_features // 2, grid_size).
+        out = 2 * 3.14159265359 * self.frequencies @ x
+
+        # Concatenate sine and cosine parts along the channel dimension
+        out = torch.cat((torch.cos(out), torch.sin(out)), dim=1)
+
+        return out
+
+    def __repr__(self) -> str:
+
+        return (
+            f'FourierEncoding(\n'
+            f'  in_features={self.in_features}, \n'
+            f'  out_features={self.out_features}, \n'
+            f'  kind="{self.kind}", \n'
+            f'  sigma={self.sigma}, \n'
+            f'  min_freq={self.min_freq}, \n'
+            f'  max_freq={self.max_freq}, \n'
+            f')'
+        )
+
+
 class Mean(nn.Module):
     """
     Wrap the `.mean()` method into a `nn.Module`.
