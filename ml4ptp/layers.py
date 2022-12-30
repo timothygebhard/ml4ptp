@@ -313,17 +313,17 @@ class FourierEncoding(torch.nn.Module):
 
         # Create frequency matrix
         if kind == 'gaussian':
-            self.frequencies = (
+            frequencies = (
                 sigma * torch.randn(out_features // 2, in_features)
             )
         elif kind == 'linear':
-            self.frequencies = torch.linspace(
+            frequencies = torch.linspace(
                 start=min_freq,
                 end=max_freq,
                 steps=out_features // 2,
             ).tile((in_features, 1)).T
         elif kind == 'log':
-            self.frequencies = torch.logspace(
+            frequencies = torch.logspace(
                 start=np.log10(min_freq),
                 end=np.log10(max_freq),
                 steps=out_features // 2,
@@ -331,6 +331,13 @@ class FourierEncoding(torch.nn.Module):
             ).tile((in_features, 1)).T
         else:
             raise ValueError(f'Unknown encoding kind: {kind}.')
+
+        # Register frequencies as a buffer. This makes sure that they are
+        # saved and loaded with the model, and that they are moved to the
+        # correct device when the model is moved. The typehint is needed so
+        # that mypy does not complain in the `__call__()` method.
+        self.frequencies: torch.Tensor
+        self.register_buffer('frequencies', frequencies)
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
 
