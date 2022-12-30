@@ -50,6 +50,7 @@ def compute_mmd(
     # If no sigma is given, compute it from the samples using the median
     # heuristic from Gretton et al. (2012), where sigma is given as one half
     # of the median of the distances between the points in the combined sample.
+    # This should also take care different dimensionalities of the samples?
     if sigma is None:
         distances = torch.pdist(torch.cat([x, y], dim=0))
         sigma = float(distances.median())
