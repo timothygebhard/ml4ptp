@@ -4,6 +4,8 @@ datamodule:
   test_file_path: "$ML4PTP_DATASETS_DIR/goyal-2020/output/test.hdf"
   key_P: "/pt_profiles/pressure"
   key_T: "/pt_profiles/temperature"
+  key_weights: null
+  weighting_scheme: "equal"
   train_size: 10000
   val_size: 1000
   train_batch_size: 256
@@ -34,8 +36,8 @@ model:
 
 # Parameters for the loss
 loss:
-  beta: 1.0
-  weighted_loss: False
+  beta: 0.1
+  n_mmd_loops: 1
 
 # Parameters for the optimizer
 optimizer:
@@ -55,7 +57,7 @@ lr_scheduler:
 
 # Parameters for plotting to TensorBoard
 plotting:
-  enable_plotting: True
+  plot_interval: 20
   pt_profile:
     min_T: 0
     max_T: 4000
