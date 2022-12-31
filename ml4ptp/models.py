@@ -294,7 +294,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         if (
             batch_idx == 0
             and self.logger is not None
-            and self.plotting_config['enable_plotting']
+            and self.plot_interval > 0
             and self.current_epoch % self.plot_interval == 0
         ):
             self.plot_z_to_tensorboard(z=z, label=stage)
