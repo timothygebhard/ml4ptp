@@ -158,7 +158,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # norm of our generated latents is too small or too big) and we need
         # to re-initialize the encoder to prevent the model from collapsing.
         # This is obviously a hack, but it kinda seems to work?
-        while True:
+        while self.current_epoch < 10:
 
             # Compute the norm of the latent codes
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
@@ -177,7 +177,7 @@ class Model(pl.LightningModule, NormalizerMixin):
             z = self.encoder(log_P=log_P, T=T)
 
             # Abort training if we have already failed too many times
-            if self.n_failures > 100:  # pragma: no cover
+            if self.n_failures > 10:  # pragma: no cover
                 raise RuntimeError('Too many initialization failures!')
 
         # Run through decoder to get predicted temperatures
