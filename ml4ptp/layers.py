@@ -141,6 +141,8 @@ def get_cnn_layers(
     kernel_size: int,
     activation: str = 'leaky_relu',
     batch_norm: bool = False,
+    in_channels: int = 2,
+    out_channels: int = 1,
 ) -> nn.Sequential:
     """
     Create a 1D convolutional neural network with 2 input and 1 output
@@ -154,6 +156,10 @@ def get_cnn_layers(
         kernel_size: Size of the 1D convolutional kernels.
         activation: Which kind of activation function to use.
         batch_norm: Whether to use batch normalization.
+        in_channels: Number of input channels. This should be 2 for
+            most cases, except, for example, if we use Fourier features
+            from a `FourierEncoding` layer.
+        out_channels: Number of output channels. (Usually 1.)
 
     Returns:
         A `nn.Sequential` container with the desired CNN.
@@ -162,7 +168,7 @@ def get_cnn_layers(
     # Define layers: Start with input layer
     layers = [
         nn.Conv1d(
-            in_channels=2,
+            in_channels=in_channels,
             out_channels=n_channels,
             kernel_size=kernel_size,
         ),
@@ -194,7 +200,7 @@ def get_cnn_layers(
     layers += [
         nn.Conv1d(
             in_channels=n_channels,
-            out_channels=1,
+            out_channels=out_channels,
             kernel_size=kernel_size,
         ),
         Squeeze(),
