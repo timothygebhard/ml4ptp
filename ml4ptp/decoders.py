@@ -70,7 +70,6 @@ class Decoder(nn.Module, NormalizerMixin):
             layer_size=layer_size,
             output_size=1,
             activation=activation,
-            final_tanh=False,
             batch_norm=batch_norm,
         )
 
@@ -369,7 +368,6 @@ class HypernetDecoder(nn.Module, NormalizerMixin):
             layer_size=hypernet_layer_size,
             output_size=output_size,
             activation=hypernet_activation,
-            final_tanh=False,
             batch_norm=batch_norm,
         )
 

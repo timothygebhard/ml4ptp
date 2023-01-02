@@ -55,7 +55,6 @@ class MLPEncoder(nn.Module, NormalizerMixin):
             n_layers=self.n_layers,
             output_size=self.latent_size,
             activation=activation,
-            final_tanh=True,
             batch_norm=batch_norm,
         )
 
@@ -128,7 +127,6 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             n_layers=2,
             output_size=1,
             activation=self.activation,
-            final_tanh=False,
             batch_norm=self.batch_norm,
         )
         self.layers_2: torch.nn.Sequential = get_mlp_layers(
@@ -137,7 +135,6 @@ class ModifiedMLPEncoder(nn.Module, NormalizerMixin):
             n_layers=self.n_layers,
             output_size=self.latent_size,
             activation=self.activation,
-            final_tanh=True,
             batch_norm=self.batch_norm,
         )
 
@@ -243,7 +240,6 @@ class ConvolutionalEncoder(nn.Module, NormalizerMixin):
             n_layers=self.mlp_n_layers,
             output_size=self.latent_size,
             activation=self.activation,
-            final_tanh=True,
             batch_norm=batch_norm,
         )
 
@@ -316,7 +312,6 @@ class CNPEncoder(nn.Module, NormalizerMixin):
             n_layers=self.n_layers,
             output_size=self.latent_size,
             activation=self.activation,
-            final_tanh=True,
             batch_norm=batch_norm,
         )
 

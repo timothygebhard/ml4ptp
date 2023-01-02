@@ -50,7 +50,6 @@ def get_mlp_layers(
     layer_size: int,
     output_size: int = 1,
     activation: str = 'leaky_relu',
-    final_tanh: bool = True,
     batch_norm: bool = False,
     dropout: float = 0.0,
 ) -> nn.Sequential:
@@ -67,8 +66,6 @@ def get_mlp_layers(
             If "siren" is used, the MLP will use sine as the activation
             function and apply the special initialization scheme from
             Sitzmann et al. (2020).
-        final_tanh: If True, add a scaled Tanh() activation after the
-            last layer to limit outputs to [-5, 5]. (For encoders.)
         batch_norm: Whether to use batch normalization.
         dropout: Dropout probability. If 0, no dropout is used.
 
@@ -115,12 +112,6 @@ def get_mlp_layers(
 
     # Add output layer (no activation, no batch norm, no dropout)
     layers += [nn.Linear(layer_size, output_size)]
-
-    # Add final tanh activation, if desired
-    # This function is approximately linear from -1.5 to 1.5, but makes sure
-    # all values are inside [-3, 3], which is want we want for sampling z.
-    if final_tanh:
-        layers += [ScaledTanh(3.0, 3.0)]
 
     # Drop any `Identity` layers
     layers = [_ for _ in layers if not isinstance(_, Identity)]
