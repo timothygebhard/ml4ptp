@@ -12,6 +12,7 @@ from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
 )
+from torch.nn.functional import softplus
 
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
@@ -155,14 +156,16 @@ class Model(pl.LightningModule, NormalizerMixin):
         z = self.encoder(log_P=log_P, T=T)
 
         # Check if we got unlucky with the weight initialization (i.e., the
-        # norm of our generated latents is too small or too big) and we need
-        # to re-initialize the encoder to prevent the model from collapsing.
+        # norm of our latents is too small) and we need to re-initialize the
+        # encoder to prevent the model from collapsing. We only do this at
+        # the beginning of training, though.
         # This is obviously a hack, but it kinda seems to work?
         while self.current_epoch < 10:
 
-            # Compute the norm of the latent codes
+            # Check the norm of the latent codes
+            # The threshold here is somewhat arbitrary, but it seems to work?
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
-            if 0.1 < mean_norm < 2.5:
+            if 0.05 < mean_norm:
                 break  # pragma: no cover
 
             # If we got unlucky, re-initialize the encoder weights
@@ -191,9 +194,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         T_true: torch.Tensor,
         T_pred: torch.Tensor,
         weights: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, ...]:
         """
-        Compute the loss.
+        Compute the (total) loss.
         """
 
         # Compute the reconstruction loss on the *normalized* temperatures,
@@ -219,14 +222,27 @@ class Model(pl.LightningModule, NormalizerMixin):
             sample = torch.randn(*z.shape, device=self.device)  # type: ignore
             mmd_loss = mmd_loss + compute_mmd(sample, z) / self.n_mmd_loops
 
+        # Compute loss on the norm of the latent codes.
+        # Essentially, we want to make sure that no latent codes end up too
+        # far from the center (making it hard to define a prior over them).
+        # In theory, the MMD should already take care of this, but in practice
+        # it seems like adding this extra "soft barrier function" term to our
+        # loss is helpful to catch cases that the MMD lets slip through.
+        # One alternative was to place a (scaled) Tanh() layer at the end of
+        # the encoder, but in practice, this makes it harder to train the model
+        # because it sometimes gets stuck in a zero-gradient region.
+        norms = torch.linalg.norm(z, dim=1)
+        norm_loss = 10 * softplus(norms - 3.5, beta=100, threshold=10).mean()
+
         # Compute the total loss
-        total_loss = rec_loss__normalized + self.beta * mmd_loss
+        total_loss = rec_loss__normalized + self.beta * mmd_loss + norm_loss
 
         return (
             total_loss,
             rec_loss__normalized,
             rec_loss__unnormalized,
             mmd_loss,
+            norm_loss,
         )
 
     def training_step(
@@ -273,6 +289,7 @@ class Model(pl.LightningModule, NormalizerMixin):
             rec_loss__normalized,
             rec_loss__unnormalized,
             latent_loss,
+            norm_loss,
         ) = self.loss(z=z, T_true=T_true, T_pred=T_pred, weights=weights)
 
         # Log the loss terms to TensorBoard
@@ -282,6 +299,7 @@ class Model(pl.LightningModule, NormalizerMixin):
                 f"{stage}/rec_loss__normalized": rec_loss__normalized,
                 f"{stage}/rec_loss__unnormalized": rec_loss__unnormalized,
                 f"{stage}/latent_loss": latent_loss,
+                f"{stage}/norm_loss": norm_loss,
             },
             on_step=True,
             on_epoch=True,
