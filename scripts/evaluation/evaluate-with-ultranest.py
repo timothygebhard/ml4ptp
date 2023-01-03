@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     # Prepare inputs for p_map
-    log_P, T_true = datamodule.get_test_data()
+    log_P, T_true, _ = datamodule.get_test_data()
     idx = np.arange(len(log_P))
     log_P = log_P[split_idx::n_splits]
     T_true = T_true[split_idx::n_splits]
