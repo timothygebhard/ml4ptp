@@ -201,8 +201,8 @@ if __name__ == "__main__":
     # the DataModule should use the same random seed as the Trainer. However,
     # there may be cases where we want multiple runs with the exact same data,
     # but different weight initializations.
-    if 'random_seed' not in config['datamodule'].keys():
-        config['datamodule']['random_seed'] = random_seed
+    if 'random_state' not in config['datamodule'].keys():
+        config['datamodule']['random_state'] = random_seed
 
     # Instantiate the DataModule
     print('Instantiating DataModule...', end=' ', flush=True)
