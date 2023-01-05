@@ -163,6 +163,8 @@ if __name__ == "__main__":
     rich_progress_bar_callback = RichProgressBar(leave=True)
     callbacks.append(rich_progress_bar_callback)
 
+    print('Done!', flush=True)
+
     # -------------------------------------------------------------------------
     # Setup the Trainer
     # -------------------------------------------------------------------------
@@ -208,7 +210,11 @@ if __name__ == "__main__":
     print('Instantiating DataModule...', end=' ', flush=True)
     datamodule = DataModule(**config['datamodule'])
     datamodule.prepare_data()
-    print('Done!', flush=True)
+    print('Done!\n', flush=True)
+
+    print('DataModule summary:', flush=True)
+    print(datamodule, flush=True)
+    print()
 
     # -------------------------------------------------------------------------
     # Set up the model
