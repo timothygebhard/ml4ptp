@@ -13,6 +13,8 @@ from pytorch_lightning.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
 )
+from rich.console import Console
+from rich.table import Table
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -390,3 +392,73 @@ class DataModule(pl.LightningDataModule):
         log_P, T_true, weights = self.test_dataset.tensors
 
         return log_P.numpy(), T_true.numpy(), weights.numpy()
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation of the DataModule.
+        """
+
+        # Collect attributes of training dataset
+        if self.train_dataset:
+            n_train_samples = len(self.train_dataset)
+            n_train_batches = len(self.train_dataloader())
+        else:
+            n_train_samples = 0
+            n_train_batches = 0
+
+        # Collect attributes of validation dataset
+        if self.val_dataset:
+            n_val_samples = len(self.val_dataset)
+            n_val_batches = len(self.val_dataloader())
+        else:
+            n_val_samples = 0
+            n_val_batches = 0
+
+        # Collect attributes of test dataset
+        if self.test_dataset:
+            n_test_samples = len(self.test_dataset)
+            n_test_batches = len(self.test_dataloader())
+        else:
+            n_test_samples = 0
+            n_test_batches = 0
+
+        # Create new table object
+        table = Table()
+        table.add_column('')
+        table.add_column('training', justify='right')
+        table.add_column('validation', justify='right')
+        table.add_column('test', justify='right')
+
+        # Add rows
+        table.add_row(
+            "size",
+            f'{self.train_size:,}',
+            f'{self.val_size:,}',
+            f'---',
+        )
+        table.add_row(
+            "batch_size",
+            f'{self.train_batch_size:,}',
+            f'{self.val_batch_size:,}',
+            f'{self.test_batch_size:,}',
+        )
+        table.add_row(
+            "n_samples",
+            f'{n_train_samples:,}',
+            f'{n_val_samples:,}',
+            f'{n_test_samples:,}',
+        )
+        table.add_row(
+            "n_batches",
+            f'{n_train_batches:,}',
+            f'{n_val_batches:,}',
+            f'{n_test_batches:,}',
+        )
+
+        # Create a silent console to render the table
+        console = Console(width=80, record=True)
+        with console.capture() as capture:
+            console.print(table)
+
+        # Return the rendered table
+        return capture.get()

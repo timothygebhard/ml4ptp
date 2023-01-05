@@ -259,3 +259,10 @@ def test__data_module(hdf_file: Path) -> None:
     assert np.isclose(normalization['log_P_factor'], 2.1602468490600586)
     assert np.isclose(normalization['T_offset'], 4.0)
     assert np.isclose(normalization['T_factor'], 2.1602468490600586)
+
+    # -------------------------------------------------------------------------
+    # Case 8: __repr__()
+    # -------------------------------------------------------------------------
+
+    table = dm.__repr__()
+    assert len(table.split('\n')) == 9
