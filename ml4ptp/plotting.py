@@ -84,10 +84,32 @@ def set_fontsize(ax: plt.Axes, fontsize: float) -> None:
         item.set_fontsize(fontsize)
 
 
+def disable_ticks(ax: plt.Axes) -> None:
+    """
+    Disable the ticks and labels on the given matplotlib ``ax``.
+
+    This is similar to calling ``ax.axis('off')``, except that the frame
+    around the plot is preserved.
+
+    Args:
+        ax: A matplotlib axis.
+    """
+
+    ax.tick_params(
+        axis='both',
+        which='both',
+        top=False,
+        bottom=False,
+        left=False,
+        right=False,
+        labelbottom=False,
+        labelleft=False,
+    )
+
+
 # -----------------------------------------------------------------------------
 # TENSORBOARD
 # -----------------------------------------------------------------------------
-
 
 def plot_z_to_tensorboard(z: torch.Tensor) -> plt.Figure:
 
