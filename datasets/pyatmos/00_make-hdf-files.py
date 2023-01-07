@@ -133,6 +133,16 @@ if __name__ == "__main__":
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
+    # Drop out-of-distribution simulations
+    # -------------------------------------------------------------------------
+
+    # We now drop a single row containing a simulation with a PT profile that
+    # is completely out-of-distribution and causes problems during training
+    print('Dropping out-of-distribution data...', end=' ', flush=True)
+    summary_df = summary_df[summary_df['hash'] != 'a1313b02c922a93fac37196a1']
+    print('Done!', flush=True)
+
+    # -------------------------------------------------------------------------
     # Collect simulation data (in parallel) and combine data frames
     # -------------------------------------------------------------------------
 
@@ -158,9 +168,10 @@ if __name__ == "__main__":
     merged_df = pd.merge(summary_df, results_df, on="hash")
     print('Done!\n', flush=True)
 
-    # Sanity check: There should be a total of 124,314 atmospheres
-    if len(merged_df) != 124_314:
-        warn(f"Expexted 124,314 atmospheres, but found {len(merged_df):,}!")
+    # Sanity check: There should be a total of 124,314 - 1 atmospheres
+    # (The -1 is because we dropped one out-of-distribution atmosphere.)
+    if len(merged_df) != 124_314 - 1:
+        warn(f"Expexted 124,313 atmospheres, but found {len(merged_df):,}!")
 
     # -------------------------------------------------------------------------
     # Create indices for training and test
