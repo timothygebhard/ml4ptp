@@ -139,7 +139,9 @@ if __name__ == "__main__":
     # We now drop a single row containing a simulation with a PT profile that
     # is completely out-of-distribution and causes problems during training
     print('Dropping out-of-distribution data...', end=' ', flush=True)
-    summary_df = summary_df[summary_df['hash'] != 'a1313b02c922a93fac37196a1']
+    summary_df = summary_df[
+        summary_df['hash'] != 'a1313b02c922a93fac37196a112fe3f8'
+    ]
     print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
@@ -209,7 +211,7 @@ if __name__ == "__main__":
             for key in merged_df.keys():
 
                 # Determine the data type
-                dtype = 'S25' if key == 'hash' else float
+                dtype = 'S32' if key == 'hash' else float
 
                 # Select the `key` column and the `idx` rows
                 # Using `row_stack()` is necessary to ensure that all data
