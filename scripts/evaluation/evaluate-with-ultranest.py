@@ -6,15 +6,13 @@ Evaluate model on test set using `ultranest`.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
-from functools import partial
+from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import List
 
 import argparse
 import socket
 import time
-
-from p_tqdm import p_umap
 
 import h5py
 import numpy as np
@@ -23,9 +21,8 @@ import pandas as pd
 
 from ml4ptp.config import load_experiment_config
 from ml4ptp.data_modules import DataModule
-from ml4ptp.evaluation import find_optimal_z_with_ultranest
+from ml4ptp.evaluation import find_optimal_z_with_ultranest, EvaluationResult
 from ml4ptp.paths import expandvars
-from ml4ptp.utils import get_number_of_available_cores
 
 
 # -----------------------------------------------------------------------------
@@ -43,13 +40,16 @@ def get_cli_args() -> argparse.Namespace:
         help='Path to the experiment directory with the config.yaml',
     )
     parser.add_argument(
-        '--split-idx',
-        default=0,
+        '--limit',
+        default=4.0,
+        type=float,
+        help='Limit parameter for the prior. Default: 4.0.',
+    )
+    parser.add_argument(
+        '--n-live-points',
+        default=400,
         type=int,
-        help=(
-            'When running this script in parallel: '
-            'Index of the split to evaluate; must be in [0, n_splits).'
-        ),
+        help='Number of live points to use for the nested sampling.',
     )
     parser.add_argument(
         '--n-splits',
@@ -58,9 +58,15 @@ def get_cli_args() -> argparse.Namespace:
         help='When running this script in parallel: How many splits to use.',
     )
     parser.add_argument(
+        '--prior',
+        default='gaussian',
+        choices=['uniform', 'gaussian'],
+        help='Prior to use for the latent variables. Default: "gaussian".',
+    )
+    parser.add_argument(
         '--run-dir',
         default=(
-            '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_1'
+            '$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_0'
         ),
         type=str,
         required=True,
@@ -73,7 +79,22 @@ def get_cli_args() -> argparse.Namespace:
         '--random-seed',
         type=int,
         default=42,
-        help='Random seed for PyTorch, numpy, ....',
+        help='Random seed for PyTorch, numpy, ... . Default: 42.',
+    )
+    parser.add_argument(
+        '--split-idx',
+        default=0,
+        type=int,
+        help=(
+            'When running this script in parallel: '
+            'Index of the split to evaluate; must be in [0, n_splits).'
+        ),
+    )
+    parser.add_argument(
+        '--timeout',
+        type=int,
+        default=600,
+        help='Timeout in seconds for the evaluation. Default: 600.',
     )
     args = parser.parse_args()
 
@@ -102,28 +123,32 @@ if __name__ == "__main__":
 
     # Get CLI arguments
     args = get_cli_args()
+    print('Received the following arguments:\n', flush=True)
+    for key, value in vars(args).items():
+        print(f'  {key + ":":<16} {value}', flush=True)
+    print('\n', flush=True)
 
     # Load experiment configuration from YAML
-    print('Loading experiment configuration...', end=' ', flush=True)
+    print('Loading config file...', end=' ', flush=True)
     experiment_dir = expandvars(Path(args.experiment_dir)).resolve()
     config = load_experiment_config(experiment_dir / 'config.yaml')
-    print('Done!\n', flush=True)
+    print('Done!', flush=True)
 
     # Define shortcuts
     split_idx = args.split_idx
     n_splits = args.n_splits
-    random_seed = args.random_seed
+    n_live_points = args.n_live_points
     run_dir = expandvars(Path(args.run_dir)).resolve()
 
     # Set random seed
-    np.random.seed(random_seed)
+    np.random.seed(args.random_seed)
 
     # -------------------------------------------------------------------------
     # Prepare the dataset and load the trained encoder and decoder models
     # -------------------------------------------------------------------------
 
     # Instantiate the DataModule
-    print('Instantiating DataModule...', end=' ', flush=True)
+    print('Creating DataModule...', end=' ', flush=True)
     datamodule = DataModule(**config['datamodule'])
     datamodule.prepare_data()
     print('Done!', flush=True)
@@ -138,7 +163,7 @@ if __name__ == "__main__":
     print('Loading trained decoder...', end=' ', flush=True)
     file_path = run_dir / 'decoder.onnx'
     decoder_bytes = onnx.load(file_path.as_posix()).SerializeToString()
-    print('Done!\n', flush=True)
+    print('Done!\n\n', flush=True)
 
     # -------------------------------------------------------------------------
     # Run fitting
@@ -151,35 +176,40 @@ if __name__ == "__main__":
     T_true = T_true[split_idx::n_splits]
     idx = idx[split_idx::n_splits]
 
-    # Get number of cores to use
-    n_jobs = get_number_of_available_cores()
-    print(f'Number of available cores: {n_jobs}\n', flush=True)
-    print('Fitting:', flush=True)
+    # Run fitting
+    # We do this sequentially, because combining multiprocessing with limiting
+    # the runtime of nested sampling is just asking for trouble ...
+    print('Fitting profiles:\n', flush=True)
+    results: List[EvaluationResult] = []
+    for i, (log_P_i, T_true_i, idx_i) in enumerate(zip(log_P, T_true, idx)):
 
-    # Run fitting (in parallel)
-    # We use umap here, because it should (theoretically) be faster than map,
-    # and because we can sort by the `idx` of the input data afterwards.
-    results: List[Dict[str, Union[int, float, np.ndarray]]] = p_umap(
-        partial(
-            find_optimal_z_with_ultranest,
+        print(f'  Profile {i + 1:>3d}/{len(log_P)} ...', end=' ', flush=True)
+        result = find_optimal_z_with_ultranest(
+            log_P=log_P_i,
+            T_true=T_true_i,
+            idx=idx_i,
             encoder_bytes=encoder_bytes,
             decoder_bytes=decoder_bytes,
-            random_seed=random_seed,
-            n_live_points=400,
+            random_seed=args.random_seed,
+            n_live_points=args.n_live_points,
             n_max_calls=500_000,
-        ),
-        log_P,
-        T_true,
-        idx,
-        num_cpus=n_jobs,
-        ncols=80,  # for tqdm
-    )
+            timeout=args.timeout,
+            prior=args.prior,
+            limit=args.limit,
+        )
+        print(
+            f'Done! (runtime = {result.runtime:.1f} seconds, '
+            f'success = {bool(result.success)}, '
+            f'mre = {result.mre_refined:.3f})'
+            ,
+            flush=True
+        )
 
     # Sort results by idx
-    results = sorted(results, key=lambda x: x['idx'])  # type: ignore
+    results = sorted(results, key=lambda x: x.idx)
 
-    # Convert results (i.e., list of dicts) to a dataframe for easier handling
-    results_df = pd.DataFrame(results)
+    # Convert results to a dataframe for easier handling
+    results_df = pd.DataFrame([asdict(_) for _ in results])
 
     # -------------------------------------------------------------------------
     # Save the (partial) results to an HDF file
@@ -192,24 +222,10 @@ if __name__ == "__main__":
     file_name = f'results_on_test_set{suffix}.hdf'
     file_path = run_dir / file_name
 
-    # Define keys to save
-    keys = [
-        'log_P',
-        'T_true',
-        'z_initial',
-        'z_refined',
-        'T_pred_initial',
-        'T_pred_refined',
-        'mre_initial',
-        'mre_refined',
-        'mse_initial',
-        'mse_refined',
-        'ncall',
-        'niter',
-        'success',
-    ]
-    if n_splits > 1:
-        keys += ['idx']
+    # Define keys to save: if we only save a single file, we can drop the idx
+    keys = sorted(list(results_df.keys()))
+    if n_splits == 1:
+        keys.remove('idx')
 
     # Save results to HDF file
     with h5py.File(file_path, 'w') as hdf_file:
