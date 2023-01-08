@@ -114,11 +114,13 @@ def test__find_optimal_z_with_ultranest(
         random_seed=0,
         n_live_points=100,
         n_max_calls=1000,
+        prior='uniform',
+        limit=5.0,
     )
 
-    assert result['success']
-    assert np.allclose(result['z_initial'], 2.5 * np.ones((1, 1)))
-    assert np.allclose(result['z_refined'], 3.14 * np.ones((1, 1)), atol=1e-2)
-    assert np.allclose(result['T_pred_refined'], T_true, atol=1e-2)
-    assert np.isclose(result['mse_initial'], 0.41163772809999977)
-    assert np.isclose(result['mse_refined'], 9.92954956941911e-07)
+    assert result.success
+    assert np.allclose(result.z_initial, 2.5 * np.ones((1, 1)))
+    assert np.allclose(result.z_refined, 3.14 * np.ones((1, 1)), atol=1e-2)
+    assert np.allclose(result.T_pred_refined, T_true, atol=1e-2)
+    assert np.isclose(result.mse_initial, 0.41163772809999977)
+    assert np.isclose(result.mse_refined, 9.92954956941911e-07)
