@@ -434,7 +434,7 @@ class DataModule(pl.LightningDataModule):
             "size",
             f'{self.train_size:,}',
             f'{self.val_size:,}',
-            f'---',
+            '---',
         )
         table.add_row(
             "batch_size",
