@@ -98,27 +98,12 @@ if __name__ == "__main__":
 
     print('Reading in partial HDF files...', end=' ', flush=True)
 
-    data_as_lists: Dict[str, List[np.ndarray]] = dict(
-        idx=[],
-        log_P=[],
-        T_true=[],
-        z_initial=[],
-        z_refined=[],
-        T_pred_initial=[],
-        T_pred_refined=[],
-        mre_initial=[],
-        mre_refined=[],
-        mse_initial=[],
-        mse_refined=[],
-        niter=[],
-        ncall=[],
-        success=[],
-    )
+    data_as_lists: Dict[str, List[np.ndarray]] = dict()
 
     # Loop over partial HDF files and read them in
     for file_name in partial_hdf_files:
         with h5py.File(run_dir / file_name, 'r') as hdf_file:
-            for key in data_as_lists.keys():
+            for key in hdf_file.keys():
                 data_as_lists[key].append(np.array(hdf_file[key]))
 
     print('Done!', flush=True)
