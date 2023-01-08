@@ -197,6 +197,7 @@ if __name__ == "__main__":
             prior=args.prior,
             limit=args.limit,
         )
+        results.append(result)
         print(
             f'Done! (runtime = {result.runtime:.1f} seconds, '
             f'success = {bool(result.success)}, '
