@@ -217,10 +217,9 @@ class ConcatenateWithZ(nn.Module):
     Args:
         z: The latent code `z` to concatenate with the input.
         layer_size: The size of the extra layer through which `z` is
-            sent before concatenation. (This seems to be useful for
-            SIREN-style `SkipConnectionDecoder`s, which otherwise often
-            struggle to learn a good latent space.) If this is set to
-            0, `z` is concatenated directly.
+            sent before concatenation. This layer has no bias, so it
+            is really only a matrix multiplication. If `layer_size` is
+            set to 0, no layer is used and `z` is concatenated directly.
     """
 
     def __init__(self, z: torch.Tensor, layer_size: int = 64) -> None:
@@ -232,11 +231,7 @@ class ConcatenateWithZ(nn.Module):
 
         # If `layer_size` is set to 0, we don't need an extra layer
         if self.layer_size > 0:
-            self.layers = nn.Sequential(
-                nn.Linear(z.shape[1], self.layer_size),
-                nn.LeakyReLU(),
-                nn.Linear(self.layer_size, self.layer_size),
-            )
+            self.layer = nn.Linear(z.shape[1], self.layer_size, bias=False)
 
     def update_z(self, z: torch.Tensor) -> None:
         self.z = z
@@ -244,7 +239,7 @@ class ConcatenateWithZ(nn.Module):
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
 
         # If we have a layer, use it to transform z
-        z = self.layers(self.z) if self.layer_size > 0 else self.z
+        z = self.layer(self.z) if self.layer_size > 0 else self.z
 
         return torch.cat(tensors=(tensor, z), dim=1)
 
