@@ -62,7 +62,10 @@ def get_cli_args() -> argparse.Namespace:
         '--evaluation-requirements',
         type=str,
         nargs='+',
-        default=[''],
+        default=[
+            'UtsnameNodename =!= "g095"',
+            'UtsnameNodename =!= "g124"',
+        ],
         help=(
             'One more multiple strings with requirements for machines on '
             'which to run the evaluation (e.g., exclude black hole machines).'
