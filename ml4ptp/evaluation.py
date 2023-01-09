@@ -130,6 +130,10 @@ def find_optimal_z_with_ultranest(
     # Define prior and likelihood
     # -------------------------------------------------------------------------
 
+    # Make sure we got a valid prior type before we define the transform
+    if prior not in ('uniform', 'gaussian'):
+        raise ValueError(f'Invalid prior "{prior}"!')
+
     def prior_transform(cube: np.ndarray) -> np.ndarray:
         """
         Transformation of the unit hypercube to the prior.
@@ -145,9 +149,6 @@ def find_optimal_z_with_ultranest(
             elif prior == 'gaussian':
                 factor = erf(np.sqrt(2) * limit / 2)
                 z[:, i] = np.sqrt(2) * erfinv((2 * z[:, i] - 1) * factor)
-
-            else:
-                raise ValueError(f'Invalid prior "{prior}"!')
 
         return z
 

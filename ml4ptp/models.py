@@ -160,13 +160,13 @@ class Model(pl.LightningModule, NormalizerMixin):
         # encoder to prevent the model from collapsing. We only do this at
         # the beginning of training, though.
         # This is obviously a hack, but it kinda seems to work?
-        while self.current_epoch < 10:
+        while self.current_epoch < 10:  # pragma: no cover
 
             # Check the norm of the latent codes
             # The threshold here is somewhat arbitrary, but it seems to work?
             mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
             if 0.05 < mean_norm:
-                break  # pragma: no cover
+                break
 
             # If we got unlucky, re-initialize the encoder weights
             self.n_failures += 1

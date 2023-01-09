@@ -101,7 +101,10 @@ def test__find_optimal_z_with_ultranest(
     assert T.shape == (3, 7)
     assert np.allclose(T, np.ones((3, 7)))
 
-    # Case 1: 1D latent variable
+    # -------------------------------------------------------------------------
+    # Case 1: 1D latent variable, uniform prior
+    # -------------------------------------------------------------------------
+
     log_P = np.ones((1, 7))
     T_true = log_P + 3.14159 * np.ones((1, 7))
 
@@ -124,3 +127,46 @@ def test__find_optimal_z_with_ultranest(
     assert np.allclose(result.T_pred_refined, T_true, atol=1e-2)
     assert np.isclose(result.mse_initial, 0.41163772809999977)
     assert np.isclose(result.mse_refined, 9.92954956941911e-07)
+
+    # -------------------------------------------------------------------------
+    # Case 2: 1D latent variable, truncated Gaussian prior
+    # -------------------------------------------------------------------------
+
+    log_P = np.ones((1, 7))
+    T_true = log_P + 1.234 * np.ones((1, 7))
+
+    result = find_optimal_z_with_ultranest(
+        log_P=log_P,
+        T_true=T_true,
+        idx=0,
+        encoder_bytes=dummy_encoder_bytes,
+        decoder_bytes=dummy_decoder_bytes,
+        random_seed=0,
+        n_live_points=100,
+        n_max_calls=1000,
+        prior='gaussian',
+        limit=4.0,
+    )
+
+    assert result.success
+    assert np.allclose(result.z_initial, 2.5 * np.ones((1, 1)))
+    assert np.allclose(result.z_refined, 1.234 * np.ones((1, 1)), atol=1e-2)
+    assert np.allclose(result.T_pred_refined, T_true, atol=1e-2)
+    assert np.isclose(result.mse_initial, 1.6027559999999998)
+    assert np.isclose(result.mse_refined, 2.319126553229717e-07)
+
+    # -------------------------------------------------------------------------
+    # Case 3: illegal prior
+    # -------------------------------------------------------------------------
+
+    with pytest.raises(ValueError) as value_error:
+        find_optimal_z_with_ultranest(
+            log_P=log_P,
+            T_true=T_true,
+            idx=0,
+            encoder_bytes=dummy_encoder_bytes,
+            decoder_bytes=dummy_decoder_bytes,
+            prior='illegal',
+            random_seed=0,
+        )
+    assert 'Invalid prior' in str(value_error)

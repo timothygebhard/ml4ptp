@@ -18,6 +18,7 @@ from ml4ptp.plotting import (
     plot_profile_to_tensorboard,
     plot_z_to_tensorboard,
     set_fontsize,
+    disable_ticks,
 )
 
 
@@ -84,3 +85,10 @@ def test__plot_z_to_tensorboard() -> None:
     figure = plot_z_to_tensorboard(z=torch.randn(17, 3))
     assert isinstance(figure, plt.Figure)
     plt.close(figure)
+
+
+def test__disable_ticks() -> None:
+
+    fig, ax = plt.subplots()
+    disable_ticks(ax)
+    plt.close(fig)

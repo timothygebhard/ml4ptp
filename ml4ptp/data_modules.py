@@ -402,7 +402,7 @@ class DataModule(pl.LightningDataModule):
         if self.train_dataset:
             n_train_samples = len(self.train_dataset)
             n_train_batches = len(self.train_dataloader())
-        else:
+        else:  # pragma: no cover
             n_train_samples = 0
             n_train_batches = 0
 
@@ -410,7 +410,7 @@ class DataModule(pl.LightningDataModule):
         if self.val_dataset:
             n_val_samples = len(self.val_dataset)
             n_val_batches = len(self.val_dataloader())
-        else:
+        else:  # pragma: no cover
             n_val_samples = 0
             n_val_batches = 0
 
@@ -418,7 +418,7 @@ class DataModule(pl.LightningDataModule):
         if self.test_dataset:
             n_test_samples = len(self.test_dataset)
             n_test_batches = len(self.test_dataloader())
-        else:
+        else:  # pragma: no cover
             n_test_samples = 0
             n_test_batches = 0
 
