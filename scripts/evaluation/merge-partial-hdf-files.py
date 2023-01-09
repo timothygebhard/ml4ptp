@@ -6,6 +6,7 @@ Merge partial HDF files from running evaluation in parallel.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
@@ -98,7 +99,7 @@ if __name__ == "__main__":
 
     print('Reading in partial HDF files...', end=' ', flush=True)
 
-    data_as_lists: Dict[str, List[np.ndarray]] = dict()
+    data_as_lists: Dict[str, List[np.ndarray]] = defaultdict(list)
 
     # Loop over partial HDF files and read them in
     for file_name in partial_hdf_files:
