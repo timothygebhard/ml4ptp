@@ -180,7 +180,7 @@ class Model(pl.LightningModule, NormalizerMixin):
             z = self.encoder(log_P=log_P, T=T)
 
             # Abort training if we have already failed too many times
-            if self.n_failures > 10:  # pragma: no cover
+            if self.n_failures >= 100:  # pragma: no cover
                 raise RuntimeError('Too many initialization failures!')
 
         # Run through decoder to get predicted temperatures
