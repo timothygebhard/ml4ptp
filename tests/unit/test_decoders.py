@@ -143,7 +143,7 @@ def test__skip_connections_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = decoder(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.29369789361953735)
+    assert np.isclose(T_pred.mean().item(), 0.06748008728027344)
 
 
 def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:

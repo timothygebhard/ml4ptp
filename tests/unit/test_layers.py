@@ -59,7 +59,6 @@ def test__get_mlp_layers() -> None:
         layer_size=2,
         output_size=1,
         activation='leaky_relu',
-        final_tanh=False,
         batch_norm=False,
         dropout=0.0,
     )
@@ -74,7 +73,6 @@ def test__get_mlp_layers() -> None:
         layer_size=2,
         output_size=1,
         activation='relu',
-        final_tanh=False,
         batch_norm=False,
         dropout=0.0,
     )
@@ -89,7 +87,6 @@ def test__get_mlp_layers() -> None:
         layer_size=2,
         output_size=1,
         activation='relu',
-        final_tanh=False,
         batch_norm=False,
         dropout=0.5,
     )
