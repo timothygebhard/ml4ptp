@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # Get list of partial HDF files
     print('Getting list of partial HDF files...', end=' ', flush=True)
-    partial_hdf_files = list(run_dir.glob('results_on_test_set__*.hdf'))
+    partial_hdf_files = list(run_dir.glob('results_on_test_set__*-*.hdf'))
     print('Done!', flush=True)
 
     # Get the number of expected partial HDF files
