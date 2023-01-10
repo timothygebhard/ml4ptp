@@ -144,7 +144,8 @@ if __name__ == "__main__":
             ax.set_yticks([-5, -4, -3, -2, -1, 0])
         else:
             ax.set_xlim(0, 5000)
-            ax.set_ylim(2.5, -6.5)
+            ax.set_ylim(3.5, -6.5)
+            ax.set_yticks([-6, -5, -4, -3, -2, -1, 0, 1, 2, 3])
 
         set_fontsize(ax, 5.5)
         ax.xaxis.label.set_fontsize(6.5)
