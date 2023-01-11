@@ -40,7 +40,7 @@ def get_cli_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--config-files',
-        # required=True,
+        required=True,
         nargs='+',
         default=[
             './configs/pyatmos__polynomial.yaml',
@@ -63,6 +63,8 @@ def get_cli_arguments() -> argparse.Namespace:
 
 
 def add_plot_group_to_figure(
+    dataset: str,
+    title: str,
     plot_group: Dict[str, Any],
     fig: plt.Figure,
     ax: plt.Axes,
@@ -159,23 +161,43 @@ def add_plot_group_to_figure(
             zorder=98 + i,
         )
 
+    # Define the horizontal alignment and background color of the median label.
+    # It's not pretty, but otherwise we get overlapping labels for PyATMOS.
+    ha = 'center'
+    fc = 'white'
+    x_offset = 0.00
+    if dataset == 'pyatmos' and title == 'Our method':
+        if plot_group['n'] == 4:
+            ha = 'right'
+            fc = 'none'
+            x_offset = -0.002
+        elif plot_group['n'] == 3:
+            x_offset = 0.002
+            ha = 'left'
+            fc = 'none'
+
     # Add text box with median
     for c, alpha in [('white', 1), (color, 0)]:
         ax.text(
+            # x=(
+            #     (np.log10(median) - np.log10(kde_grid[0]))
+            #     / (np.log10(np.max(kde_grid)) - np.log10(kde_grid[0]))
+            # ),
             x=(
-                (np.log10(median) - np.log10(kde_grid[0]))
-                / (np.log10(np.max(kde_grid)) - np.log10(kde_grid[0]))
+                (median - np.min(kde_grid))
+                / (np.max(kde_grid) - np.min(kde_grid))
+                + x_offset
             ),
-            y=0.9,
+            y=0.96,
             s=f' {median:.2f} ',
             rotation=90,
             va='top',
-            ha='center',
+            ha=ha,
             transform=ax.transAxes,
             fontsize=3.5,
             color=c,
             bbox=dict(
-                fc='white', ec='none', alpha=alpha, boxstyle='square,pad=0'
+                fc=fc, ec='none', alpha=alpha, boxstyle='square,pad=0'
             ),
             zorder=100 - alpha,
         )
@@ -191,12 +213,12 @@ def get_plot_options(dataset: str) -> dict:
     plot_options: Dict[str, Any] = {}
 
     if dataset == 'pyatmos':
-        plot_options['kde_grid'] = np.geomspace(0.01, 50, 1000)
-        plot_options['ylim'] = (0.01, 20)
-        plot_options['yformatter'] = FormatStrFormatter('%.2f')
+        plot_options['kde_grid'] = np.linspace(-0.5, 16.5, 1000)
+        plot_options['ylim'] = (0.001, 50)
+        plot_options['yformatter'] = FormatStrFormatter('%.3f')
     elif dataset == 'goyal-2020':
-        plot_options['kde_grid'] = np.geomspace(1, 300, 1000)
-        plot_options['ylim'] = (0.001, 2)
+        plot_options['kde_grid'] = np.linspace(-5, 205, 1000)
+        plot_options['ylim'] = (0.0005, 0.5)
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
@@ -264,6 +286,8 @@ if __name__ == "__main__":
         medians = {}
         for plot_group in plot_groups:
             fig, ax, median = add_plot_group_to_figure(
+                dataset=dataset,
+                title=title,
                 plot_group=plot_group,
                 fig=fig,
                 ax=ax,
@@ -273,7 +297,7 @@ if __name__ == "__main__":
         print('Done!\n', flush=True)
 
         # Add legend
-        legend = ax.legend(loc='center left', fontsize=5.5)
+        legend = ax.legend(loc='center right', fontsize=5.5)
         legend.set_title(
             title=title,
             prop={'size': 5.5, 'weight': 'bold'},
@@ -292,7 +316,6 @@ if __name__ == "__main__":
         # Set x- and y-limits (and make them log-scale); format ticks
         ax.set_xlim(plot_options['kde_grid'][0], plot_options['kde_grid'][-1])
         ax.set_ylim(*plot_options['ylim'])
-        ax.set_xscale('log')
         ax.set_yscale('log')
         ax.yaxis.set_major_formatter(plot_options['yformatter'])
 
