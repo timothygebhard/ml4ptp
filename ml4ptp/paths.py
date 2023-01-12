@@ -52,6 +52,21 @@ def get_datasets_dir() -> Path:
     return datasets_dir
 
 
+def get_experiments_dir() -> Path:
+    """
+    Return the path to the directory containing the experiments.
+    """
+
+    experiments_dir = expandvars(Path('$ML4PTP_EXPERIMENTS_DIR'))
+
+    if not experiments_dir.exists():
+        raise FileNotFoundError(
+            f'The experiments_dir directory does not exist: {experiments_dir}'
+        )
+
+    return experiments_dir
+
+
 def get_scripts_dir() -> Path:
     """
     Return the path to the directory containing the scripts.
