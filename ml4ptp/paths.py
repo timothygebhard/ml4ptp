@@ -61,7 +61,7 @@ def get_experiments_dir() -> Path:
 
     if not experiments_dir.exists():
         raise FileNotFoundError(
-            f'The experiments_dir directory does not exist: {experiments_dir}'
+            f'The experiments directory does not exist: {experiments_dir}'
         )
 
     return experiments_dir

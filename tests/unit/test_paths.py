@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from ml4ptp.paths import expandvars, get_datasets_dir, get_scripts_dir
+from ml4ptp.paths import (
+    expandvars,
+    get_datasets_dir,
+    get_experiments_dir,
+    get_scripts_dir,
+)
 
 
 # -----------------------------------------------------------------------------
@@ -48,6 +53,20 @@ def test__get_datasets_dir(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(FileNotFoundError) as file_not_found_error:
         get_datasets_dir()
     assert 'The datasets directory does not exist' in str(file_not_found_error)
+
+
+def test__get_experiments_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+
+    # Case 1
+    monkeypatch.setenv("ML4PTP_EXPERIMENTS_DIR", ".")
+    assert isinstance(get_datasets_dir(), Path)
+    assert get_experiments_dir().as_posix() == "."
+
+    # Case 2
+    monkeypatch.delenv("ML4PTP_EXPERIMENTS_DIR", raising=False)
+    with pytest.raises(FileNotFoundError) as file_not_found_error:
+        get_experiments_dir()
+    assert 'The experiments directory does not ' in str(file_not_found_error)
 
 
 def test__get_scripts_dir() -> None:
