@@ -74,3 +74,8 @@ trainer:
   log_every_n_steps: 50
   max_epochs: 1000
   gradient_clip_val: 1.0
+
+# Parameters for additional callbacks
+callbacks:
+  early_stopping:
+    patience: 1000
