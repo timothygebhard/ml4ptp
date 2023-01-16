@@ -1,0 +1,76 @@
+# Define the data set to load
+datamodule:
+  train_file_path: "$ML4PTP_DATASETS_DIR/pyatmos/output/train.hdf"
+  test_file_path: "$ML4PTP_DATASETS_DIR/pyatmos/output/test.hdf"
+  key_P: "P"
+  key_T: "T"
+  train_size: 100000
+  val_size: 10000
+  train_batch_size: 512
+  val_batch_size: 1024
+  num_workers: 4
+  persistent_workers: True
+  shuffle: True
+  pin_memory: True
+  drop_last: True
+  normalization: "whiten"
+  random_state: 42
+
+# Parameters for the encoder and decoder
+model:
+  encoder:
+    name: ConvolutionalEncoder
+    parameters:
+      input_size: 101
+      latent_size: 2
+      mlp_layer_size: 512
+      mlp_n_layers: 3
+      cnn_n_layers: 2
+      cnn_n_channels: 64
+      cnn_kernel_size: 1
+  decoder:
+    name: SkipConnectionsDecoder
+    parameters:
+      latent_size: 2
+      layer_size: 512
+      n_layers: 3
+      cat_layer_size: 16
+
+# Parameters for the loss
+loss:
+  beta: 0.1
+  n_mmd_loops: 1
+
+# Parameters for the optimizer
+optimizer:
+  name: AdamW
+  parameters:
+    lr: 0.001
+
+# Parameters for the learning rate scheduler (see optimizer)
+lr_scheduler:
+  name: OneCycleLR
+  interval: step
+  parameters:
+    steps_per_epoch: 175
+    epochs: 1000
+    pct_start: 0.05
+    cycle_momentum: False
+    max_lr: 0.0005
+
+# Parameters for plotting to TensorBoard
+plotting:
+  plot_interval: 20
+  pt_profile:
+    min_T: 0
+    max_T: 350
+    min_log_P: 0.5
+    max_log_P: -6.5
+
+# Parameters for the trainer
+trainer:
+  accelerator: auto
+  detect_anomaly: False
+  log_every_n_steps: 50
+  max_epochs: 1000
+  gradient_clip_val: 1.0
