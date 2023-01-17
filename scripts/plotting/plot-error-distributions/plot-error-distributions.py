@@ -194,7 +194,7 @@ def add_plot_group_to_figure(
             va='top',
             ha=ha,
             transform=ax.transAxes,
-            fontsize=3.5,
+            fontsize=5,
             color=c,
             bbox=dict(
                 fc=fc, ec='none', alpha=alpha, boxstyle='square,pad=0'
@@ -214,11 +214,11 @@ def get_plot_options(dataset: str) -> dict:
 
     if dataset == 'pyatmos':
         plot_options['kde_grid'] = np.linspace(-0.5, 16.5, 1000)
-        plot_options['ylim'] = (0.001, 50)
+        plot_options['ylim'] = (0.001, 90)
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     elif dataset == 'goyal-2020':
         plot_options['kde_grid'] = np.linspace(-5, 205, 1000)
-        plot_options['ylim'] = (0.0005, 0.5)
+        plot_options['ylim'] = (0.0005, 0.9)
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
