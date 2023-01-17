@@ -148,12 +148,15 @@ if __name__ == "__main__":
     )
     callbacks.append(model_checkpoint_callback)
 
-    # Create a callback for early stopping
-    early_stopping_callback = EarlyStopping(
-        monitor="val/total_loss",
-        **config['callbacks']['early_stopping'],
-    )
-    callbacks.append(early_stopping_callback)
+    # Create a callback for early stopping (if requested)
+    try:
+        early_stopping_callback = EarlyStopping(
+            monitor="val/total_loss",
+            **config['callbacks']['early_stopping'],
+        )
+        callbacks.append(early_stopping_callback)
+    except KeyError:
+        pass
 
     # Create a callback for logging the learning rate
     lr_monitor_callback = LearningRateMonitor(logging_interval='step')
