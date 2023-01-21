@@ -36,12 +36,15 @@ def get_cli_arguments() -> argparse.Namespace:
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--runs-dir',
-        default=(
-            '/Users/timothy/mount/mpicluster/projects/ml4ptp/experiments/'
-            'pyatmos/same-data-different-init/runs'
-        ),
-        help='Path to the directory containing the different runs.',
+        '--experiment-dir',
+        default='$ML4PTP_EXPERIMENTS_DIR/goyal-2020/same-data-different-init',
+        help='Path to the experiment directory.',
+    )
+    parser.add_argument(
+        '--runs',
+        default=[0, 1, 2],
+        nargs='+',
+        help='List of runs to plot.',
     )
     args = parser.parse_args()
 
@@ -105,7 +108,7 @@ def plot_decoded_profiles(
     # Define grid and log_P
     grid_size = 7
     grid = np.linspace(-3, 3, grid_size)
-    log_P = np.linspace(-5, 0, 100)
+    log_P = np.linspace(-6, 2, 100)
 
     # Create a new figure
     pad_inches = 0.025
@@ -154,8 +157,8 @@ def plot_decoded_profiles(
                 ax.plot(T_pred, log_P, color=f'C{i}', linewidth=1, ls=ls)
 
                 # Additional plot options
-                ax.set_xlim(0, 350)
-                ax.set_ylim(0.5, -5.5)
+                ax.set_xlim(0, 4500)
+                ax.set_ylim(2.5, -6.5)
 
     # Save the figure
     file_path = Path('decoded-profiles.pdf')
@@ -190,16 +193,13 @@ if __name__ == "__main__":
     print('Loading latent spaces and decoders...', end=' ', flush=True)
 
     # Get the different run directories
-    runs_dir = expandvars(Path(args.runs_dir))
-    run_dirs = sorted(runs_dir.glob('run_*'))
+    experiment_dir = expandvars(Path(args.experiment_dir))
+    run_dirs = [experiment_dir / 'runs' / f'run_{i}' for i in args.runs]
 
     # Load the latent spaces and decoders
     latent_spaces: Dict[int, np.ndarray] = {}
     decoders: Dict[int, ONNXDecoder] = {}
-    for run_dir in run_dirs:
-
-        # Get the random seed
-        random_seed = int(run_dir.name.split('_')[-1])
+    for run_dir, random_seed in zip(run_dirs, args.runs):
 
         # Load the latent space
         file_path = run_dir / 'results_on_test_set.hdf'
