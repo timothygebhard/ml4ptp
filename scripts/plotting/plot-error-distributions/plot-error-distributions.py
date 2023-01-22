@@ -298,6 +298,7 @@ if __name__ == "__main__":
 
         # Add legend
         legend = ax.legend(loc='center right', fontsize=5.5)
+        legend.set_zorder(1000)
         legend.set_title(
             title=title,
             prop={'size': 5.5, 'weight': 'bold'},
