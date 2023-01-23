@@ -7,6 +7,9 @@ line according to the density of the profiles at this (P, T) coordinate.
 # IMPORTS
 # -----------------------------------------------------------------------------
 
+from pathlib import Path
+from typing import Optional
+
 import argparse
 import time
 
@@ -20,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ml4ptp.paths import get_datasets_dir
-from ml4ptp.plotting import set_fontsize  # , add_colorbar_to_ax
+from ml4ptp.plotting import set_fontsize
 
 
 # -----------------------------------------------------------------------------
@@ -32,7 +35,7 @@ def get_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dataset',
-        # required=True,
+        required=True,
         default='pyatmos',
         choices=['pyatmos', 'goyal-2020'],
         help='Name of the dataset for which to plot the histogram.',
@@ -63,11 +66,17 @@ if __name__ == '__main__':
     # Load the dataset
     # -------------------------------------------------------------------------
 
+    # Type annotations
+    excluded_path: Optional[Path]
+    excluded_log_P: Optional[np.ndarray]
+    excluded_T: Optional[np.ndarray]
+
     # Define path and keys for the dataset
     if dataset == 'pyatmos':
 
         train_path = get_datasets_dir() / 'pyatmos' / 'output' / 'train.hdf'
         test_path = get_datasets_dir() / 'pyatmos' / 'output' / 'test.hdf'
+        excluded_path = get_datasets_dir() / 'pyatmos' / 'output' / 'ood.hdf'
 
         P_key = 'P'
         T_key = 'T'
@@ -80,6 +89,7 @@ if __name__ == '__main__':
 
         train_path = get_datasets_dir() / 'goyal-2020' / 'output' / 'train.hdf'
         test_path = get_datasets_dir() / 'goyal-2020' / 'output' / 'test.hdf'
+        excluded_path = None
 
         P_key = '/pt_profiles/pressure'
         T_key = '/pt_profiles/temperature'
@@ -100,6 +110,17 @@ if __name__ == '__main__':
         log_P = np.concatenate((log_P, np.log10(np.array(hdf_file[P_key]))))
         T = np.concatenate((T, np.array(hdf_file[T_key])))
     print(f'Done! [Size = {T.shape}]', flush=True)
+
+    # Load the excluded dataset, if any
+    print('Loading excluded dataset (if any)...', end=' ', flush=True)
+    if excluded_path is not None:
+        with h5py.File(excluded_path, 'r') as hdf_file:
+            excluded_log_P = np.log10(np.array(hdf_file[P_key]))
+            excluded_T = np.array(hdf_file[T_key])
+    else:
+        excluded_log_P = None
+        excluded_T = None
+    print('Done!', flush=True)
 
     # -------------------------------------------------------------------------
     # Compute a 2D kernel density estimate of the dataset
@@ -131,7 +152,7 @@ if __name__ == '__main__':
     # Create a the colored spaghetti plot
     # -------------------------------------------------------------------------
 
-    print('Creating histogram plot...', end=' ', flush=True)
+    print('Creating spaghetti plot...', end=' ', flush=True)
 
     # Set default font
     mpl.rcParams['font.sans-serif'] = "Arial"
@@ -184,9 +205,14 @@ if __name__ == '__main__':
         # Add the line collection to the plot
         line = ax.add_collection(lc)
 
+    # Plot the excluded dataset, if any
+    if excluded_T is not None and excluded_log_P is not None:
+        for (x, y) in zip(excluded_T, excluded_log_P):
+            ax.plot(x, y, lw=0.3, ls='--', color='LawnGreen')
+
     # Set the axis labels
     ax.set_xlabel('T (K)')
-    ax.set_ylabel('log(P / bar)')
+    ax.set_ylabel(r'$\log_{10}$(P / bar)')
 
     # Set the axis ticks
     ax.set_yticks(yticks)
