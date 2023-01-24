@@ -76,8 +76,9 @@ class Model(pl.LightningModule, NormalizerMixin):
         self.lr_scheduler_config = lr_scheduler_config
 
         # Define some shortcuts
-        self.beta = self.loss_config['beta']
-        self.n_mmd_loops = self.loss_config.get('n_mmd_loops', 10)
+        self.beta = self.loss_config.get('beta', 0.1)
+        self.gamma = self.loss_config.get('gamma', 1.0)
+        self.n_mmd_loops = self.loss_config.get('n_mmd_loops', 1)
         self.plot_interval = self.plotting_config.get('plot_interval', 10)
 
         # Keep track of the number of times we had to re-initialize the encoder
@@ -235,7 +236,11 @@ class Model(pl.LightningModule, NormalizerMixin):
         norm_loss = 10 * softplus(norms - 3.5, beta=100, threshold=10).mean()
 
         # Compute the total loss
-        total_loss = rec_loss__normalized + self.beta * mmd_loss + norm_loss
+        total_loss = (
+            rec_loss__normalized
+            + self.beta * mmd_loss
+            + self.gamma * norm_loss
+        )
 
         return (
             total_loss,
