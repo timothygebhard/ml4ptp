@@ -104,6 +104,8 @@ def disable_ticks(ax: plt.Axes) -> None:
         right=False,
         labelbottom=False,
         labelleft=False,
+        labelright=False,
+        labeltop=False,
     )
 
 
