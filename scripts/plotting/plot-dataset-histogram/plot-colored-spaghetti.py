@@ -185,7 +185,7 @@ if __name__ == '__main__':
         # Basically, we create a separate line for each segment connecting the
         # points (log_P_{i}, T_{i}) and (log_P_{i+1}, T_{i+1}), and we color
         # each line according to the density of the corresponding PT profile.
-    
+
         # We start by defining the line segments. See also the following link:
         #   https://matplotlib.org/3.1.1/gallery/lines_bars_and_markers/
         #   multicolored_line.html
