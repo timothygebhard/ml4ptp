@@ -39,7 +39,7 @@ setup(
         'onnx',
         'onnxruntime',
         'pandas',
-        'pytorch-lightning>=1.7',
+        'pytorch-lightning>=1.9',
         'pyyaml',
         'rich',
         'scikit-learn',
