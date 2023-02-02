@@ -17,7 +17,7 @@ import time
 import torch
 import yaml
 
-from lightning_lite.utilities.seed import seed_everything
+from lightning_fabric.utilities.seed import seed_everything
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     Callback,
