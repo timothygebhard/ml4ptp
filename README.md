@@ -5,8 +5,6 @@
 [![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 
-## 🌡 What's this?
-
 This repository contains code to train and apply efficient, neural network-based parameterizations of pressure temperature (PT) profiles of exoplanets which can be used, for example, for atmospheric retrievals.  
 
 
@@ -47,3 +45,10 @@ pytest tests
 ```
 
 You can also use these tests to ensure that the code is compatible with newer versions of the libraries than the one in `setup.py`.
+
+
+## ⚖️ License and copyright
+
+The code in this repository is property of the [Max Planck Society](https://www.mpg.de/en).
+
+We are releasing it under a BSD-3 Clause License; see LICENSE for more details.
