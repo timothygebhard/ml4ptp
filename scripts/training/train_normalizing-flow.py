@@ -212,7 +212,8 @@ if __name__ == "__main__":
             # Get training samples: We take a batch of z-values and add some
             # random noise to them. This is done to smoothen / smear out the
             # distribution of the latent variables.
-            x = z[idx] + args.noise_scale * torch.randn_like(z[idx])
+            noise = torch.randn_like(z[idx], device=device)
+            x = z[idx] + args.noise_scale * noise
             x = x.to(device)
 
             # Prepare optimizer and flow for training
