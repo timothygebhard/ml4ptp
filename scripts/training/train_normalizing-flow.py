@@ -143,7 +143,7 @@ if __name__ == "__main__":
     for _log_P, _T in zip(log_P, T):
         _z = encoder(log_P=np.atleast_2d(_log_P), T=np.atleast_2d(_T))
         z_list.append(torch.from_numpy(_z).float())
-    z = torch.cat(z_list, dim=0)
+    z = torch.cat(z_list, dim=0).to(device)
     print(f'Done! (z.shape = {tuple(z.shape)})', flush=True)
 
     # Plot the distribution of the latent variables
