@@ -173,9 +173,9 @@ if __name__ == "__main__":
         flows += [
             nf.flows.AutoregressiveRationalQuadraticSpline(
                 latent_size, hidden_layers, hidden_units
-            )
+            ),
+            nf.flows.LULinearPermute(latent_size),
         ]
-        flows += [nf.flows.LULinearPermute(latent_size)]
 
     # Define Gaussian base distribution
     base = nf.distributions.DiagGaussian(latent_size, trainable=False)
