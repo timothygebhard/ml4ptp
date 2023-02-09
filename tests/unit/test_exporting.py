@@ -175,9 +175,9 @@ def test__export_encoder_with_onnx(
             file_path=file_path,
         )
 
-        # Load model to run ONNX checks
-        encoder_loaded = onnx.load(file_path.as_posix())
-        onnx.checker.check_model(encoder_loaded)
+        # Load model directly with ONNX to run some checks
+        dummy = onnx.load(file_path.as_posix())
+        onnx.checker.check_model(dummy, full_check=True)
 
         # Load model into a ONNX runtime wrapper (for inference)
         encoder_loaded = ONNXEncoder(path_or_bytes=file_path)
@@ -232,9 +232,9 @@ def test__export_decoder_with_onnx(
             file_path=file_path,
         )
 
-        # Load model to run ONNX checks
-        decoder_loaded = onnx.load(file_path.as_posix())
-        onnx.checker.check_model(decoder_loaded)
+        # Load model directly with ONNX to run some checks
+        dummy = onnx.load(file_path.as_posix())
+        onnx.checker.check_model(dummy, full_check=True)
 
         # Load model into a ONNX runtime wrapper (for inference)
         decoder_loaded = ONNXDecoder(path_or_bytes=file_path)
