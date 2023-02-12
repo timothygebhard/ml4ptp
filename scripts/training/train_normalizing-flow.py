@@ -166,8 +166,7 @@ if __name__ == "__main__":
     hidden_layers = 2
     num_layers = 8
 
-    # Construct the flow; this is basically taken directly from the examples
-    # in the `normflows` package.
+    # Construct the flow
     flows = []
     for i in range(num_layers):
         flows += [
