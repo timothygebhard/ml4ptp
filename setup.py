@@ -45,6 +45,7 @@ setup(
         'scikit-learn',
         'scipy',
         'torch',
+        'tensorboard',
         'tqdm',
         'ultranest',
     ],
