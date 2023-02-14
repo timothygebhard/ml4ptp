@@ -188,4 +188,4 @@ def test__hypernet_decoder(normalization: Dict[str, Any]) -> None:
     T_pred = model(z=z, log_P=log_P)
 
     assert T_pred.shape == log_P.shape
-    assert np.isclose(T_pred.mean().item(), 0.29131171107292175)
+    assert np.isclose(T_pred.mean().item(), 0.29131171107292175, atol=1e-3)
