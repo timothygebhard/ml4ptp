@@ -10,7 +10,6 @@ numbers of fitting parameters.
 
 from collections import defaultdict
 from itertools import product
-from pathlib import Path
 from typing import Any, Dict
 
 import time
@@ -28,9 +27,8 @@ from ml4ptp.plotting import CBF_COLORS, set_fontsize
 
 
 # -----------------------------------------------------------------------------
-# MAIN CODE
+# DEFINITIONS
 # -----------------------------------------------------------------------------
-
 
 class NestedDefaultDict(defaultdict):
     """
@@ -58,9 +56,9 @@ def collect_results_our_method() -> Dict[str, NestedDefaultDict]:
     medians = NestedDefaultDict()
     for dataset, latent_size, run in product(datasets, latent_sizes, runs):
         file_path = (
-            Path('/Users/timothy/mount/mpicluster/projects/ml4ptp/experiments')
+            get_experiments_dir()
             / dataset
-            / 'ce-4'
+            / 'default'
             / f'latent-size-{latent_size}'
             / 'runs'
             / f'run_{run}'
@@ -216,7 +214,7 @@ if __name__ == "__main__":
         pad_inches = 0.025
         fig, axes = plt.subplots(
             nrows=2,
-            figsize=(8 / 2.54, 4.5 / 2.54),
+            figsize=(8.7 / 2.54, 4.5 / 2.54),
             sharey='all',
             height_ratios=[0.5, 4],
         )
