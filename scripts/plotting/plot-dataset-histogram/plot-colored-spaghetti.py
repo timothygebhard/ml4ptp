@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # Create the figure
     pad_inches = 0.01
     fig, ax = plt.subplots(
-        figsize=(8 / 2.54 - 2 * pad_inches, 4.5 / 2.54 - 2 * pad_inches),
+        figsize=(8.7 / 2.54 - 2 * pad_inches, 4.5 / 2.54 - 2 * pad_inches),
     )
 
     # Set general plot options
