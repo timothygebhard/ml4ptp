@@ -51,6 +51,7 @@ def normalization() -> Dict[str, Any]:
 
 @pytest.fixture()
 def mlp_encoder(normalization: Dict[str, Any]) -> MLPEncoder:
+    torch.manual_seed(0)
     return MLPEncoder(
         input_size=101,
         latent_size=2,
@@ -62,6 +63,7 @@ def mlp_encoder(normalization: Dict[str, Any]) -> MLPEncoder:
 
 @pytest.fixture()
 def modified_mlp_encoder(normalization: Dict[str, Any]) -> ModifiedMLPEncoder:
+    torch.manual_seed(0)
     return ModifiedMLPEncoder(
         input_size=101,
         latent_size=2,
@@ -75,6 +77,7 @@ def modified_mlp_encoder(normalization: Dict[str, Any]) -> ModifiedMLPEncoder:
 def convolutional_encoder(
     normalization: Dict[str, Any],
 ) -> ConvolutionalEncoder:
+    torch.manual_seed(0)
     return ConvolutionalEncoder(
         input_size=101,
         latent_size=2,
@@ -90,6 +93,7 @@ def convolutional_encoder(
 
 @pytest.fixture()
 def cnp_encoder(normalization: Dict[str, Any]) -> CNPEncoder:
+    torch.manual_seed(0)
     return CNPEncoder(
         latent_size=2,
         layer_size=32,
@@ -100,6 +104,7 @@ def cnp_encoder(normalization: Dict[str, Any]) -> CNPEncoder:
 
 @pytest.fixture()
 def decoder(normalization: Dict[str, Any]) -> Decoder:
+    torch.manual_seed(0)
     return Decoder(
         latent_size=2,
         layer_size=32,
@@ -113,6 +118,7 @@ def decoder(normalization: Dict[str, Any]) -> Decoder:
 def skip_connections_decoder(
     normalization: Dict[str, Any],
 ) -> SkipConnectionsDecoder:
+    torch.manual_seed(0)
     return SkipConnectionsDecoder(
         latent_size=2,
         layer_size=32,
@@ -124,6 +130,7 @@ def skip_connections_decoder(
 
 @pytest.fixture()
 def hypernet_decoder(normalization: Dict[str, Any]) -> HypernetDecoder:
+    torch.manual_seed(0)
     return HypernetDecoder(
         latent_size=2,
         normalization=normalization,
@@ -357,6 +364,8 @@ def test__pt_profile(
     tmp_path: Path,
 ) -> None:
 
+    np.random.seed(0)
+
     # Define inputs for all test cases
     batch_size = 32
     grid_size = 51
@@ -416,3 +425,27 @@ def test__pt_profile(
     log_P = 3.0
     T_pred = pt_profile(z=z, log_P=log_P)
     assert T_pred.shape == (1, )
+
+    # Case 7
+    pt_profile = PTProfile(file_path.as_posix(), log_P_min=0)
+    log_P = np.linspace(-5, 1, 7)
+    z = np.array([0.0, 0.0])
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert len(np.unique(T_pred)) == 2
+    assert len(np.unique(T_pred[:5])) == 1
+
+    # Case 8
+    pt_profile = PTProfile(file_path.as_posix(), log_P_max=0)
+    log_P = np.linspace(-5, 1, 7)
+    z = np.array([0.0, 0.0])
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert len(np.unique(T_pred)) == 6
+    assert len(np.unique(T_pred[5:])) == 1
+
+    # Case 9
+    pt_profile = PTProfile(file_path.as_posix(), T_min=0, T_max=0.01)
+    log_P = np.linspace(-5, 1, 101)
+    z = np.array([0.0, 0.0])
+    T_pred = pt_profile(z=z, log_P=log_P)
+    assert np.all(T_pred >= 0.00)
+    assert np.all(T_pred <= 0.01)
