@@ -29,6 +29,13 @@ def get_cli_arguments() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--aggregate',
+        type=str,
+        choices=['mean', 'delta_upper_lower'],
+        default='mean',
+        help='How to aggregate abundance profiles etc. into a single number.',
+    )
+    parser.add_argument(
         '--dataset',
         type=str,
         default='pyatmos',
@@ -93,12 +100,19 @@ if __name__ == "__main__":
     with h5py.File(file_path, 'r') as hdf_file:
         target = np.array(hdf_file[args.key])
 
-    # For properties that are not just a single number, take the mean
+    # For properties that are not just a single number, we need to aggregate
+    title = ''
     if target.ndim > 1:
-        target = np.mean(target, axis=1)
-        title = 'Mean '
-    else:
-        title = ''
+        if args.aggregate == 'mean':
+            target = np.mean(target, axis=1)
+            title = 'Mean '
+        elif args.aggregate == 'delta_upper_lower':
+            target = (
+                np.mean(target[:, 0:10], axis=1) -
+                np.mean(target[:, -10:-1], axis=1)
+            )
+        else:
+            raise ValueError(f'Unknown aggregation method: {args.aggregate}')
 
     # If we are using the log of the property, take the log
     if args.use_log:
@@ -118,8 +132,8 @@ if __name__ == "__main__":
     pad_inches = 0.025
     fig, ax = plt.subplots(
         figsize=(
-            4 / 2.54 - 2 * pad_inches,
-            4 / 2.54 - 2 * pad_inches,
+            4.3 / 2.54 - 2 * pad_inches,
+            4.3 / 2.54 - 2 * pad_inches,
         ),
     )
 
