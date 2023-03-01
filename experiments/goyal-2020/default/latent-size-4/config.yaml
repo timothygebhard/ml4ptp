@@ -4,11 +4,9 @@ datamodule:
   test_file_path: "$ML4PTP_DATASETS_DIR/goyal-2020/output/test.hdf"
   key_P: "/pt_profiles/pressure"
   key_T: "/pt_profiles/temperature"
-  key_weights: null
-  weighting_scheme: "equal"
   train_size: 10000
   val_size: 1000
-  train_batch_size: 256
+  train_batch_size: 512
   val_batch_size: 1024
   num_workers: 4
   persistent_workers: True
@@ -20,19 +18,22 @@ datamodule:
 # Parameters for the encoder and decoder
 model:
   encoder:
-    name: ModifiedMLPEncoder
+    name: ConvolutionalEncoder
     parameters:
       input_size: 51
       latent_size: 4
-      layer_size: 1024
-      n_layers: 3
+      mlp_layer_size: 512
+      mlp_n_layers: 3
+      cnn_n_layers: 2
+      cnn_n_channels: 64
+      cnn_kernel_size: 1
   decoder:
     name: SkipConnectionsDecoder
     parameters:
       latent_size: 4
       layer_size: 512
       n_layers: 3
-      activation: leaky_relu
+      cat_layer_size: 16
 
 # Parameters for the loss
 loss:
@@ -43,17 +44,18 @@ loss:
 optimizer:
   name: AdamW
   parameters:
-    lr: 0.0003
+    lr: 0.001
 
 # Parameters for the learning rate scheduler (see optimizer)
 lr_scheduler:
-  name: ReduceLROnPlateau
-  interval: epoch
+  name: OneCycleLR
+  interval: step
   parameters:
-    mode: min
-    factor: 0.5
-    patience: 20
-    min_lr: 0.000001
+    steps_per_epoch: 17
+    epochs: 1000
+    pct_start: 0.05
+    cycle_momentum: False
+    max_lr: 0.0005
 
 # Parameters for plotting to TensorBoard
 plotting:
@@ -68,10 +70,11 @@ plotting:
 trainer:
   accelerator: auto
   detect_anomaly: False
-  log_every_n_steps: 25
+  log_every_n_steps: 8
   max_epochs: 1000
+  gradient_clip_val: 1.0
 
 # Parameters for additional callbacks
 callbacks:
   early_stopping:
-    patience: 100
+    patience: 1000
