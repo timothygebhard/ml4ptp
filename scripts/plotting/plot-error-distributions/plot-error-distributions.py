@@ -24,7 +24,7 @@ import numpy as np
 
 from ml4ptp.config import load_yaml
 from ml4ptp.paths import expandvars
-from ml4ptp.plotting import set_fontsize
+from ml4ptp.plotting import set_fontsize, CBF_COLORS
 
 
 # -----------------------------------------------------------------------------
@@ -130,7 +130,7 @@ def add_plot_group_to_figure(
     # -------------------------------------------------------------------------
 
     # Determine color
-    color = f"C{plot_group['n'] - 1}"
+    color = CBF_COLORS[plot_group['n'] - 1]
 
     # Plot the mean KDE
     ax.plot(
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(
         nrows=len(args.config_files),
         figsize=(
-            17 / 2.54 - 2 * pad_inches,
+            18.4 / 2.54 - 2 * pad_inches,
             len(args.config_files) * 2.5 / 2.54 - 2 * pad_inches,
         ),
         sharex='all',
