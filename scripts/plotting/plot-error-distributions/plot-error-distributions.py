@@ -256,12 +256,12 @@ if __name__ == "__main__":
         nrows=len(args.config_files),
         figsize=(
             18.4 / 2.54 - 2 * pad_inches,
-            len(args.config_files) * 2.5 / 2.54 - 2 * pad_inches,
+            len(args.config_files) * 2.4 / 2.54 - 2 * pad_inches,
         ),
         sharex='all',
     )
     axes = np.atleast_1d(axes)
-    plt.subplots_adjust(hspace=0.1, wspace=0.1)
+    plt.subplots_adjust(hspace=0, wspace=0.05)
 
     # Loop over configuration files
     for i, config_file in enumerate(args.config_files):
