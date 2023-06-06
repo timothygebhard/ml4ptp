@@ -86,7 +86,7 @@ def optimize_z_with_lbfgs(
         )
 
         # Run several multiple optimization rounds
-        for i in range(n_epochs):
+        for _ in range(n_epochs):
 
             # Zero out all gradients
             optim.zero_grad()
@@ -96,8 +96,9 @@ def optimize_z_with_lbfgs(
             loss = (T_pred - T_true[idx]).pow(2).mean()
 
             # Backpropagate and use optimizer to update z_optimal
+            # TODO: Check bugbear's B023 here --- is this really an issue?
             loss.backward()
-            optim.step(closure=lambda: float(loss))
+            optim.step(closure=lambda: float(loss))  # noqa: B023
 
         # Compute the optimized PT profiles from z_optimal for this batch
         with torch.no_grad():

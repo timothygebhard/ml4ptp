@@ -87,7 +87,7 @@ def add_plot_group_to_figure(
         # Check if the file exists
         file_path = expandvars(Path(run['file_path'])).resolve()
         if not file_path.exists():
-            warnings.warn(f'File {file_path} does not exist!')
+            warnings.warn(f'File {file_path} does not exist!', stacklevel=2)
             continue
 
         # Open HDF file and get the RSME
@@ -105,7 +105,10 @@ def add_plot_group_to_figure(
 
     # If we have no data, return the figure as is
     if not rmses:
-        warnings.warn(f'No runs found for plot group {plot_group["label"]}')
+        warnings.warn(
+            f'No runs found for plot group {plot_group["label"]}',
+            stacklevel=2,
+        )
         return fig, ax, np.nan
 
     # -------------------------------------------------------------------------
@@ -117,7 +120,7 @@ def add_plot_group_to_figure(
 
     # Compute a histogram for each run
     kdes = []
-    for i, rmse in enumerate(rmses):
+    for rmse in rmses:
         kde = TreeKDE(kernel='gaussian', bw='ISJ').fit(rmse)
         kdes.append(kde.evaluate(kde_grid))
 

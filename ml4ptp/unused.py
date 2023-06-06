@@ -327,7 +327,7 @@ class ModulatedDecoder(nn.Module, NormalizerMixin):
         )
 
         # Add hidden layers
-        for i in range(n_layers):
+        for _ in range(n_layers):
             layers += [
                 ModulateWithZ(
                     in_features=layer_size,

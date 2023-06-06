@@ -201,7 +201,7 @@ class SkipConnectionsDecoder(nn.Module, NormalizerMixin):
         )
 
         # Add hidden layers
-        for i in range(n_layers):
+        for _ in range(n_layers):
             layers += [
                 ConcatenateWithZ(z=dummy_z, layer_size=cat_layer_size),
                 nn.Linear(

@@ -94,7 +94,7 @@ def get_mlp_layers(
     ]
 
     # Add hidden layers
-    for i in range(n_layers):
+    for _ in range(n_layers):
         layers += [
             nn.Linear(layer_size, layer_size),
             get_activation(name=activation),
@@ -172,7 +172,7 @@ def get_cnn_layers(
     ]
 
     # Add hidden layers
-    for i in range(n_layers):
+    for _ in range(n_layers):
         layers += [
             nn.Conv1d(
                 in_channels=n_channels,

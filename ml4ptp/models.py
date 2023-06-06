@@ -219,7 +219,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # just doing several iterations is better? (Or maybe this not useful at
         # all, and we should just use a single sample?)
         mmd_loss = torch.tensor(0.0)
-        for i in range(self.n_mmd_loops):
+        for _ in range(self.n_mmd_loops):
             sample = torch.randn(*z.shape, device=self.device)  # type: ignore
             mmd_loss = mmd_loss + compute_mmd(sample, z) / self.n_mmd_loops
 

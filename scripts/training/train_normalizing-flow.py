@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     # Construct the flow
     flows = []
-    for i in range(num_layers):
+    for _ in range(num_layers):
         flows += [
             nf.flows.AutoregressiveRationalQuadraticSpline(
                 latent_size, hidden_layers, hidden_units

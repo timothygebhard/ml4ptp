@@ -133,7 +133,7 @@ def fit_profile_with_guillot(
     best_mse = np.inf
 
     # Run the optimization multiple times
-    for run in range(n_runs):
+    for _ in range(n_runs):
 
         # Get initial guess
         optimizer = ng.optimizers.TwoPointsDE(
