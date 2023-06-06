@@ -208,7 +208,8 @@ if __name__ == '__main__':
     # Plot the excluded dataset, if any
     if excluded_T is not None and excluded_log_P is not None:
         for (x, y) in zip(excluded_T, excluded_log_P):
-            ax.plot(x, y, lw=0.3, ls='--', color='LawnGreen')
+            ax.plot(x, y, color="white", lw=1.25, ls='-', alpha=0.9)
+            ax.plot(x, y, color="LimeGreen", lw=0.75, ls='-')
 
     # Set the axis labels
     ax.set_xlabel('T (K)')
@@ -225,16 +226,20 @@ if __name__ == '__main__':
     mappable = plt.cm.ScalarMappable(cmap='magma', norm=norm)
     cbar = fig.colorbar(mappable, ax=ax, pad=0.01)
     cbar.outline.set_linewidth(0.25)
-    cbar.set_label(label='Density of PT profiles in dataset', size=5.5)
-    cbar.ax.tick_params(width=0.25, length=2, labelsize=4.5)
+    cbar.set_label(
+        label='Density of PT profiles in dataset',
+        size=7,
+        labelpad=8,
+    )
+    cbar.ax.tick_params(width=0.25, length=2, labelsize=7)
     cbar.ax.tick_params('both', length=2, width=0.25, which='major')
     cbar.ax.tick_params('both', length=1, width=0.25, which='minor')
 
     # Set the font size
-    set_fontsize(ax, 5.5)
-    ax.xaxis.label.set_fontsize(6.5)
-    ax.yaxis.label.set_fontsize(6.5)
-    cbar.ax.tick_params(labelsize=5.5)
+    set_fontsize(ax, 7)
+    ax.xaxis.label.set_fontsize(8)
+    ax.yaxis.label.set_fontsize(8)
+    cbar.ax.tick_params(labelsize=7)
 
     print('Done!', flush=True)
 
@@ -247,7 +252,7 @@ if __name__ == '__main__':
     fig.tight_layout(pad=0)
     fig.savefig(
         f'{dataset}-spaghetti-plot.pdf',
-        dpi=1200,
+        dpi=600,
         bbox_inches='tight',
         pad_inches=pad_inches,
     )
