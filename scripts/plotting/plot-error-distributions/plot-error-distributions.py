@@ -292,7 +292,7 @@ if __name__ == "__main__":
         nrows=len(args.config_files),
         figsize=(
             18.4 / 2.54 - 2 * pad_inches,
-            len(args.config_files) * 3.0 / 2.54 - 2 * pad_inches,
+            len(args.config_files) * 2.8 / 2.54 - 2 * pad_inches,
         ),
         sharex='all',
     )
