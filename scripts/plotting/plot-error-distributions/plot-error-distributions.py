@@ -15,6 +15,7 @@ import time
 import warnings
 
 from KDEpy import TreeKDE
+from matplotlib.patches import Rectangle
 from matplotlib.ticker import FormatStrFormatter
 
 import h5py
@@ -155,55 +156,87 @@ def add_plot_group_to_figure(
     )
 
     # Add dashed line with the median to the plot
-    for i, (c, lw, ls) in enumerate([('white', 1, '-'), (color, 0.5, '--')]):
+    for i, (c, lw, ls) in enumerate(
+        [
+            ('white', 1.25, '-'),
+            (color, 0.75, '--'),
+        ]
+    ):
         ax.axvline(
             x=median,
             color=c,
             ls=ls,
             lw=lw,
-            zorder=98 + i,
+            zorder=97 + i,
         )
 
     # Define the horizontal alignment and background color of the median label.
     # It's not pretty, but otherwise we get overlapping labels for PyATMOS.
     ha = 'center'
-    fc = 'white'
     x_offset = 0.00
     if dataset == 'pyatmos' and title == 'Our method':
         if plot_group['n'] == 4:
-            ha = 'right'
-            fc = 'none'
-            x_offset = -0.002
+            x_offset = -0.007
         elif plot_group['n'] == 3:
-            x_offset = 0.002
-            ha = 'left'
-            fc = 'none'
+            x_offset = 0.007
+
+    # Define the vertical position of the median label
+    if dataset == 'pyatmos' and title == 'Our method':
+        y = 0.04
+        va = 'bottom'
+        dy0 = 0.00
+        dy1 = 0.02
+    else:
+        y = 0.96
+        va = 'top'
+        dy0 = 0.02
+        dy1 = 0.00
 
     # Add text box with median
-    for c, alpha in [('white', 1), (color, 0)]:
-        ax.text(
-            # x=(
-            #     (np.log10(median) - np.log10(kde_grid[0]))
-            #     / (np.log10(np.max(kde_grid)) - np.log10(kde_grid[0]))
-            # ),
-            x=(
-                (median - np.min(kde_grid))
-                / (np.max(kde_grid) - np.min(kde_grid))
-                + x_offset
-            ),
-            y=0.96,
-            s=f' {median:.2f} ',
-            rotation=90,
-            va='top',
-            ha=ha,
+    label = ax.text(
+        x=(
+            (median - np.min(kde_grid))
+            / (np.max(kde_grid) - np.min(kde_grid))
+            + x_offset
+            + 0.0014  # adjust improper alignment due to lack of descenders
+        ),
+        y=y,
+        s=f'{median:.2f}',
+        rotation=90,
+        va=va,
+        ha=ha,
+        transform=ax.transAxes,
+        fontsize=7,
+        color=color,
+        bbox=dict(alpha=0, boxstyle='square,pad=0'),
+        zorder=100,
+    )
+
+    # Manually add a white background to the median label
+    # We can't simply use the `bbox` kwarg because it's alignment is not ideal
+    # with text that does not have descenders (e.g., numbers only).
+    # See: https://stackoverflow.com/a/69254920/4100721
+    fig.canvas.draw()
+    extent = label.get_window_extent(renderer=fig.canvas.get_renderer())
+    extent = extent.transformed(ax.transAxes.inverted())
+    x0 = extent.x0 + 0.00125
+    x1 = extent.x1 - 0.00400
+    y0 = extent.y0 + dy0
+    y1 = extent.y1 - dy1
+    dx = x1 - x0
+    dy = y1 - y0
+    ax.add_patch(
+        Rectangle(
+            xy=(x0, y0),
+            width=dx,
+            height=dy,
             transform=ax.transAxes,
-            fontsize=5,
-            color=c,
-            bbox=dict(
-                fc=fc, ec='none', alpha=alpha, boxstyle='square,pad=0'
-            ),
-            zorder=100 - alpha,
+            fc='white',
+            ec='none',
+            alpha=0.9,
+            zorder=99,
         )
+    )
 
     return fig, ax, median
 
@@ -216,12 +249,12 @@ def get_plot_options(dataset: str) -> dict:
     plot_options: Dict[str, Any] = {}
 
     if dataset == 'pyatmos':
-        plot_options['kde_grid'] = np.linspace(-0.5, 16.5, 1000)
-        plot_options['ylim'] = (0.001, 90)
+        plot_options['kde_grid'] = np.linspace(-0.25, 16.25, 1000)
+        plot_options['ylim'] = (0.001, 10)
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     elif dataset == 'goyal-2020':
-        plot_options['kde_grid'] = np.linspace(-5, 205, 1000)
-        plot_options['ylim'] = (0.0005, 0.9)
+        plot_options['kde_grid'] = np.linspace(-2.5, 202.5, 1000)
+        plot_options['ylim'] = (0.0001, 1.0 )
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
@@ -259,7 +292,7 @@ if __name__ == "__main__":
         nrows=len(args.config_files),
         figsize=(
             18.4 / 2.54 - 2 * pad_inches,
-            len(args.config_files) * 2.4 / 2.54 - 2 * pad_inches,
+            len(args.config_files) * 3.0 / 2.54 - 2 * pad_inches,
         ),
         sharex='all',
     )
@@ -300,11 +333,11 @@ if __name__ == "__main__":
         print('Done!\n', flush=True)
 
         # Add legend
-        legend = ax.legend(loc='center right', fontsize=5.5)
+        legend = ax.legend(loc='center right', fontsize=7)
         legend.set_zorder(1000)
         legend.set_title(
             title=title,
-            prop={'size': 5.5, 'weight': 'bold'},
+            prop={'size': 7, 'weight': 'bold'},
         )
         legend.get_frame().set_facecolor('white')
         legend.get_frame().set_alpha(0.9)
@@ -322,16 +355,21 @@ if __name__ == "__main__":
         ax.set_ylim(*plot_options['ylim'])
         ax.set_yscale('log')
         ax.yaxis.set_major_formatter(plot_options['yformatter'])
+        ax.yaxis.get_major_locator().set_params(numticks=99)
+        ax.yaxis.get_minor_locator().set_params(
+            numticks=99,
+            subs=np.arange(0.1, 1, 0.1),
+        )
 
         # Set font sizes
-        set_fontsize(ax, 5.5)
-        ax.xaxis.label.set_fontsize(6.5)
-        ax.yaxis.label.set_fontsize(6.5)
+        set_fontsize(ax, 7)
+        ax.xaxis.label.set_fontsize(8)
+        ax.yaxis.label.set_fontsize(8)
 
         # Set x- and y-labels
         ax.set_ylabel('Density')
         if i == len(args.config_files) - 1:
-            ax.set_xlabel('Root Mean Squared Error (in Kelvin)')
+            ax.set_xlabel('Root Mean Squared Error (K)')
 
         # Set width and length of the tick marks
         ax.tick_params('x', length=0, width=0.25, which='major')
