@@ -12,13 +12,15 @@ from pathlib import Path
 import argparse
 import time
 
+from matplotlib.patches import Rectangle
+
 import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ml4ptp.paths import get_datasets_dir
-from ml4ptp.plotting import set_fontsize
+from ml4ptp.paths import expandvars, get_datasets_dir
+from ml4ptp.plotting import set_fontsize, add_colorbar_to_ax
 
 
 # -----------------------------------------------------------------------------
@@ -28,13 +30,6 @@ from ml4ptp.plotting import set_fontsize
 def get_cli_arguments() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--aggregate',
-        type=str,
-        choices=['mean', 'delta_upper_lower'],
-        default='mean',
-        help='How to aggregate abundance profiles etc. into a single number.',
-    )
     parser.add_argument(
         '--dataset',
         type=str,
@@ -55,10 +50,16 @@ def get_cli_arguments() -> argparse.Namespace:
         help='Path to the directory containing the results_on_test_set.hdf',
     )
     parser.add_argument(
+        '--scaling-factor',
+        type=float,
+        default=1.0,
+        help='Scaling factor by which to divide the target before plotting.',
+    )
+    parser.add_argument(
         '--title',
         type=str,
         default=None,
-        help='Optional: Title to use for the plot.',
+        help='Title to use for the plot.',
     )
     parser.add_argument(
         '--use-log',
@@ -74,7 +75,7 @@ def get_cli_arguments() -> argparse.Namespace:
 # MAIN CODE
 # -----------------------------------------------------------------------------
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     # -------------------------------------------------------------------------
     # Preliminaries
@@ -85,13 +86,17 @@ if __name__ == "__main__":
 
     # Get CLI arguments
     args = get_cli_arguments()
+    print('Received the following CLI arguments:')
+    for key, value in vars(args).items():
+        print(f'  {key}: {value}')
+    print()
 
     # -------------------------------------------------------------------------
     # Load data
     # -------------------------------------------------------------------------
 
     # Load z_refined from results_on_test_set.hdf
-    file_path = Path(args.run_dir) / 'results_on_test_set.hdf'
+    file_path = expandvars(Path(args.run_dir)) / 'results_on_test_set.hdf'
     with h5py.File(file_path, 'r') as hdf_file:
         z_refined = np.array(hdf_file['z_refined'])
 
@@ -100,19 +105,12 @@ if __name__ == "__main__":
     with h5py.File(file_path, 'r') as hdf_file:
         target = np.array(hdf_file[args.key])
 
+    # Apply scaling factor to make colorbar legend nicer
+    target /= float(args.scaling_factor)
+
     # For properties that are not just a single number, we need to aggregate
-    title = ''
     if target.ndim > 1:
-        if args.aggregate == 'mean':
-            target = np.mean(target, axis=1)
-            title = 'Mean '
-        elif args.aggregate == 'delta_upper_lower':
-            target = (
-                np.mean(target[:, 0:10], axis=1) -
-                np.mean(target[:, -10:-1], axis=1)
-            )
-        else:
-            raise ValueError(f'Unknown aggregation method: {args.aggregate}')
+        target = np.mean(target, axis=1)
 
     # If we are using the log of the property, take the log
     if args.use_log:
@@ -123,8 +121,8 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     # Set default font
-    mpl.rcParams['font.sans-serif'] = "Arial"
-    mpl.rcParams['font.family'] = "sans-serif"
+    mpl.rcParams['font.sans-serif'] = 'Arial'
+    mpl.rcParams['font.family'] = 'sans-serif'
 
     print('Creating plot...', end=' ', flush=True)
 
@@ -132,41 +130,14 @@ if __name__ == "__main__":
     pad_inches = 0.025
     fig, ax = plt.subplots(
         figsize=(
-            4.3 / 2.54 - 2 * pad_inches,
-            4.3 / 2.54 - 2 * pad_inches,
+            5.6 / 2.54 - 2 * pad_inches,
+            7.0 / 2.54 - 2 * pad_inches,
         ),
     )
 
-    # Set general plot options
-    for axis in ['top', 'bottom', 'left', 'right']:
-        ax.spines[axis].set_linewidth(0.25)
-        ax.xaxis.set_tick_params(width=0.25)
-        ax.yaxis.set_tick_params(width=0.25)
-
-    if args.title is not None:
-        ax.set_title(args.title)
-    else:
-        title += ('log$_{{10}}\,$' if args.use_log else '') + args.key
-        ax.set_title(
-            label=title,
-            fontweight='bold',
-        )
-
-    ax.set_aspect('equal')
-    ax.set_xlabel(r'$z_1$')
-    ax.set_ylabel(r'$z_2$')
-    ax.set_xlim(-5, 5)
-    ax.set_ylim(-5, 5)
-    ax.set_xticks([-5, -2.5, 0, 2.5, 5])
-    ax.set_yticks([-5, -2.5, 0, 2.5, 5])
-    set_fontsize(ax, 5.5)
-    ax.xaxis.label.set_fontsize(6.5)
-    ax.yaxis.label.set_fontsize(6.5)
-    ax.tick_params('both', length=2, width=0.25, which='major')
-
     # Plot the scatter plot
-    marker_size = 1 if args.dataset == 'pyatmos' else 4
-    ax.scatter(
+    marker_size = 4 if args.dataset == 'pyatmos' else 8
+    img = ax.scatter(
         z_refined[:, 0],
         z_refined[:, 1],
         c=target,
@@ -176,6 +147,69 @@ if __name__ == "__main__":
         edgecolors='none',
         rasterized=True,
     )
+
+    # Set general plot options
+    set_fontsize(ax, 7)
+    for axis in ['top', 'bottom', 'left', 'right']:
+        ax.spines[axis].set_linewidth(0.25)
+    ax.xaxis.set_tick_params(width=0.25)
+    ax.yaxis.set_tick_params(width=0.25)
+    ax.set_aspect('equal')
+    ax.set_xlabel(r'$z_1$')
+    ax.set_ylabel(r'$z_2$')
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(-4, 4)
+    ax.set_xticks([-4, -2, 0, 2, 4])
+    ax.set_yticks([-4, -2, 0, 2, 4])
+    ax.xaxis.label.set_fontsize(8)
+    ax.yaxis.label.set_fontsize(8)
+    ax.tick_params('both', length=1.5, width=0.25, which='major')
+
+    print('Done!', flush=True)
+
+    # -------------------------------------------------------------------------
+    # Add colorbar
+    # -------------------------------------------------------------------------
+
+    print('Adding colorbar...', end=' ', flush=True)
+
+    cbar = add_colorbar_to_ax(
+        img=img,
+        fig=fig,
+        ax=ax,
+        where='top',
+    )
+
+    # Add the title to the colorbar
+    # The invisible rectangle is a hack to get the same layout for all plots;
+    # otherwise, the different heights of the titles affect the plot size due
+    # to different sub/superscripts (\vphantom is not supported apparently).
+    if args.title is not None:
+        cbar.ax.text(
+            x=0.5,
+            y=4.5,
+            s=args.title,
+            transform=cbar.ax.transAxes,
+            fontsize=8,
+            va='center',
+            ha='center',
+        )
+        ax.add_artist(
+            Rectangle(
+                xy=(0.0, 0),
+                width=1.0,
+                height=1.3,
+                fc='none',
+                ec='none',
+                alpha=0.5,
+                transform=ax.transAxes,
+                clip_on=False,
+            )
+        )
+
+    # Set limits and other options
+    cbar.outline.set_linewidth(0.25)
+    cbar.ax.xaxis.set_tick_params(width=0.25, length=1.5)
 
     print('Done!', flush=True)
 
