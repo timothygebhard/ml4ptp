@@ -55,7 +55,7 @@ def get_cli_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         '--output-file-name',
-        default='pyatmos__all.pdf',
+        default='pyatmos.pdf',
         help='Name of the output file (including file extension).',
     )
     args = parser.parse_args()
@@ -117,7 +117,7 @@ def add_plot_group_to_figure(
     # -------------------------------------------------------------------------
 
     # Compute the median (or rather: the mean of the median of each run)
-    median = float(np.mean([np.median(_) for _ in rmses]))
+    median = float(np.mean([np.median(rmse) for rmse in rmses]))
 
     # Compute a histogram for each run
     kdes = []
@@ -292,7 +292,7 @@ if __name__ == "__main__":
         nrows=len(args.config_files),
         figsize=(
             18.4 / 2.54 - 2 * pad_inches,
-            len(args.config_files) * 2.8 / 2.54 - 2 * pad_inches,
+            len(args.config_files) * 3.4 / 2.54 - 2 * pad_inches,
         ),
         sharex='all',
     )
@@ -392,10 +392,7 @@ if __name__ == "__main__":
 
     print('\nSaving figure to PDF...', end=' ', flush=True)
 
-    plots_dir = Path(__file__).resolve().parent / 'plots'
-    plots_dir.mkdir(exist_ok=True)
-
-    file_path = plots_dir / args.output_file_name
+    file_path = Path(__file__).resolve().parent / args.output_file_name
     fig.tight_layout(pad=0)
     fig.savefig(file_path, dpi=300, bbox_inches='tight', pad_inches=pad_inches)
 
