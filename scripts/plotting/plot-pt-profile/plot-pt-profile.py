@@ -16,6 +16,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ml4ptp.paths import expandvars
 from ml4ptp.plotting import set_fontsize
 
 
@@ -44,7 +45,6 @@ def get_cli_arguments() -> argparse.Namespace:
         '--run-dir',
         type=str,
         required=True,
-        default='$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/runs/run_0',
         help='Path to the directory containing the results_on_test_set.hdf',
     )
     parser.add_argument(
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     print('Loading data from HDF file...', end=' ', flush=True)
 
     # Load data from results_on_test_set.hdf
-    file_path = Path(args.run_dir) / 'results_on_test_set.hdf'
+    file_path = expandvars(Path(args.run_dir)) / 'results_on_test_set.hdf'
     with h5py.File(file_path, 'r') as hdf_file:
         log_P = np.array(hdf_file['log_P']).squeeze()
         T_true = np.array(hdf_file['T_true']).squeeze()
@@ -124,8 +124,8 @@ if __name__ == "__main__":
         pad_inches = 0.025
         fig, ax = plt.subplots(
             figsize=(
-                4 / 2.54 - 2 * pad_inches,
-                3 / 2.54 - 2 * pad_inches,
+                4.0 / 2.54 - 2 * pad_inches,
+                3.5 / 2.54 - 2 * pad_inches,
             ),
         )
 
@@ -135,21 +135,23 @@ if __name__ == "__main__":
             ax.xaxis.set_tick_params(width=0.25)
             ax.yaxis.set_tick_params(width=0.25)
 
-        ax.set_xlabel('Temperature (K)')
-        ax.set_ylabel('log$_{10}$(Pressure / bar)')
+        ax.set_xlabel('T (K)')
+        ax.set_ylabel('log$_{10}$(P / bar)')
 
         if args.dataset == 'pyatmos':
-            ax.set_xlim(0, 400)
+            ax.set_xlim(0, 450)
+            ax.set_xticks([0, 100, 200, 300, 400])
             ax.set_ylim(0.5, -5.5)
             ax.set_yticks([-5, -4, -3, -2, -1, 0])
         else:
-            ax.set_xlim(0, 5000)
+            ax.set_xlim(0, 7000)
+            ax.set_xticks([0, 2000, 4000, 6000])
             ax.set_ylim(3.5, -6.5)
-            ax.set_yticks([-6, -5, -4, -3, -2, -1, 0, 1, 2, 3])
+            ax.set_yticks([-6, -4, -2, 0, 2])
 
-        set_fontsize(ax, 5.5)
-        ax.xaxis.label.set_fontsize(6.5)
-        ax.yaxis.label.set_fontsize(6.5)
+        set_fontsize(ax, 7)
+        ax.xaxis.label.set_fontsize(8)
+        ax.yaxis.label.set_fontsize(8)
         ax.tick_params('both', length=2, width=0.25, which='major')
 
         # Plot the PT profile
@@ -168,19 +170,26 @@ if __name__ == "__main__":
             color='red',
         )
 
-        # Add a text box with dim(z) and the RMSE
-        ax.text(
-            x=0.95,
-            y=0.95,
-            s=(
-                f'RMSE = {np.sqrt(mse_refined[idx]):.2f}\n'
-                f'dim(z) = {dim_z}'
-            ),
-            transform=ax.transAxes,
-            ha='right',
-            va='top',
-            fontsize=5.5,
-        )
+        # Add a text boxes with RMSE and dim(z)
+        for y, text in [
+            (0.95, f'RMSE = {np.sqrt(mse_refined[idx]):.2f}'),
+            (0.80, f'dim(z) = {dim_z}')
+        ]:
+            ax.text(
+                x=0.95,
+                y=y,
+                s=text,
+                transform=ax.transAxes,
+                ha='right',
+                va='top',
+                fontsize=7,
+                bbox=dict(
+                    fc='white',
+                    ec='none',
+                    alpha=0.7,
+                    boxstyle='square,pad=0',
+                ),
+            )
 
         print('Done!', flush=True)
         print('Saving figure to PDF...', end=' ', flush=True)
@@ -197,7 +206,10 @@ if __name__ == "__main__":
         file_path = plots_dir / file_name
         fig.tight_layout(pad=0)
         fig.savefig(
-            file_path, dpi=600, bbox_inches='tight', pad_inches=pad_inches
+            fname=file_path,
+            dpi=600,
+            bbox_inches='tight',
+            pad_inches=pad_inches,
         )
 
         plt.close(fig)
