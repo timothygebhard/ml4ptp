@@ -251,7 +251,7 @@ if __name__ == '__main__':
 
     fig.tight_layout(pad=0)
     fig.savefig(
-        f'{dataset}-spaghetti-plot.pdf',
+        f'{dataset}.pdf',
         dpi=600,
         bbox_inches='tight',
         pad_inches=pad_inches,
