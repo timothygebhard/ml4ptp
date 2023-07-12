@@ -1,0 +1,38 @@
+title: "PCA baseline"
+plot_groups:
+  - label: '$n_\mathrm{PC} = 2$'
+    n: 2
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "2-principal-components/run-0/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "2-principal-components/run-1/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "2-principal-components/run-2/mse"
+  - label: '$n_\mathrm{PC} = 3$'
+    n: 3
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "3-principal-components/run-0/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "3-principal-components/run-1/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "3-principal-components/run-2/mse"
+  - label: '$n_\mathrm{PC} = 4$'
+    n: 4
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "4-principal-components/run-0/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "4-principal-components/run-1/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "4-principal-components/run-2/mse"
+  - label: '$n_\mathrm{PC} = 5$'
+    n: 5
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "5-principal-components/run-0/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "5-principal-components/run-1/mse"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/goyal-2020/pca-baseline/results_on_test_set.hdf"
+        key: "5-principal-components/run-2/mse"

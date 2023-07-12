@@ -1,0 +1,38 @@
+title: "Our method"
+plot_groups:
+  - label: 'dim($z$) = 1'
+    n: 1
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-1/runs/run_0/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-1/runs/run_1/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-1/runs/run_2/results_on_test_set.hdf"
+        key: "mse_refined"
+  - label: 'dim($z$) = 2'
+    n: 2
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_0/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_1/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-2/runs/run_2/results_on_test_set.hdf"
+        key: "mse_refined"
+  - label: 'dim($z$) = 3'
+    n: 3
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-3/runs/run_0/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-3/runs/run_1/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-3/runs/run_2/results_on_test_set.hdf"
+        key: "mse_refined"
+  - label: 'dim($z$) = 4'
+    n: 4
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-4/runs/run_0/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-4/runs/run_1/results_on_test_set.hdf"
+        key: "mse_refined"
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/default/latent-size-4/runs/run_2/results_on_test_set.hdf"
+        key: "mse_refined"

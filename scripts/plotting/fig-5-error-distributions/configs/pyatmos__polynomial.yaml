@@ -1,0 +1,22 @@
+title: "Polynomial baseline"
+plot_groups:
+  - label: '$n_\mathrm{parameters} = 2$'
+    n: 2
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/polynomial-baseline/results_on_test_set.hdf"
+        key: "2-fit-parameters/mse"
+  - label: '$n_\mathrm{parameters} = 3$'
+    n: 3
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/polynomial-baseline/results_on_test_set.hdf"
+        key: "3-fit-parameters/mse"
+  - label: '$n_\mathrm{parameters} = 4$'
+    n: 4
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/polynomial-baseline/results_on_test_set.hdf"
+        key: "4-fit-parameters/mse"
+  - label: '$n_\mathrm{parameters} = 5$'
+    n: 5
+    runs:
+      - file_path: "$ML4PTP_EXPERIMENTS_DIR/pyatmos/polynomial-baseline/results_on_test_set.hdf"
+        key: "5-fit-parameters/mse"
