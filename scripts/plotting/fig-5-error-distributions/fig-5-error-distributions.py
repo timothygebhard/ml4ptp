@@ -254,7 +254,7 @@ def get_plot_options(dataset: str) -> dict:
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     elif dataset == 'goyal-2020':
         plot_options['kde_grid'] = np.linspace(-2.5, 202.5, 1000)
-        plot_options['ylim'] = (0.0001, 1.0 )
+        plot_options['ylim'] = (0.0001, 1.0)
         plot_options['yformatter'] = FormatStrFormatter('%.3f')
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
