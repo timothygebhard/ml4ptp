@@ -5,7 +5,8 @@
 [![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 
-This repository contains code to train and apply efficient, neural network-based parameterizations of pressure temperature (PT) profiles of exoplanets which can be used, for example, for atmospheric retrievals.  
+This repository contains the code for the paper "Parameterizing pressure-temperature profiles
+of exoplanet atmospheres with neural networks".  
 
 
 ## ⚡ Getting started
