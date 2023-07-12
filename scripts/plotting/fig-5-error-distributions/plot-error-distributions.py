@@ -392,8 +392,11 @@ if __name__ == "__main__":
 
     print('\nSaving figure to PDF...', end=' ', flush=True)
 
-    file_path = Path(__file__).resolve().parent / args.output_file_name
     fig.tight_layout(pad=0)
+
+    plots_dir = Path(__file__).resolve().parent / 'plots'
+    plots_dir.mkdir(exist_ok=True)
+    file_path = plots_dir / args.output_file_name
     fig.savefig(file_path, dpi=300, bbox_inches='tight', pad_inches=pad_inches)
 
     print('Done!', flush=True)
