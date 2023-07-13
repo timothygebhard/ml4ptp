@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # General plot settings
     set_fontsize(ax, 7)
     ax.set_xlim(0, 350)
-    ax.set_ylim(0.5, -5.5)
+    ax.set_ylim(0.5, -5)
     ax.set_yticks([0, -1, -2, -3, -4, -5])
     ax.set_xlabel("T (K)", fontsize=8)
     ax.set_ylabel("log$_\mathrm{10}$(P / bar)", fontsize=8)
