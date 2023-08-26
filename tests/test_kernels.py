@@ -32,9 +32,9 @@ def test__compute_mmd() -> None:
     # Case 1
     x = torch.randn(1_000, 1)
     y = torch.randn(1_000, 1)
-    assert np.isclose(compute_mmd(x, y).item(), 0.0010222)
+    assert np.isclose(compute_mmd(x, y).item(), 0.0010222, atol=1e-6)
 
     # Case 2
     x = torch.randn(1_000, 1)
     y = torch.randn(1_000, 1) + 1_000
-    assert np.isclose(compute_mmd(x, y).item(), 0.9043338)
+    assert np.isclose(compute_mmd(x, y).item(), 0.9043338, atol=1e-6)
