@@ -8,8 +8,7 @@ Unit tests for models.py
 
 from pathlib import Path
 
-from pytorch_lightning import Trainer
-from pytorch_lightning.utilities.seed import seed_everything
+from lightning.pytorch import Trainer, seed_everything
 
 import h5py
 import numpy as np
