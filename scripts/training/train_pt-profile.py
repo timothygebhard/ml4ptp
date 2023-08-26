@@ -268,9 +268,9 @@ if __name__ == "__main__":
     batch_size = 32
     grid_size = config['model']['encoder']['parameters'].get('input_size', 101)
     latent_size = config['model']['encoder']['parameters']['latent_size']
-    log_P = torch.randn(batch_size, grid_size)
-    T = torch.randn(batch_size, grid_size)
-    z = torch.randn(batch_size, latent_size)
+    log_P = torch.randn(batch_size, grid_size, device=model.device)
+    T = torch.randn(batch_size, grid_size, device=model.device)
+    z = torch.randn(batch_size, latent_size, device=model.device)
 
     # Export encoder
     file_path = run_dir / 'encoder.onnx'
