@@ -47,6 +47,7 @@ def hdf_file(tmp_path: Path) -> Path:
 # TESTS
 # -----------------------------------------------------------------------------
 
+@pytest.mark.filterwarnings("ignore:GPU available but not used")
 def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     seed_everything(42)
@@ -121,7 +122,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     # -------------------------------------------------------------------------
 
     trainer = Trainer(
-        accelerator='auto',
+        accelerator='cpu',  # GPU will give slightly different results
         default_root_dir=tmp_path.as_posix(),
         max_epochs=2,
         log_every_n_steps=1,
