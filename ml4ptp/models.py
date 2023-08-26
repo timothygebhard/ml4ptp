@@ -8,14 +8,15 @@ Define models.
 
 from typing import List, Optional, Tuple
 
-from pytorch_lightning.utilities.types import (
+from lightning.pytorch.utilities import grad_norm
+from lightning.pytorch.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
 )
 from torch.nn.functional import softplus
 
 import matplotlib.pyplot as plt
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 
 from ml4ptp.importing import get_member_by_name
@@ -147,6 +148,16 @@ class Model(pl.LightningModule, NormalizerMixin):
 
         return result
 
+    def on_before_optimizer_step(
+        self,
+        optimizer: torch.optim.Optimizer,
+    ) -> None:
+        """
+        Apply gradient clipping before each optimizer step.
+        See: https://github.com/Lightning-AI/lightning/pull/16745
+        """
+        self.log_dict(grad_norm(self, norm_type=2))
+
     def forward(
         self,
         log_P: torch.Tensor,
@@ -165,7 +176,7 @@ class Model(pl.LightningModule, NormalizerMixin):
 
             # Check the norm of the latent codes
             # The threshold here is somewhat arbitrary, but it seems to work?
-            mean_norm = torch.norm(z, dim=1).mean()  # type: ignore
+            mean_norm = torch.norm(z, dim=1).mean()
             if 0.05 < mean_norm:
                 break
 
@@ -220,7 +231,7 @@ class Model(pl.LightningModule, NormalizerMixin):
         # all, and we should just use a single sample?)
         mmd_loss = torch.tensor(0.0)
         for _ in range(self.n_mmd_loops):
-            sample = torch.randn(*z.shape, device=self.device)  # type: ignore
+            sample = torch.randn(*z.shape, device=self.device)
             mmd_loss = mmd_loss + compute_mmd(sample, z) / self.n_mmd_loops
 
         # Compute loss on the norm of the latent codes.

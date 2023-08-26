@@ -8,8 +8,8 @@ Customized TensorBoard callback for PyTorch.
 
 from typing import Mapping, Optional
 
-from pytorch_lightning import loggers
-from pytorch_lightning.utilities import rank_zero_only
+from lightning.pytorch import loggers
+from lightning.pytorch.utilities import rank_zero_only
 
 
 # -----------------------------------------------------------------------------

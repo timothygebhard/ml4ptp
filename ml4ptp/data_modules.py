@@ -9,7 +9,7 @@ Data module(s) that encapsulate the data handling for PyTorch Lightning.
 from pathlib import Path
 from typing import Dict, Optional, Union, Tuple
 
-from pytorch_lightning.utilities.types import (
+from lightning.pytorch.utilities.types import (
     EVAL_DATALOADERS,
     TRAIN_DATALOADERS,
 )
@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 import h5py
 import numpy as np
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 
 from ml4ptp.paths import expandvars

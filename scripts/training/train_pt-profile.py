@@ -17,9 +17,8 @@ import time
 import torch
 import yaml
 
-from lightning_fabric.utilities.seed import seed_everything
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import (
+from lightning.pytorch import Trainer, seed_everything
+from lightning.pytorch.callbacks import (
     Callback,
     EarlyStopping,
     LearningRateMonitor,
@@ -193,7 +192,6 @@ if __name__ == "__main__":
         callbacks=callbacks,
         default_root_dir=expandvars(experiment_dir).as_posix(),
         logger=logger,
-        track_grad_norm=2,
         **config['trainer'],
     )
     print()
