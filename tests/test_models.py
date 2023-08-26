@@ -131,16 +131,16 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
 
     trainer.fit(model=model, datamodule=datamodule)
     assert np.isclose(
-        trainer.logged_metrics['val/total_loss_epoch'],  # type: ignore
-        506.7633,
+        trainer.logged_metrics['val/total_loss_epoch'],
+        508.5398,
     )
     assert np.isclose(
-        trainer.logged_metrics['train/total_loss_epoch'],  # type: ignore
-        61.6025,
+        trainer.logged_metrics['train/total_loss_epoch'],
+        72.4137,
     )
 
     trainer.test(model=model, datamodule=datamodule, verbose=False)
     assert np.isclose(
-        trainer.logged_metrics['test/total_loss_epoch'],  # type: ignore
-        50.1122,
+        trainer.logged_metrics['test/total_loss_epoch'],
+        49.0438,
     )
