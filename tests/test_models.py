@@ -121,7 +121,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
     # -------------------------------------------------------------------------
 
     trainer = Trainer(
-        accelerator='cpu',
+        accelerator='auto',
         default_root_dir=tmp_path.as_posix(),
         max_epochs=2,
         log_every_n_steps=1,
