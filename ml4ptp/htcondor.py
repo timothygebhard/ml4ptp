@@ -97,6 +97,7 @@ class SubmitFile:
             '# GENERAL JOB REQUIREMENTS',
             '#' + 78 * '-' + '\n',
             f'executable = {self.executable}',
+            'transfer_executable = False',
             f'getenv = {self.getenv}\n',
             f'request_memory = {self.memory}',
             f'request_cpus = {self.cpus}\n',
@@ -329,9 +330,9 @@ def submit_dag(
 
     # Define the command to launch the DAG; add the force flag if requested
     if force:
-        cmd = ['condor_submit_dag', '-force', file_path.as_posix()]
+        cmd = ['condor_submit_dag_bid', '25', '-force', file_path.as_posix()]
     else:
-        cmd = ['condor_submit_dag', file_path.as_posix()]
+        cmd = ['condor_submit_dag_bid', '25', file_path.as_posix()]
 
     # Otherwise, we actually launch the workflow
     p = subprocess.run(args=cmd, capture_output=True)
