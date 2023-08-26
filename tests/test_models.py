@@ -12,6 +12,7 @@ from lightning.pytorch import Trainer, seed_everything
 
 import h5py
 import numpy as np
+import torch
 import pytest
 
 from ml4ptp.data_modules import DataModule
@@ -116,6 +117,7 @@ def test__model(hdf_file: Path, tmp_path: Path) -> None:
         lr_scheduler_config=lr_scheduler_config,
         plotting_config=plotting_config,
     )
+    assert model.device == torch.device('cpu')
 
     # -------------------------------------------------------------------------
     # Setup Trainer and run tests
