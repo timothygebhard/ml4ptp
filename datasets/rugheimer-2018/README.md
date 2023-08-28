@@ -1,0 +1,2 @@
+The PT profiles in this directory are from [Rugheimer & Kaltenegger (2018)](https://iopscience.iop.org/article/10.3847/1538-4357/aaa47a), who kindly gave us permission to include them in this repository.
+They do not fall under the general license of this repository, and all rights remain with the original authors.
