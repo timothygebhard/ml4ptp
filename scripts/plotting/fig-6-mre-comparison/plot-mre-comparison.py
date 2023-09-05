@@ -227,15 +227,16 @@ if __name__ == "__main__":
             bbox=dict(fc='white', ec='none', boxstyle='square,pad=0'),
         )
 
+    # [Grid had to be removed due to the journal's style guidelines]
     # Add grid (ugly workaround because `ax.grid()` ignores `zorder`)
-    for y in np.arange(1, 8).astype(float):
-        axes[1].axhline(y=y, ls='--', alpha=0.2, color='k', lw=0.25, zorder=-1)
+    # for y in np.arange(1, 8).astype(float):
+    #     axes[1].axhline(y=y, ls='--', alpha=0.2, color='k', zorder=-1)
 
     # Set up limits, ticks, labels, etc.
     set_fontsize(axes[1], 8)
     axes[1].spines[['right', 'top', 'left']].set_visible(False)
     axes[1].tick_params('x', width=0.25, length=2, labelsize=7)
-    axes[1].tick_params('y', width=0, length=0, labelsize=7)
+    axes[1].tick_params('y', width=0.00, length=0, labelsize=7)
     axes[1].set_xlim(0.5, 5.5)
     axes[1].set_ylim(0, 7.5)
     axes[1].set_xticks(range(1, 6))
