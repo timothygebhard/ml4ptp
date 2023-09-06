@@ -55,7 +55,7 @@ Our training and test datasets (as well as the trained models that produced the 
 
 ## 🚀 Demo
 
-[This notebook](https://github.com/timothygebhard/ml4ptp/blob/main/notebooks/demo.ipynb) contains a short demo that illustrates how our trained models can be loaded and used to produce PT profiles.
+[This notebook](https://github.com/timothygebhard/ml4ptp/blob/main/notebooks/demo.ipynb) contains a short demo that illustrates how our models can be loaded and used to produce PT profiles.
 
 
 ## 🏋️ Training models
@@ -86,7 +86,7 @@ If you find this code useful, please consider citing our paper:
   author = {Gebhard, Timothy D. and Angerhausen, Daniel and Konrad, Björn S. and Alei, Eleonora and Quanz, Sascha P. and Schölkopf, Bernhard},
   title = {Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks},
   year = {2023},
-  journal = {Astronomy and Astrophysics},
+  journal = {Astronomy \& Astrophysics},
   addendum = {(Accepted)},
 }
 ```
