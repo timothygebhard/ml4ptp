@@ -9,10 +9,6 @@ This repository contains the code for the research paper:
 
 > T. D. Gebhard et al. (2023). "Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks." _Accepted at A&A._
 
-> [!NOTE]  
-> We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning.
-> Thus, the results obtained with the new code may differ marginally from the ones reported in the paper. 
-
 
 ## ⚡ Getting started
 
@@ -29,8 +25,12 @@ pip install .
 
 The code was written with Python 3.8 in mind, but we expect it to work also with newer versions of Python.
 
-For reproducibility, we have also added a `versions.txt` file which contains the exact version of each Python package in our environment when we last re-ran our experiments after updating the code to PyTorch 2.0. 
-Running with these versions should produce results equivalent to those in our paper.
+> [!NOTE]  
+> We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning.
+> Thus, the results obtained with the new code can differ marginally from the ones reported in the paper. 
+>
+> We have added a `versions.txt` file which contains the exact version of each Python package in our environment when we last re-ran our experiments after updating the code to PyTorch 2.0. 
+> Running with these versions should produce results equivalent to those in our paper.
 
 
 ### 🏕 Setting up the environment
@@ -68,6 +68,19 @@ pytest tests
 
 You can also use these tests to ensure that the code is compatible with newer versions of the libraries than the one in `setup.py`.
 
+## 📜 Citation
+
+If you find this code useful, please consider citing our paper:
+
+```bibtex
+@article{Gebhard_2023,
+  author = {Gebhard, Timothy D. and Angerhausen, Daniel and Konrad, Björn S. and Alei, Eleonora and Quanz, Sascha P. and Schölkopf, Bernhard},
+  title = {Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks},
+  year = {2023},
+  journal = {Astronomy and Astrophysics},
+  addendum = {(Accepted)},
+}
+```
 
 ## ⚖️ License and copyright
 
