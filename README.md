@@ -5,12 +5,13 @@
 [![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 
-This repository contains the code for the paper "Parameterizing pressure-temperature profiles
-of exoplanet atmospheres with neural networks" (accepted for publication in A&A).
+This repository contains the code for the research paper:
+
+> T. D. Gebhard et al. (2023). "Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks." _Accepted at A&A._
 
 > [!NOTE]  
 > We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning.
-> Consequently, the results obtained with the new code may differ marginally from the ones reported in the paper. 
+> Thus, the results obtained with the new code may differ marginally from the ones reported in the paper. 
 
 
 ## ⚡ Getting started
@@ -28,6 +29,9 @@ pip install .
 
 The code was written with Python 3.8 in mind, but we expect it to work also with newer versions of Python.
 
+For reproducibility, we have also added a `versions.txt` file which contains the exact version of each Python package in our environment when we last re-ran our experiments after updating the code to PyTorch 2.0. 
+Running with these versions should produce results equivalent to those in our paper.
+
 
 ### 🏕 Setting up the environment
 
@@ -42,6 +46,16 @@ You might want to add these lines to your `.bashrc` or `.zshrc` file.
 
 Note that the `datasets` and `experiments` directories are part of this repository and hold scripts and default configurations.
 However, using the above environment variables allows you to flexibly move the inputs and outputs of the code to different locations on your machine (e.g., you do not need to store your data together with the code).
+
+## 📚 Data
+
+Our training and test datasets (as well as the trained models that produced the results in our paper) are available for download [here](https://doi.org/10.17617/3.K2CY3M).
+
+## 🏋️ Training models
+
+In case you want to re-run the training of our models, or use our code to train a new model, have a look at the `train_pt-profile.py` script in `scripts/training`.
+This script takes as its main input an `--experiment-dir`, that is, the path to a an experiment directory that contains a `config.yaml` file with the configuration for the experiment.
+This configuration file describes the dataset to be used as well as the model to be trained; see `experiments` for examples. 
 
 ## 🐭 Tests
 
