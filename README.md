@@ -28,9 +28,9 @@ The code was written with Python 3.8 in mind, but we expect it to work also with
 > [!NOTE]  
 > We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning.
 > Thus, the results obtained with the new code can differ marginally from the ones reported in the paper. 
->
-> We have added a `versions.txt` file which contains the exact version of each Python package in our environment when we last re-ran our experiments after updating the code to PyTorch 2.0. 
-> Running with these versions should produce results equivalent to those in our paper.
+
+We have added a `versions.txt` file which contains the exact version of each Python package in our environment when we last re-ran our experiments after updating the code to PyTorch 2.0. 
+Running with these versions should produce results equivalent to those in our paper.
 
 
 ### 🏕 Setting up the environment
@@ -47,15 +47,23 @@ You might want to add these lines to your `.bashrc` or `.zshrc` file.
 Note that the `datasets` and `experiments` directories are part of this repository and hold scripts and default configurations.
 However, using the above environment variables allows you to flexibly move the inputs and outputs of the code to different locations on your machine (e.g., you do not need to store your data together with the code).
 
+
 ## 📚 Data
 
 Our training and test datasets (as well as the trained models that produced the results in our paper) are available for download [here](https://doi.org/10.17617/3.K2CY3M).
+
+
+## 🚀 Demo
+
+[This notebook](https://github.com/timothygebhard/ml4ptp/blob/main/notebooks/demo.ipynb) contains a short demo that illustrates how our trained models can be loaded and used to produce PT profiles.
+
 
 ## 🏋️ Training models
 
 In case you want to re-run the training of our models, or use our code to train a new model, have a look at the `train_pt-profile.py` script in `scripts/training`.
 This script takes as its main input an `--experiment-dir`, that is, the path to a an experiment directory that contains a `config.yaml` file with the configuration for the experiment.
 This configuration file describes the dataset to be used as well as the model to be trained; see `experiments` for examples. 
+
 
 ## 🐭 Tests
 
@@ -67,6 +75,7 @@ pytest tests
 ```
 
 You can also use these tests to ensure that the code is compatible with newer versions of the libraries than the one in `setup.py`.
+
 
 ## 📜 Citation
 
@@ -81,6 +90,7 @@ If you find this code useful, please consider citing our paper:
   addendum = {(Accepted)},
 }
 ```
+
 
 ## ⚖️ License and copyright
 
