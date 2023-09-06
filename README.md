@@ -8,12 +8,10 @@
 This repository contains the code for the paper "Parameterizing pressure-temperature profiles
 of exoplanet atmospheres with neural networks" (accepted for publication in A&A).
 
----
+> [!NOTE]  
+> We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning.
+> Consequently, the results obtained with the new code may differ marginally from the ones reported in the paper. 
 
-_Note (2023-09-05): We have recently updated the code to be compatible with the latest versions of the PyTorch and Lightning._
-_Consequently, the results obtained with the new code may differ marginally from the ones reported in the paper._ 
-
----
 
 ## ⚡ Getting started
 
