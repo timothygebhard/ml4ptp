@@ -3,11 +3,16 @@
 ![Python 3.8](https://img.shields.io/badge/python-3.8+-blue)
 [![Checked with MyPy](https://img.shields.io/badge/mypy-checked-blue)](https://github.com/python/mypy)
 [![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Data availability](https://img.shields.io/badge/Data-Available_on_Edmond-31705e)](https://doi.org/10.17617/3.K2CY3M)
+[![arXiv](https://img.shields.io/badge/arXiv-2309.03075-b31b1b.svg)](https://arxiv.org/abs/2309.03075) 
 
 
 This repository contains the code for the research paper:
 
-> T. D. Gebhard et al. (2023). "Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks." _Accepted at A&A._
+> T. D. Gebhard et al. (2023).
+> "Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks."
+> _Astronomy & Astrophysics_, 681 (A3).
+> Also available on [arXiv:2309.03075](https://arxiv.org/abs/2309.03075).
 
 
 ## ⚡ Getting started
@@ -82,12 +87,16 @@ You can also use these tests to ensure that the code is compatible with newer ve
 If you find this code useful, please consider citing our paper:
 
 ```bibtex
-@article{Gebhard_2023,
-  author = {Gebhard, Timothy D. and Angerhausen, Daniel and Konrad, Björn S. and Alei, Eleonora and Quanz, Sascha P. and Schölkopf, Bernhard},
-  title = {Parameterizing pressure-temperature profiles of exoplanet atmospheres with neural networks},
-  year = {2023},
-  journal = {Astronomy \& Astrophysics},
-  addendum = {(Accepted)},
+@article{Gebhard_2024,
+  title          = {{Parameterizing pressure–temperature profiles of exoplanet atmospheres with neural networks}},
+  author         = {{Gebhard}, Timothy D. and {Angerhausen}, Daniel and {Konrad}, Björn S. and {Alei}, Eleonora and {Quanz}, Sascha P. and {Schölkopf}, Bernhard},
+  year           = 2024,
+  month          = 1,
+  adsurl         = {https://adsabs.harvard.edu/abs/2024A&A...681A...3G},
+  doi            = {10.1051/0004-6361/202346390},
+  journal        = {\aap},
+  pages          = {A3},
+  volume         = 681,
 }
 ```
 
